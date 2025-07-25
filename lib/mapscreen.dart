@@ -12,8 +12,8 @@ import 'package:geolocator/geolocator.dart';
 
 
 class MapScreen extends StatefulWidget {
-  final String kmlFilePath;
-  MapScreen({required this.kmlFilePath});
+  // final String kmlFilePath;
+  // MapScreen({ this.kmlFilePath});
 
   @override
   _MapScreenState createState() => _MapScreenState();
@@ -34,10 +34,9 @@ class _MapScreenState extends State<MapScreen> {
   @override
   void initState() {
     super.initState();
-    
-    _loadKmlRoute();
     _determinePosition();
   }
+
   void _startTracking() {
     _trackingPoints.clear();
     _isTracking = true;
@@ -62,9 +61,9 @@ class _MapScreenState extends State<MapScreen> {
     await ref.putString(jsonEncode(json));
     _savedRoutes.add(fileName);
   }
-  Future<void> _loadKmlRoute() async {
+  Future<void> _loadKmlRoute(kmlFilePath) async {
     try {
-      final ref = firebase_storage.FirebaseStorage.instance.ref(widget.kmlFilePath);
+      final ref = firebase_storage.FirebaseStorage.instance.ref(kmlFilePath);
       final url = await ref.getDownloadURL();
 
       final response = await http.get(Uri.parse(url));
@@ -120,45 +119,16 @@ class _MapScreenState extends State<MapScreen> {
       print("Error loading KML: $e");
     }
   }
-  Future<void> _loadRouteFromStorage(String fileName) async {
+
+  Future<List<String>> _fetchKmlFiles() async {
     try {
-      final ref = firebase_storage.FirebaseStorage.instance.ref('routes/$fileName');
-      final url = await ref.getDownloadURL();
-      final response = await http.get(Uri.parse(url));
+      final result = await firebase_storage.FirebaseStorage.instance
+          .ref('kpl')
+          .listAll();
 
-      final List<dynamic> jsonData = jsonDecode(response.body);
-      final List<LatLng> loadedPoints = jsonData
-          .map((e) => LatLng(e['lat'], e['lng']))
-          .toList();
-
-      setState(() {
-        _polylines = {
-          Polyline(
-            polylineId: PolylineId(fileName),
-            points: loadedPoints,
-            color: Colors.red,
-            width: 4,
-          )
-        };
-        _initialLocation = loadedPoints.first;
-      });
-
-      _controller?.animateCamera(CameraUpdate.newLatLng(_initialLocation));
+      return result.items.map((item) => item.fullPath).toList(); // only paths
     } catch (e) {
-      print("Error loading saved route: $e");
-    }
-  }
-  Future<List<String>> _fetchSavedRoutes() async {
-    try {
-      final listResult = await firebase_storage.FirebaseStorage.instance.ref('routes').listAll();
-
-      // Only keep .json files
-      return listResult.items
-          .where((item) => item.name.endsWith(".json"))
-          .map((item) => item.name)
-          .toList();
-    } catch (e) {
-      print("Error listing routes: $e");
+      print("Failed to list files: $e");
       return [];
     }
   }
@@ -237,7 +207,7 @@ class _MapScreenState extends State<MapScreen> {
           Expanded(
             flex: 2,
             child: FutureBuilder<List<String>>(
-              future: _fetchSavedRoutes(), // Fetch file list from Firebase
+              future: _fetchKmlFiles(), // Fetch file list from Firebase
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return Center(child: CircularProgressIndicator());
@@ -247,15 +217,16 @@ class _MapScreenState extends State<MapScreen> {
                   return Center(child: Text("Error loading routes"));
                 }
 
-                final routes = snapshot.data ?? [];
+                final filePaths = snapshot.data ?? [];
 
                 return ListView.builder(
-                  itemCount: routes.length,
+                  itemCount: filePaths.length,
                   itemBuilder: (context, index) {
-                    final fileName = routes[index];
+                    final path = filePaths[index];
+                    final name = path.split('/').last; // Extract file name
                     return ListTile(
-                      title: Text(fileName),
-                      onTap: () => _loadRouteFromStorage(fileName),
+                      title: Text(name),
+                      onTap: () => _loadKmlRoute(path),
                     );
                   },
                 );

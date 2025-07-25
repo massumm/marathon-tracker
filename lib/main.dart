@@ -1,13 +1,8 @@
-// main.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:http/http.dart' as http;
-import 'package:xml/xml.dart' as xml;
 import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
-import 'package:geolocator/geolocator.dart';
-
-import 'mapscreen.dart';
+import 'mypage.dart';
+import 'mapscreen.dart'; // your existing map screen
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,8 +14,49 @@ class MapApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: KmlListScreen(),
+      home: HomeScreen(),
       debugShowCheckedModeBanner: false,
+    );
+  }
+}
+
+class HomeScreen extends StatefulWidget {
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  int _selectedIndex = 0;
+
+  final List<Widget> _screens = [
+    MapScreen(),
+    MyPageScreen(),
+  ];
+
+  void _onItemTapped(int index) {
+    setState(() => _selectedIndex = index);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: _screens[_selectedIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+        selectedItemColor: Colors.blue,
+        unselectedItemColor: Colors.grey,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.map),
+            label: 'Map',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'MyPage',
+          ),
+        ],
+      ),
     );
   }
 }
@@ -36,27 +72,8 @@ class _KmlListScreenState extends State<KmlListScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchKmlFiles();
   }
 
-  Future<void> _fetchKmlFiles() async {
-    try {
-      final firebase_storage.ListResult result = await firebase_storage.FirebaseStorage.instance
-          .ref('kpl')
-          .listAll();
-
-      setState(() {
-        files = result.items.map((item) {
-          return {
-            'name': item.name,
-            'path': item.fullPath,
-          };
-        }).toList();
-      });
-    } catch (e) {
-      print("Failed to list files: $e");
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -71,7 +88,7 @@ class _KmlListScreenState extends State<KmlListScreen> {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => MapScreen(kmlFilePath: file['path']!),
+                builder: (_) => MapScreen(),
               ),
             ),
           );
@@ -80,4 +97,6 @@ class _KmlListScreenState extends State<KmlListScreen> {
     );
   }
 }
+
+// Dummy MyPage screen
 
