@@ -1,13 +1,8 @@
-// main.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:http/http.dart' as http;
-import 'package:xml/xml.dart' as xml;
 import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
-import 'package:geolocator/geolocator.dart';
-
-import 'mapscreen.dart';
+import 'mypage.dart';
+import 'mapscreen.dart'; // your existing map screen
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,63 +14,57 @@ class MapApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: KmlListScreen(),
+      home: HomeScreen(),
       debugShowCheckedModeBanner: false,
     );
   }
 }
 
-class KmlListScreen extends StatefulWidget {
+class HomeScreen extends StatefulWidget {
+  static late void Function(int) setTabIndex;
   @override
-  _KmlListScreenState createState() => _KmlListScreenState();
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _KmlListScreenState extends State<KmlListScreen> {
-  List<Map<String, String>> files = [];
+class _HomeScreenState extends State<HomeScreen> {
+  int _selectedIndex = 0;
 
+  final List<Widget> _screens = [
+    MapScreen(),
+    MyPageScreen(),
+  ];
   @override
   void initState() {
     super.initState();
-    _fetchKmlFiles();
-  }
-
-  Future<void> _fetchKmlFiles() async {
-    try {
-      final firebase_storage.ListResult result = await firebase_storage.FirebaseStorage.instance
-          .ref('kpl')
-          .listAll();
-
+    HomeScreen.setTabIndex = (int index) {
       setState(() {
-        files = result.items.map((item) {
-          return {
-            'name': item.name,
-            'path': item.fullPath,
-          };
-        }).toList();
+        _selectedIndex = index;
       });
-    } catch (e) {
-      print("Failed to list files: $e");
-    }
+    };
+  }
+  void _onItemTapped(int index) {
+    setState(() => _selectedIndex = index);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("KML Files")),
-      body: ListView.builder(
-        itemCount: files.length,
-        itemBuilder: (context, index) {
-          final file = files[index];
-          return ListTile(
-            title: Text(file['name'] ?? ''),
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => MapScreen(kmlFilePath: file['path']!),
-              ),
-            ),
-          );
-        },
+      body: _screens[_selectedIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+        selectedItemColor: Colors.blue,
+        unselectedItemColor: Colors.grey,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.map),
+            label: 'Map',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'MyPage',
+          ),
+        ],
       ),
     );
   }
