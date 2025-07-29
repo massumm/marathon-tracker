@@ -21,6 +21,7 @@ class MapApp extends StatelessWidget {
 }
 
 class HomeScreen extends StatefulWidget {
+  static late void Function(int) setTabIndex;
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
@@ -32,7 +33,15 @@ class _HomeScreenState extends State<HomeScreen> {
     MapScreen(),
     MyPageScreen(),
   ];
-
+  @override
+  void initState() {
+    super.initState();
+    HomeScreen.setTabIndex = (int index) {
+      setState(() {
+        _selectedIndex = index;
+      });
+    };
+  }
   void _onItemTapped(int index) {
     setState(() => _selectedIndex = index);
   }
@@ -60,43 +69,4 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
-
-class KmlListScreen extends StatefulWidget {
-  @override
-  _KmlListScreenState createState() => _KmlListScreenState();
-}
-
-class _KmlListScreenState extends State<KmlListScreen> {
-  List<Map<String, String>> files = [];
-
-  @override
-  void initState() {
-    super.initState();
-  }
-
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text("KML Files")),
-      body: ListView.builder(
-        itemCount: files.length,
-        itemBuilder: (context, index) {
-          final file = files[index];
-          return ListTile(
-            title: Text(file['name'] ?? ''),
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => MapScreen(),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-// Dummy MyPage screen
 

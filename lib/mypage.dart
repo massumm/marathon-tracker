@@ -14,7 +14,11 @@ class _MypagescreenState extends State<MyPageScreen> {
       final listResult = await firebase_storage.FirebaseStorage.instance.ref('routes').listAll();
 
       // Only include .json files
-      return listResult.items.where((item) => item.name.endsWith(".json")).toList();
+      var filteredList = listResult.items.where((item) => item.name.endsWith(".json")).toList();
+
+      // Sort the list in descending order by name
+      filteredList.sort((a, b) => b.name.compareTo(a.name));
+      return filteredList;
     } catch (e) {
       print("Error listing routes: $e");
       return [];
