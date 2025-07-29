@@ -63,12 +63,12 @@ class _MyPageMapScreenState extends State<MyPageMapScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Route Viewer")),
+      appBar: AppBar(title: Text("マップビュー")),
       body: _isloading
           ? GoogleMap(
               initialCameraPosition: CameraPosition(
                 target: _initialLocation,
-                zoom: 14,
+                zoom: 16,
               ),
               onMapCreated: (GoogleMapController controller) {
                 _controller = controller;

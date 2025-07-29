@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
 import 'mypage.dart';
 import 'mapscreen.dart'; // your existing map screen
 
@@ -58,11 +57,11 @@ class _HomeScreenState extends State<HomeScreen> {
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.map),
-            label: 'Map',
+            label: '地図表示',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),
-            label: 'MyPage',
+            label: 'マイページ',
           ),
         ],
       ),
