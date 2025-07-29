@@ -36,9 +36,17 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
     super.initState();
     print("we are in");
     _loadKmlRoute(widget.kmlFilePath);
-    //_determinePosition();
+
   }
 
+  /// Loads a KML route from the specified [path] in Firebase Storage.
+  ///
+  /// This method fetches the KML file from Firebase Storage, parses its XML content,
+  /// and extracts polyline paths and placemark markers.
+  ///
+  /// The extracted polylines and markers are then displayed on the map.
+  /// The map camera is animated to the starting point of the first loaded polyline.
+  /// If any error occurs during the process, an error message is printed to the console.
   Future<void> _loadKmlRoute(String path) async {
     try {
       final ref = firebase_storage.FirebaseStorage.instance.ref(path);
@@ -121,6 +129,14 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
     }
   }
 
+  /// Starts tracking the user's location.
+  ///
+  /// This method clears any previous tracking data, sets the tracking state to true,
+  /// and initializes a timer to update the elapsed time.
+  /// It then gets the current GPS position and animates the map camera to that location.
+  /// A stream listener is set up to continuously receive position updates,
+  /// adding each new location to the `_trackingPoints` list and updating the UI.
+  /// The `_isTracking` flag is set to true to reflect the active tracking state.
   Future<void> _startTracking() async {
     _trackingPoints.clear();
     _isTracking = true;
@@ -138,12 +154,32 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
     setState(() {});
 
     _positionStream = Geolocator.getPositionStream().listen((position) {
+      print("position"+position.toString());
+      _controller?.animateCamera(CameraUpdate.newLatLng(currentLatLng));
       final latLng = LatLng(position.latitude, position.longitude);
       _trackingPoints.add(latLng);
       setState(() {});
     });
   }
 
+  /// Stops tracking the user's location and saves the recorded route.
+  ///
+  /// This method performs the following actions:
+  /// 1. Sets an loading state to show a progress indicator.
+  /// 2. Cancels the position stream and timer used for tracking.
+  /// 3. Sets `_isTracking` to false to indicate that tracking has stopped.
+  /// 4. Generates a unique filename for the route data based on the current timestamp.
+  /// 5. Calculates the elapsed time, start time, total distance, and average pace of the tracked route.
+  /// 6. Constructs a JSON object containing the route details:
+  ///    - Event name (e.g., "Iwaki Sunshine Marathon")
+  ///    - Event type (e.g., "Full Marathon")
+  ///    - Start date and time
+  ///    - Total time, distance, and pace
+  ///    - A list of latitude and longitude coordinates representing the route.
+  /// 7. Uploads the JSON data to Firebase Storage under the 'routes/' directory.
+  /// 8. Clears the loading state.
+  /// 9. Navigates back to the first screen in the navigation stack (typically the home screen).
+  /// 10. Sets the tab index on the `HomeScreen` to 1 (assuming this navigates to a specific tab, e.g., My Page).
   Future<void> _stopTracking() async {
     setState(() {
       _isLoading = true;
@@ -151,10 +187,8 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
     _positionStream?.cancel();
     _timer?.cancel();
     _isTracking = false;
-    // setState(() {}); // Already called above
 
     // Artificial delay to simulate saving and show loader
-    // await Future.delayed(Duration(seconds: 2));
     final now = DateTime.now();
     final fileName = 'my_route_${now.millisecondsSinceEpoch}.json';
 
@@ -202,6 +236,12 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
     HomeScreen.setTabIndex(1); // implement this
 
   }
+  /// Formats the given number of seconds into a string representation of time (hh:mm:ss).
+  ///
+  /// [seconds]: The total number of seconds to format.
+  ///
+  /// Returns a string in "hh:mm:ss" format.
+  /// For example, `_formatTime(3661)` would return "01:01:01".
   String _formatTime(int seconds) {
     final duration = Duration(seconds: seconds);
     final hours = duration.inHours.toString().padLeft(2, '0');
@@ -220,12 +260,12 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Route View")),
+      appBar: AppBar(title: Text("マップビュー")),
       body: Stack(
         children: [
           if (_kmlLoaded)
           GoogleMap(
-            initialCameraPosition: CameraPosition(target: _initialLocation, zoom: 15),
+            initialCameraPosition: CameraPosition(target: _initialLocation, zoom: 17),
             myLocationEnabled: true,
             myLocationButtonEnabled: true,
             onMapCreated: (controller) => _controller = controller,
@@ -245,7 +285,9 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
           if (!_kmlLoaded)
             Center(child: CircularProgressIndicator()),
           Container(
+            margin: EdgeInsets.only(left: 70, right: 70),
             alignment: Alignment.topCenter,
+
 
             height: 40,
             decoration: BoxDecoration(
@@ -265,7 +307,7 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
           )
 ,
           Positioned(
-            bottom: 10,
+            bottom: 50,
             left: 0,
             right: 0,
             child: Center(

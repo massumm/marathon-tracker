@@ -47,7 +47,16 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
-
+  /// Determines the current position of the device.
+  ///
+  /// This function checks if location services are enabled and if the app has
+  /// the necessary permissions to access the device's location.
+  /// If services are disabled or permissions are denied, the function returns early.
+  /// If permissions are granted, it fetches the current position and updates
+  /// the state with the new position. It also attempts to move the map camera
+  /// to the new location if the map controller is available.
+  ///
+  /// This function does not return a value.
   Future<void> _determinePosition() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
@@ -79,7 +88,7 @@ class _MapScreenState extends State<MapScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Map Route")),
+      appBar: AppBar(title: Text("地図表示")),
       body: Column(
         children: [
           Expanded(

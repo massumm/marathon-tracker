@@ -28,7 +28,7 @@ class _MypagescreenState extends State<MyPageScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("My Page")),
+      appBar: AppBar(title: Text("マイページ")),
       body: FutureBuilder<List<firebase_storage.Reference>>(
         future: _fetchSavedRoutes(),
         builder: (context, snapshot) {
