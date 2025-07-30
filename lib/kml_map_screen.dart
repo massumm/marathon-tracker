@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_map/main.dart';
-import 'package:google_map/mypage.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
 import 'package:http/http.dart' as http;
@@ -34,7 +33,6 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
   @override
   void initState() {
     super.initState();
-    print("we are in");
     _loadKmlRoute(widget.kmlFilePath);
 
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 import 'mypage.dart';
 import 'mapscreen.dart'; // your existing map screen
 
@@ -7,6 +8,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   runApp(MapApp());
+  WakelockPlus.enable();
 }
 
 class MapApp extends StatelessWidget {
