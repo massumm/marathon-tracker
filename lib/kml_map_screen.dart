@@ -155,8 +155,8 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
 
     _positionStream = Geolocator.getPositionStream().listen((position) {
       print("position"+position.toString());
-      _controller?.animateCamera(CameraUpdate.newLatLng(currentLatLng));
       final latLng = LatLng(position.latitude, position.longitude);
+      _controller?.animateCamera(CameraUpdate.newLatLng(latLng));
       _trackingPoints.add(latLng);
       setState(() {});
     });
