@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
 class KMLUploadScreen extends StatefulWidget {
+  const KMLUploadScreen({super.key});
+
   @override
   _KMLUploadScreenState createState() => _KMLUploadScreenState();
 }
@@ -51,10 +53,10 @@ class _KMLUploadScreenState extends State<KMLUploadScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Upload KML")),
+      appBar: AppBar(title: const Text("Upload KML")),
       body: Center(
         child: _isUploading
-            ? Column(
+            ? const Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             CircularProgressIndicator(),
@@ -64,7 +66,7 @@ class _KMLUploadScreenState extends State<KMLUploadScreen> {
         )
             : ElevatedButton(
           onPressed: _pickAndUploadFile,
-          child: Text("Upload KML File"),
+          child: const Text("Upload KML File"),
         ),
       ),
     );

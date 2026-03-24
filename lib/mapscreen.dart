@@ -8,6 +8,8 @@ import 'kml_map_screen.dart';
 
 
 class MapScreen extends StatefulWidget {
+  const MapScreen({super.key});
+
   // final String kmlFilePath;
 
   @override
@@ -16,14 +18,14 @@ class MapScreen extends StatefulWidget {
 
 class _MapScreenState extends State<MapScreen> {
   GoogleMapController? _controller;
-  LatLng _initialLocation = LatLng(35.6895, 139.6917); // default Tokyo, Japan
-  Set<Polyline> _polylines = {};
+  final LatLng _initialLocation = const LatLng(35.6895, 139.6917); // default Tokyo, Japan
+  final Set<Polyline> _polylines = {};
   Position? _currentPosition;
 
   //initial setup for tracking user
-  List<LatLng> _trackingPoints = [];
+  final List<LatLng> _trackingPoints = [];
 
-  bool _isTracking = false;
+  final bool _isTracking = false;
 
 
   @override
@@ -88,7 +90,7 @@ class _MapScreenState extends State<MapScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("地図表示")),
+      appBar: AppBar(title: const Text("地図表示")),
       body: Column(
         children: [
           Expanded(
@@ -103,7 +105,7 @@ class _MapScreenState extends State<MapScreen> {
                   polylines: _isTracking
                       ? {
                     Polyline(
-                      polylineId: PolylineId("tracking"),
+                      polylineId: const PolylineId("tracking"),
                       points: _trackingPoints,
                       color: Colors.green,
                       width: 4,
@@ -122,14 +124,14 @@ class _MapScreenState extends State<MapScreen> {
             child: FutureBuilder<List<String>>(
               future: _fetchKmlFiles(), // Fetch file list from Firebase
               builder: (context, snapshot) {
-                print("snapshot details in mapscreen"+snapshot.toString());
+                print("snapshot details in mapscreen$snapshot");
                 if (snapshot.connectionState == ConnectionState.waiting) {
 
-                  return Center(child: CircularProgressIndicator());
+                  return const Center(child: CircularProgressIndicator());
                 }
 
                 if (snapshot.hasError) {
-                  return Center(child: Text("Error loading routes"));
+                  return const Center(child: Text("Error loading routes"));
                 }
 
                 // Sort file paths in descending order

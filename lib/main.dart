@@ -7,14 +7,16 @@ import 'mapscreen.dart'; // your existing map screen
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  runApp(MapApp());
+  runApp(const MapApp());
   WakelockPlus.enable();
 }
 
 class MapApp extends StatelessWidget {
+  const MapApp({super.key});
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return const MaterialApp(
       home: HomeScreen(),
       debugShowCheckedModeBanner: false,
     );
@@ -23,6 +25,8 @@ class MapApp extends StatelessWidget {
 
 class HomeScreen extends StatefulWidget {
   static late void Function(int) setTabIndex;
+
+  const HomeScreen({super.key});
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
@@ -31,8 +35,8 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
   final List<Widget> _screens = [
-    MapScreen(),
-    MyPageScreen(),
+    const MapScreen(),
+    const MyPageScreen(),
   ];
   @override
   void initState() {

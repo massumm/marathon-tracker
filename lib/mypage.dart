@@ -4,6 +4,8 @@ import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
 import 'mypage_map_screen.dart'; // Make sure you have this file
 
 class MyPageScreen extends StatefulWidget {
+  const MyPageScreen({super.key});
+
   @override
   _MypagescreenState createState() => _MypagescreenState();
 }
@@ -28,22 +30,22 @@ class _MypagescreenState extends State<MyPageScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("マイページ")),
+      appBar: AppBar(title: const Text("My Page")),
       body: FutureBuilder<List<firebase_storage.Reference>>(
         future: _fetchSavedRoutes(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator());
           }
 
           if (snapshot.hasError) {
-            return Center(child: Text("Error loading files"));
+            return const Center(child: Text("Error loading files"));
           }
 
           final files = snapshot.data ?? [];
 
           if (files.isEmpty) {
-            return Center(child: Text("No saved routes found."));
+            return const Center(child: Text("No saved routes found."));
           }
 
           return ListView.builder(

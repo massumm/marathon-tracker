@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:google_map/main.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
 import 'package:http/http.dart' as http;
@@ -11,7 +10,7 @@ import 'package:geolocator/geolocator.dart';
 class KmlMapScreen extends StatefulWidget {
   final String kmlFilePath;
 
-  const KmlMapScreen({required this.kmlFilePath});
+  const KmlMapScreen({super.key, required this.kmlFilePath});
 
   @override
   _KmlMapScreenState createState() => _KmlMapScreenState();
@@ -22,9 +21,9 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
   Timer? _timer;
   int _elapsedSeconds = 0;
   Set<Polyline> _polylines = {};
-  LatLng _initialLocation = LatLng(23.777176, 90.399452);
+  LatLng _initialLocation = const LatLng(23.777176, 90.399452);
   Set<Marker> _markers = {};
-  List<LatLng> _trackingPoints = [];
+  final List<LatLng> _trackingPoints = [];
   bool _isTracking = false;
   StreamSubscription<Position>? _positionStream;
   bool _isLoading = false;
@@ -57,7 +56,7 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
 
         Set<Polyline> loadedPolylines = {};
         Set<Marker> loadedMarkers = {};
-        int polyline_id = 0;
+        int polylineId = 0;
         // 1. Parse polyline paths
         for (var element in coordinatesElements) {
           final coords = element.text.trim().split(RegExp(r'\s+'));
@@ -75,11 +74,11 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
           }
           // 2. Parse markers (placemarks with Point)
           for (var placemark in placemarks) {
-            print("placemarks"+placemark.toString());
+            print("placemarks$placemark");
             final name = placemark.getElement('name')?.text ?? '';
             final description = placemark.getElement('description')?.text ?? '';
             final coordText = placemark.findAllElements('coordinates').first.text.trim();
-            print("coordText"+coordText);
+            print("coordText$coordText");
             final parts = coordText.split(',');
             if (parts.length >= 2) {
               final lon = double.tryParse(parts[0]);
@@ -99,19 +98,19 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
           }
           if (points.length >= 2) {
             loadedPolylines.add(Polyline(
-              polylineId: PolylineId("route_$polyline_id"),
+              polylineId: PolylineId("route_$polylineId"),
               points: points,
               color: Colors.orange,
               width: 4,
             ));
-            polyline_id++;
+            polylineId++;
           }
         }
 
         // 3. Apply updates
         if (loadedPolylines.isNotEmpty) {
           setState(() {
-            print("polylines added"+loadedPolylines.first.points.first.toString());
+            print("polylines added${loadedPolylines.first.points.first}");
             _polylines = loadedPolylines;
             _initialLocation = loadedPolylines.first.points.first;
             _markers = loadedMarkers;
@@ -144,7 +143,7 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
     final currentLatLng = LatLng(position.latitude, position.longitude);
     _controller?.animateCamera(CameraUpdate.newLatLng(currentLatLng));
 
-    _timer = Timer.periodic(Duration(seconds: 1), (_) {
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       setState(() {
         _elapsedSeconds++;
       });
@@ -152,7 +151,7 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
     setState(() {});
 
     _positionStream = Geolocator.getPositionStream().listen((position) {
-      print("position"+position.toString());
+      print("position$position");
       final latLng = LatLng(position.latitude, position.longitude);
       _controller?.animateCamera(CameraUpdate.newLatLng(latLng));
       _trackingPoints.add(latLng);
@@ -231,7 +230,7 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
 
     Navigator.of(context).popUntil((route) => route.isFirst);
     // Optionally use a method to change the tab index
-    HomeScreen.setTabIndex(1); // implement this
+   // HomeScreen.setTabIndex(1); // implement this
 
   }
   /// Formats the given number of seconds into a string representation of time (hh:mm:ss).
@@ -258,7 +257,7 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("マップビュー")),
+      appBar: AppBar(title: const Text("マップビュー")),
       body: Stack(
         children: [
           if (_kmlLoaded)
@@ -271,7 +270,7 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
               ..._polylines,
               if (_isTracking)
                 Polyline(
-                  polylineId: PolylineId("tracking"),
+                  polylineId: const PolylineId("tracking"),
                   points: _trackingPoints,
                   color: Colors.green,
                   width: 4,
@@ -281,9 +280,9 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
           ),
 
           if (!_kmlLoaded)
-            Center(child: CircularProgressIndicator()),
+            const Center(child: CircularProgressIndicator()),
           Container(
-            margin: EdgeInsets.only(left: 70, right: 70),
+            margin: const EdgeInsets.only(left: 70, right: 70),
             alignment: Alignment.topCenter,
 
 
@@ -295,7 +294,7 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
             child: Center(
               child: Text(
                 _formatTime(_elapsedSeconds),
-                style: TextStyle(
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 20,
                   fontWeight: FontWeight.bold,

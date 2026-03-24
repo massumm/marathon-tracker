@@ -7,7 +7,7 @@ import 'package:http/http.dart' as http;
 class MyPageMapScreen extends StatefulWidget {
   final String filePath;
 
-  const MyPageMapScreen({Key? key, required this.filePath}) : super(key: key);
+  const MyPageMapScreen({super.key, required this.filePath});
 
   @override
   _MyPageMapScreenState createState() => _MyPageMapScreenState();
@@ -63,7 +63,7 @@ class _MyPageMapScreenState extends State<MyPageMapScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("マップビュー")),
+      appBar: AppBar(title: const Text("マップビュー")),
       body: _isloading
           ? GoogleMap(
               initialCameraPosition: CameraPosition(
@@ -78,7 +78,7 @@ class _MyPageMapScreenState extends State<MyPageMapScreen> {
               myLocationButtonEnabled: true,
               zoomControlsEnabled: true,
             )
-          : Center(
+          : const Center(
               child: CircularProgressIndicator(),
             ),
     );
