@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
-import 'admin/dashboard.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'core/theme.dart';
+import 'firebase_options.dart';
+import 'screens/admin/dashboard.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const AdminPanelApp());
 }
 
@@ -10,10 +15,11 @@ class AdminPanelApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
+      theme: AppTheme.theme,
       title: 'Admin Panel',
       debugShowCheckedModeBanner: false,
-      home: AdminDashboard(),
+      home: const AdminDashboard(),
     );
   }
 }

@@ -3,10 +3,12 @@ plugins {
     id "kotlin-android"
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id "dev.flutter.flutter-gradle-plugin"
-
-
+    id "com.google.gms.google-services"
 }
-apply plugin: 'com.google.gms.google-services'
+
+// Redirect build output to Flutter's expected location: <project_root>/build/app/
+layout.buildDirectory.set(file("../../build/app"))
+
 android {
     namespace = "com.example.google_map"
     compileSdk = 36

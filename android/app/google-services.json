@@ -26,6 +26,25 @@
     },
     {
       "client_info": {
+        "mobilesdk_app_id": "1:157462453434:android:6a718aba510cf9464c7683",
+        "android_client_info": {
+          "package_name": "com.example.bloc_pattern"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCTrj-Z_zrOqdrAzfeibKGvHHDiV7cQuRc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:157462453434:android:fb87af59b08a4ec74c7683",
         "android_client_info": {
           "package_name": "com.example.google_map"
