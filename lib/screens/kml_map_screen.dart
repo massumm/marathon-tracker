@@ -6,97 +6,174 @@ import '../controllers/kml_map_controller.dart';
 import '../core/theme.dart';
 import '../models/runner_data.dart';
 
-class KmlMapScreen extends GetView<KmlMapController> {
+class KmlMapScreen extends StatefulWidget {
   const KmlMapScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('マップビュー')),
-      // Single Obx — all observable reads happen here, no nested Obx
-      body: Obx(() => _buildBody()),
-    );
+  State<KmlMapScreen> createState() => _KmlMapScreenState();
+}
+
+class _KmlMapScreenState extends State<KmlMapScreen> {
+  late final KmlMapController _ctrl;
+  bool _panelOpen = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = Get.find<KmlMapController>();
   }
 
-  Widget _buildBody() {
-    if (!controller.kmlLoaded.value) {
+  void _togglePanel() => setState(() => _panelOpen = !_panelOpen);
+  void _closePanel() => setState(() => _panelOpen = false);
+
+  void _handleRunnerTap(RunnerData r) {
+    _closePanel();
+    _ctrl.flyToRunner(r);
+    _ctrl.showRunnerInfo(r);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final runners = _ctrl.activeRunners.toList();
+
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('マップビュー'),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      _panelOpen
+                          ? Icons.close
+                          : Icons.people_alt_outlined,
+                    ),
+                    color: Colors.white,
+                    onPressed: _togglePanel,
+                  ),
+                  if (runners.isNotEmpty && !_panelOpen)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        width: 16,
+                        height: 16,
+                        decoration: const BoxDecoration(
+                            color: Colors.green, shape: BoxShape.circle),
+                        child: Center(
+                          child: Text(
+                            '${runners.length}',
+                            style: const TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        body: _buildBody(runners),
+      );
+    });
+  }
+
+  Widget _buildBody(List<RunnerData> runners) {
+    if (!_ctrl.kmlLoaded.value) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    // Read all observables once in this scope so GetX tracks them correctly
-    final isTracking = controller.isTracking.value;
-    final isSaving = controller.isSaving.value;
-    final elapsedSecs = controller.elapsedSeconds.value;
-    final points = controller.trackingPoints.toList();
-    final currentPos = controller.currentPosition.value;
-    final runners = controller.activeRunners.toList();
-    final runnerMarkersSet = controller.runnerMarkers.values.toSet();
-    final hasRunners = runners.isNotEmpty;
+    final isTracking = _ctrl.isTracking.value;
+    final isSaving = _ctrl.isSaving.value;
+    final elapsedSecs = _ctrl.elapsedSeconds.value;
+    final points = _ctrl.trackingPoints.toList();
+    final runnerMarkersSet = _ctrl.runnerMarkers.values.toSet();
 
     return Stack(children: [
-      // ── Map ─────────────────────────────────────────────────────────────
+      // ── Map ───────────────────────────────────────────────────────────────
       GoogleMap(
         initialCameraPosition:
-            CameraPosition(target: controller.initialLocation, zoom: 17),
+            CameraPosition(target: _ctrl.initialLocation, zoom: 17),
         myLocationEnabled: true,
         myLocationButtonEnabled: true,
         onMapCreated: (c) {
-          controller.mapController = c;
-          c.animateCamera(CameraUpdate.newLatLng(controller.initialLocation));
+          _ctrl.mapController = c;
+          c.animateCamera(CameraUpdate.newLatLng(_ctrl.initialLocation));
         },
         polylines: {
-          ...controller.kmlPolylines,
+          ..._ctrl.kmlPolylines,
           if (isTracking && points.length >= 2)
             Polyline(
               polylineId: const PolylineId('tracking'),
-              points: points, // already a new list from .toList()
+              points: points,
               color: AppTheme.trackingGreen,
               width: 5,
             ),
         },
         markers: {
-          ...controller.kmlMarkers,
+          ..._ctrl.kmlMarkers,
           ...runnerMarkersSet,
         },
       ),
 
-      // ── Live runners panel ───────────────────────────────────────────────
-      if (hasRunners)
+      // ── Stats panel (tracking active) ─────────────────────────────────────
+      if (isTracking)
         Positioned(
           top: 12,
-          left: 12,
-          right: 12,
-          child: _RunnersPanel(
-            runners: runners,
-            onTap: (r) {
-              controller.flyToRunner(r);
-              controller.showRunnerInfo(r);
-            },
+          left: 16,
+          right: 16,
+          child: _StatsPanel(
+            time: _ctrl.formatTime(elapsedSecs),
+            distance: _ctrl.currentDistanceKm,
+            pace: _ctrl.currentPaceKmH,
+          ),
+        )
+      else
+        // ── Timer chip (before tracking starts) ───────────────────────────
+        Positioned(
+          top: 12,
+          left: 0,
+          right: 0,
+          child: Center(
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                _ctrl.formatTime(elapsedSecs),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 2,
+                ),
+              ),
+            ),
           ),
         ),
 
-      // ── Stats or timer chip ──────────────────────────────────────────────
-      if (isTracking)
-        Positioned(
-          top: hasRunners ? 110 : 12,
-          left: 16,
-          right: 16,
-          child: _statsPanel(elapsedSecs),
-        )
-      else
-        _timerChip(elapsedSecs),
-
-      // ── Start / Stop button ──────────────────────────────────────────────
+      // ── Start / Stop button ───────────────────────────────────────────────
       Positioned(
         bottom: 48,
         left: 0,
         right: 0,
         child: Center(
           child: GestureDetector(
-            onTap:
-                isTracking ? controller.stopTracking : controller.startTracking,
+            onTap: isTracking ? _ctrl.stopTracking : _ctrl.startTracking,
             child: Image.asset(
-              isTracking ? 'assets/images/stop.png' : 'assets/images/start.png',
+              isTracking
+                  ? 'assets/images/stop.png'
+                  : 'assets/images/start.png',
               height: 80,
               width: 80,
             ),
@@ -104,7 +181,56 @@ class KmlMapScreen extends GetView<KmlMapController> {
         ),
       ),
 
-      // ── Saving overlay ───────────────────────────────────────────────────
+      // ── Transparent dismiss layer (closes panel on outside tap) ───────────
+      if (_panelOpen)
+        Positioned.fill(
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: _closePanel,
+          ),
+        ),
+
+      // ── Sliding runner panel (from right) — always on top ─────────────────
+      Positioned(
+        top: 0,
+        right: 0,
+        bottom: 0,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 280),
+          curve: Curves.easeInOut,
+          width: _panelOpen ? 240 : 0,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(16),
+              bottomLeft: Radius.circular(16),
+            ),
+            boxShadow: _panelOpen
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.18),
+                      blurRadius: 16,
+                      offset: const Offset(-4, 0),
+                    ),
+                  ]
+                : [],
+          ),
+          child: ClipRRect(
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(16),
+              bottomLeft: Radius.circular(16),
+            ),
+            child: SingleChildScrollView(
+              child: _RunnerPanelContent(
+                runners: runners,
+                onTap: _handleRunnerTap,
+              ),
+            ),
+          ),
+        ),
+      ),
+
+      // ── Saving overlay ────────────────────────────────────────────────────
       if (isSaving)
         Container(
           color: Colors.black45,
@@ -122,171 +248,163 @@ class KmlMapScreen extends GetView<KmlMapController> {
         ),
     ]);
   }
+}
 
-  Widget _statsPanel(int elapsedSecs) {
+// ── Panel content ─────────────────────────────────────────────────────────────
+
+class _RunnerPanelContent extends StatelessWidget {
+  final List<RunnerData> runners;
+  final void Function(RunnerData) onTap;
+  const _RunnerPanelContent({required this.runners, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 16, 14, 6),
+          child: Text(
+            runners.isEmpty
+                ? 'No runners live'
+                : '${runners.length} Runner${runners.length > 1 ? 's' : ''} Live',
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.textSecondary,
+              letterSpacing: 0.3,
+            ),
+          ),
+        ),
+        const Divider(height: 1),
+        if (runners.isEmpty)
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text(
+              'No one is running yet.',
+              style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+            ),
+          )
+        else
+          ...runners
+              .map((r) => _RunnerTile(runner: r, onTap: () => onTap(r))),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+}
+
+class _RunnerTile extends StatelessWidget {
+  final RunnerData runner;
+  final VoidCallback onTap;
+  const _RunnerTile({required this.runner, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final label = runner.displayName.isNotEmpty
+        ? runner.displayName
+        : runner.email.isNotEmpty
+            ? runner.email.split('@').first
+            : 'Runner';
+
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        child: Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: const BoxDecoration(
+                color: Color(0xFF1976D2),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Text(
+                  label[0].toUpperCase(),
+                  style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimary),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    runner.email,
+                    style: const TextStyle(
+                        fontSize: 10, color: AppTheme.textSecondary),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 6),
+            const Icon(Icons.my_location, size: 15, color: Colors.green),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Stats panel ───────────────────────────────────────────────────────────────
+
+class _StatsPanel extends StatelessWidget {
+  final String time;
+  final double distance;
+  final double pace;
+  const _StatsPanel(
+      {required this.time, required this.distance, required this.pace});
+
+  @override
+  Widget build(BuildContext context) {
     return Material(
       elevation: 6,
       borderRadius: BorderRadius.circular(14),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            _statCol(Icons.timer, controller.formatTime(elapsedSecs), '時間'),
+            _col(Icons.timer, time, '時間'),
             _divider(),
-            _statCol(Icons.straighten,
-                '${controller.currentDistanceKm.toStringAsFixed(2)} km', '距離'),
+            _col(Icons.straighten, '${distance.toStringAsFixed(2)} km', '距離'),
             _divider(),
-            _statCol(Icons.speed,
-                '${controller.currentPaceKmH.toStringAsFixed(1)} km/h', 'ペース'),
+            _col(Icons.speed, '${pace.toStringAsFixed(1)} km/h', 'ペース'),
           ],
         ),
       ),
     );
   }
 
-  Widget _timerChip(int elapsedSecs) {
-    return Positioned(
-      top: 12,
-      left: 0,
-      right: 0,
-      child: Center(
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.black54,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(
-            controller.formatTime(elapsedSecs),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 2,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _statCol(IconData icon, String value, String label) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: AppTheme.primary, size: 18),
-        const SizedBox(height: 4),
-        Text(value,
-            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-        Text(label,
-            style:
-                const TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
-      ],
-    );
-  }
+  Widget _col(IconData icon, String value, String label) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: AppTheme.primary, size: 17),
+          const SizedBox(height: 3),
+          Text(value,
+              style:
+                  const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+          Text(label,
+              style: const TextStyle(
+                  fontSize: 10, color: AppTheme.textSecondary)),
+        ],
+      );
 
   Widget _divider() =>
-      Container(height: 36, width: 1, color: const Color(0xFFE5E7EB));
-}
-
-// ── Live runners panel (pure UI, no observables inside) ───────────────────────
-
-class _RunnersPanel extends StatelessWidget {
-  final List<RunnerData> runners;
-  final void Function(RunnerData) onTap;
-  const _RunnersPanel({required this.runners, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(children: [
-            const Icon(Icons.radio_button_on, size: 12, color: Colors.green),
-            const SizedBox(width: 5),
-            Text(
-              '${runners.length} runner${runners.length > 1 ? 's' : ''} live — tap to locate',
-              style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textSecondary),
-            ),
-          ]),
-          const SizedBox(height: 8),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children:
-                  runners.map((r) => _RunnerChip(r: r, onTap: onTap)).toList(),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RunnerChip extends StatelessWidget {
-  final RunnerData r;
-  final void Function(RunnerData) onTap;
-  const _RunnerChip({required this.r, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final label = r.displayName.isNotEmpty
-        ? r.displayName
-        : r.email.isNotEmpty
-            ? r.email.split('@').first
-            : 'Runner';
-
-    return GestureDetector(
-      onTap: () => onTap(r),
-      child: Container(
-        margin: const EdgeInsets.only(right: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1976D2).withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(20),
-          border:
-              Border.all(color: const Color(0xFF1976D2).withValues(alpha: 0.3)),
-        ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          CircleAvatar(
-            radius: 11,
-            backgroundColor: const Color(0xFF1976D2),
-            child: Text(label[0].toUpperCase(),
-                style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white)),
-          ),
-          const SizedBox(width: 6),
-          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(label,
-                style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.textPrimary)),
-            Text(r.email,
-                style: const TextStyle(
-                    fontSize: 10, color: AppTheme.textSecondary)),
-          ]),
-        ]),
-      ),
-    );
-  }
+      Container(height: 32, width: 1, color: const Color(0xFFE5E7EB));
 }

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -43,6 +44,7 @@ class KmlMapController extends GetxController {
   final activeRunners = <RunnerData>[].obs;
   final runnerMarkers = <String, Marker>{}.obs;
   StreamSubscription<List<RunnerData>>? _runnersSub;
+  BitmapDescriptor? _walkingIcon;
 
   late final String kmlFilePath;
 
@@ -54,6 +56,7 @@ class KmlMapController extends GetxController {
     kmlFilePath = Get.arguments as String;
     _loadKml();
     _subscribeToRunners();
+    // _initWalkingIcon();
   }
 
   @override
@@ -63,6 +66,40 @@ class KmlMapController extends GetxController {
     _runnersSub?.cancel();
     if (isLive.value) LiveTrackingService.instance.stopBroadcasting();
     super.onClose();
+  }
+
+  // ── Walking icon ──────────────────────────────────────────────────────────
+
+  Future<void> _initWalkingIcon() async {
+    const double size = 96;
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+
+    // Blue circle background
+    canvas.drawCircle(
+      const Offset(size / 2, size / 2),
+      size / 2,
+      Paint()..color = const Color(0xFF1976D2),
+    );
+
+    // Walking man icon
+    final tp = TextPainter(textDirection: TextDirection.ltr)
+      ..text = TextSpan(
+        text: String.fromCharCode(Icons.directions_walk.codePoint),
+        style: TextStyle(
+          fontSize: 60,
+          fontFamily: Icons.directions_walk.fontFamily,
+          package: Icons.directions_walk.fontPackage,
+          color: Colors.white,
+        ),
+      )
+      ..layout();
+    tp.paint(canvas, Offset((size - tp.width) / 2, (size - tp.height) / 2));
+
+    final img =
+        await recorder.endRecording().toImage(size.toInt(), size.toInt());
+    final bytes = await img.toByteData(format: ui.ImageByteFormat.png);
+    _walkingIcon = BitmapDescriptor.bytes(bytes!.buffer.asUint8List());
   }
 
   // ── KML loading ───────────────────────────────────────────────────────────
@@ -97,7 +134,7 @@ class KmlMapController extends GetxController {
     final pos = await LocationService.instance.getCurrentPosition();
     if (pos != null) {
       mapController?.animateCamera(
-          CameraUpdate.newLatLng(LatLng(pos.latitude, pos.longitude)));
+          CameraUpdate.newLatLngZoom(LatLng(pos.latitude, pos.longitude), 17));
     }
 
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -180,8 +217,9 @@ class KmlMapController extends GetxController {
           updated[r.uid] = Marker(
             markerId: MarkerId(r.uid),
             position: LatLng(r.lat, r.lng),
-            icon: BitmapDescriptor.defaultMarkerWithHue(
-                BitmapDescriptor.hueAzure),
+            icon: _walkingIcon ??
+                BitmapDescriptor.defaultMarkerWithHue(
+                    BitmapDescriptor.hueAzure),
             infoWindow: InfoWindow(title: label, snippet: r.email),
             onTap: () => showRunnerInfo(r),
           );
