@@ -19,7 +19,12 @@ class LocationService {
     return await Geolocator.getCurrentPosition();
   }
 
-  Stream<Position> getPositionStream() => Geolocator.getPositionStream();
+  Stream<Position> getPositionStream() => Geolocator.getPositionStream(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          distanceFilter: 5, // emit every 5 metres of movement
+        ),
+      );
 
   double totalDistanceKm(List<LatLng> points) {
     double total = 0;

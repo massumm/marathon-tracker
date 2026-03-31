@@ -1,12 +1,18 @@
-import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+
+import 'app/bindings/home_binding.dart';
+import 'app/bindings/initial_binding.dart';
+import 'app/bindings/kml_map_binding.dart';
+import 'app/routes/app_routes.dart';
 import 'core/theme.dart';
 import 'firebase_options.dart';
+import 'screens/home_screen.dart';
+import 'screens/kml_map_screen.dart';
 import 'screens/login_screen.dart';
-import 'screens/map_screen.dart';
-import 'screens/my_page_screen.dart';
+import 'screens/my_page_map_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,71 +26,32 @@ class MapApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return GetMaterialApp(
+      title: 'Marathon Map',
       theme: AppTheme.theme,
       debugShowCheckedModeBanner: false,
-      home: StreamBuilder<User?>(
-        stream: FirebaseAuth.instance.authStateChanges(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
-          if (snapshot.hasData) return const HomeScreen();
-          return const LoginScreen();
-        },
-      ),
-    );
-  }
-}
-
-class HomeScreen extends StatefulWidget {
-  // Static callback used by KmlMapScreen to switch to My Page after saving.
-  static late void Function(int) setTabIndex;
-
-  const HomeScreen({super.key});
-
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  int _selectedIndex = 0;
-
-  final List<Widget> _screens = const [
-    MapScreen(),
-    MyPageScreen(),
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    HomeScreen.setTabIndex = (int index) {
-      setState(() => _selectedIndex = index);
-    };
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: _screens[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) => setState(() => _selectedIndex = index),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.map_outlined),
-            activeIcon: Icon(Icons.map),
-            label: '地図表示',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'マイページ',
-          ),
-        ],
-      ),
+      initialBinding: InitialBinding(),
+      initialRoute: AppRoutes.login,
+      getPages: [
+        GetPage(
+          name: AppRoutes.login,
+          page: () => const LoginScreen(),
+        ),
+        GetPage(
+          name: AppRoutes.home,
+          page: () => const HomeScreen(),
+          binding: HomeBinding(),
+        ),
+        GetPage(
+          name: AppRoutes.kmlMap,
+          page: () => const KmlMapScreen(),
+          binding: KmlMapBinding(),
+        ),
+        GetPage(
+          name: AppRoutes.myPageMap,
+          page: () => const MyPageMapScreen(),
+        ),
+      ],
     );
   }
 }
