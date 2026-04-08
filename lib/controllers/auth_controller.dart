@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../app/routes/app_routes.dart';
+import '../services/friends_service.dart';
 
 class AuthController extends GetxController {
   final _auth = FirebaseAuth.instance;
@@ -16,6 +17,7 @@ class AuthController extends GetxController {
     super.onReady();
     _auth.authStateChanges().listen((user) {
       if (user != null) {
+        FriendsService.instance.registerProfile();
         Get.offAllNamed(AppRoutes.home);
       } else {
         Get.offAllNamed(AppRoutes.login);

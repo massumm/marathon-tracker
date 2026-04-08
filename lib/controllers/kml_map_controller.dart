@@ -12,6 +12,7 @@ import '../core/config.dart';
 import '../core/theme.dart';
 import '../models/runner_data.dart';
 import '../services/firebase_service.dart';
+import '../services/friends_service.dart';
 import '../services/kml_service.dart';
 import '../services/live_tracking_service.dart';
 import '../services/location_service.dart';
@@ -55,8 +56,13 @@ class KmlMapController extends GetxController {
     super.onInit();
     kmlFilePath = Get.arguments as String;
     _loadKml();
-    _subscribeToRunners();
-    // _initWalkingIcon();
+    _initWalkingIcon();
+    _loadFriendsAndSubscribe();
+  }
+
+  Future<void> _loadFriendsAndSubscribe() async {
+    final friendUids = await FriendsService.instance.getFriendUids();
+    _subscribeToRunners(friendUids);
   }
 
   @override
@@ -202,17 +208,21 @@ class KmlMapController extends GetxController {
     await FirebaseService.instance.saveTrackedRoute(fileName, jsonEncode(data));
     isSaving.value = false;
 
-    Get.find<HomeController>().changeTab(1);
+    Get.find<HomeController>().changeTab(2); // MyPage is index 2 (0=Events,1=Friends,2=MyPage)
     Get.offAllNamed(AppRoutes.home);
   }
 
   // ── Live runners ──────────────────────────────────────────────────────────
 
-  void _subscribeToRunners() {
+  void _subscribeToRunners(List<String> friendUids) {
+    final friendSet = friendUids.toSet();
     _runnersSub = LiveTrackingService.instance.watchRunners().listen(
       (runners) {
+        // Only show friends' live locations
+        final filtered =
+            friendSet.isEmpty ? <RunnerData>[] : runners.where((r) => friendSet.contains(r.uid)).toList();
         final updated = <String, Marker>{};
-        for (final r in runners) {
+        for (final r in filtered) {
           final label = _runnerLabel(r);
           updated[r.uid] = Marker(
             markerId: MarkerId(r.uid),
@@ -225,7 +235,7 @@ class KmlMapController extends GetxController {
           );
         }
         runnerMarkers.value = updated;
-        activeRunners.value = List.of(runners);
+        activeRunners.value = filtered;
       },
       onError: (e) {
         final msg = '$e'.contains('Permission denied')

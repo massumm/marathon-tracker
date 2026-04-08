@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../controllers/friends_controller.dart';
 import '../controllers/home_controller.dart';
+import 'friends_screen.dart';
 import 'map_screen.dart';
 import 'my_page_screen.dart';
 
@@ -10,30 +12,48 @@ class HomeScreen extends GetView<HomeController> {
 
   @override
   Widget build(BuildContext context) {
-    return Obx(() => Scaffold(
-          body: IndexedStack(
-            index: controller.tabIndex.value,
-            children: const [
-              MapScreen(),
-              MyPageScreen(),
-            ],
-          ),
-          bottomNavigationBar: BottomNavigationBar(
-            currentIndex: controller.tabIndex.value,
-            onTap: controller.changeTab,
-            items: const [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.map_outlined),
-                activeIcon: Icon(Icons.map),
-                label: '地図表示',
+    return Obx(() {
+      final pendingCount = Get.find<FriendsController>().requests.length;
+
+      return Scaffold(
+        body: IndexedStack(
+          index: controller.tabIndex.value,
+          children: const [
+            MapScreen(),
+            FriendsScreen(),
+            MyPageScreen(),
+          ],
+        ),
+        bottomNavigationBar: BottomNavigationBar(
+          currentIndex: controller.tabIndex.value,
+          onTap: controller.changeTab,
+          items: [
+            BottomNavigationBarItem(
+              icon: const Icon(Icons.map_outlined),
+              activeIcon: const Icon(Icons.map),
+              label: 'nav_map'.tr,
+            ),
+            BottomNavigationBarItem(
+              icon: Badge(
+                isLabelVisible: pendingCount > 0,
+                label: Text('$pendingCount'),
+                child: const Icon(Icons.people_outline),
               ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.person_outline),
-                activeIcon: Icon(Icons.person),
-                label: 'マイページ',
+              activeIcon: Badge(
+                isLabelVisible: pendingCount > 0,
+                label: Text('$pendingCount'),
+                child: const Icon(Icons.people),
               ),
-            ],
-          ),
-        ));
+              label: 'nav_friends'.tr,
+            ),
+            BottomNavigationBarItem(
+              icon: const Icon(Icons.person_outline),
+              activeIcon: const Icon(Icons.person),
+              label: 'nav_my_page'.tr,
+            ),
+          ],
+        ),
+      );
+    });
   }
 }

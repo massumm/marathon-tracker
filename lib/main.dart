@@ -9,6 +9,7 @@ import 'app/bindings/kml_map_binding.dart';
 import 'app/routes/app_routes.dart';
 import 'core/theme.dart';
 import 'firebase_options.dart';
+import 'l10n/strings.dart';
 import 'screens/home_screen.dart';
 import 'screens/kml_map_screen.dart';
 import 'screens/login_screen.dart';
@@ -30,6 +31,9 @@ class MapApp extends StatelessWidget {
       title: 'Marathon Map',
       theme: AppTheme.theme,
       debugShowCheckedModeBanner: false,
+      translations: AppStrings(),
+      locale: const Locale('ja', 'JP'),
+      fallbackLocale: const Locale('en', 'US'),
       initialBinding: InitialBinding(),
       initialRoute: AppRoutes.login,
       getPages: [

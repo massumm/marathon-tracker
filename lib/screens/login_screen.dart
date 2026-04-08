@@ -73,7 +73,9 @@ class _LoginBodyState extends State<_LoginBody> {
       await _auth.signInWithGoogle();
     } on FirebaseAuthException catch (e) {
       _showError(_friendlyError(e.code));
-    } catch (_) {}
+    } catch (e) {
+      _showError(e.toString());
+    }
   }
 
   String _friendlyError(String code) => switch (code) {
@@ -329,7 +331,7 @@ class _LoginBodyState extends State<_LoginBody> {
         const Expanded(child: Divider(color: Color(0xFFDDE1E7))),
       ]);
 
-  Widget _buildGoogleButton() => SizedBox(
+  Widget _buildGoogleButton() => Obx(() => SizedBox(
         height: 50,
         child: OutlinedButton(
           onPressed: _auth.isLoading.value ? null : _signInWithGoogle,
@@ -342,14 +344,17 @@ class _LoginBodyState extends State<_LoginBody> {
           child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
             _GoogleG(),
             const SizedBox(width: 10),
-            const Text('Continue with Google',
-                style: TextStyle(
+            Text(
+                _mode == _AuthMode.signIn
+                    ? 'Sign in with Google'
+                    : 'Sign up with Google',
+                style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: AppTheme.textPrimary)),
           ]),
         ),
-      );
+      ));
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

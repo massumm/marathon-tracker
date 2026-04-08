@@ -14,17 +14,27 @@ class MyPageScreen extends GetView<MyPageController> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('マイページ'),
+        title: Text('my_page_title'.tr),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: controller.fetchRoutes,
-            tooltip: 'Refresh',
+            tooltip: 'refresh'.tr,
+          ),
+          IconButton(
+            icon: const Icon(Icons.language),
+            tooltip: 'language'.tr,
+            onPressed: () {
+              final isJa = Get.locale?.languageCode == 'ja';
+              Get.updateLocale(
+                isJa ? const Locale('en', 'US') : const Locale('ja', 'JP'),
+              );
+            },
           ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: _confirmSignOut,
-            tooltip: 'Sign out',
+            tooltip: 'sign_out'.tr,
           ),
         ],
       ),
@@ -100,18 +110,18 @@ class MyPageScreen extends GetView<MyPageController> {
 
   void _confirmSignOut() {
     Get.dialog(AlertDialog(
-      title: const Text('Sign out'),
-      content: const Text('Are you sure you want to sign out?'),
+      title: Text('sign_out'.tr),
+      content: Text('sign_out_confirm'.tr),
       actions: [
         TextButton(
-            onPressed: Get.back, child: const Text('Cancel')),
+            onPressed: Get.back, child: Text('cancel'.tr)),
         TextButton(
           onPressed: () {
             Get.back();
             controller.signOut();
           },
           style: TextButton.styleFrom(foregroundColor: Colors.red),
-          child: const Text('Sign out'),
+          child: Text('sign_out'.tr),
         ),
       ],
     ));
