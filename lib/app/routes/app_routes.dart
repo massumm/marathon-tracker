@@ -4,4 +4,6 @@ abstract class AppRoutes {
   static const home = '/home';
   static const kmlMap = '/kml-map';
   static const myPageMap = '/my-page-map';
+  static const leaderboard = '/leaderboard';
+  static const userProfile = '/user-profile';
 }

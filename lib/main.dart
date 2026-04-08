@@ -12,8 +12,10 @@ import 'firebase_options.dart';
 import 'l10n/strings.dart';
 import 'screens/home_screen.dart';
 import 'screens/kml_map_screen.dart';
+import 'screens/leaderboard_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/my_page_map_screen.dart';
+import 'screens/user_profile_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -54,6 +56,14 @@ class MapApp extends StatelessWidget {
         GetPage(
           name: AppRoutes.myPageMap,
           page: () => const MyPageMapScreen(),
+        ),
+        GetPage(
+          name: AppRoutes.leaderboard,
+          page: () => const LeaderboardScreen(),
+        ),
+        GetPage(
+          name: AppRoutes.userProfile,
+          page: () => const UserProfileScreen(),
         ),
       ],
     );

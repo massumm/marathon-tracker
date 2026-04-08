@@ -14,6 +14,7 @@ import '../models/runner_data.dart';
 import '../services/firebase_service.dart';
 import '../services/friends_service.dart';
 import '../services/kml_service.dart';
+import '../services/user_stats_service.dart';
 import '../services/live_tracking_service.dart';
 import '../services/location_service.dart';
 import '../widgets/runner_info_sheet.dart';
@@ -206,6 +207,7 @@ class KmlMapController extends GetxController {
     };
 
     await FirebaseService.instance.saveTrackedRoute(fileName, jsonEncode(data));
+    await UserStatsService.instance.addRunStats(totalDistance, elapsedSeconds.value);
     isSaving.value = false;
 
     Get.find<HomeController>().changeTab(2); // MyPage is index 2 (0=Events,1=Friends,2=MyPage)

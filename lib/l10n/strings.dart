@@ -60,6 +60,22 @@ class AppStrings extends Translations {
           'map_view_title': 'Map View',
           'saving': 'Saving...',
 
+          // Leaderboard / Profile
+          'leaderboard': 'Leaderboard',
+          'profile': 'Profile',
+          'no_runners_yet': 'No runners yet',
+          'runs': 'runs',
+          'total_distance': 'Total Distance',
+          'total_runs': 'Total Runs',
+          'total_time': 'Total Time',
+          'avg_pace': 'Avg Pace',
+          'add_friend': 'Add Friend',
+          'explore': 'EXPLORE',
+          'edit_name': 'Edit Name',
+          'your_name': 'Your name',
+          'chat': 'Chat',
+          'coming_soon': 'Coming soon!',
+
           // Common
           'runner': 'Runner',
           'refresh': 'Refresh',
@@ -124,6 +140,22 @@ class AppStrings extends Translations {
           // Map view
           'map_view_title': 'マップビュー',
           'saving': '保存中...',
+
+          // Leaderboard / Profile
+          'leaderboard': 'ランキング',
+          'profile': 'プロフィール',
+          'no_runners_yet': 'まだランナーがいません',
+          'runs': '回',
+          'total_distance': '合計距離',
+          'total_runs': '走行回数',
+          'total_time': '合計時間',
+          'avg_pace': '平均ペース',
+          'add_friend': '友達追加',
+          'explore': 'さがす',
+          'edit_name': '名前を編集',
+          'your_name': 'お名前',
+          'chat': 'チャット',
+          'coming_soon': '近日公開！',
 
           // Common
           'runner': 'ランナー',
