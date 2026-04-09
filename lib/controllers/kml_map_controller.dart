@@ -11,6 +11,8 @@ import '../app/routes/app_routes.dart';
 import '../core/config.dart';
 import '../core/theme.dart';
 import '../models/runner_data.dart';
+import 'package:geolocator/geolocator.dart';
+
 import '../services/firebase_service.dart';
 import '../services/friends_service.dart';
 import '../services/kml_service.dart';
@@ -50,6 +52,7 @@ class KmlMapController extends GetxController {
 
   late final String kmlFilePath;
   late final String? kmlDirectUrl;
+  late final String routeLabel;
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -60,10 +63,12 @@ class KmlMapController extends GetxController {
     if (args is Map) {
       kmlDirectUrl = args['kmlUrl'] as String? ?? '';
       kmlFilePath = args['storagePath'] as String? ?? '';
+      routeLabel = args['label'] as String? ?? '';
     } else {
       // Legacy: single string storagePath
       kmlFilePath = args as String;
       kmlDirectUrl = null;
+      routeLabel = '';
     }
     _loadKml();
     _initWalkingIcon();
@@ -138,6 +143,24 @@ class KmlMapController extends GetxController {
     } catch (e) {
       debugPrint('KML load error: $e');
     }
+  }
+
+  // ── Proximity check ───────────────────────────────────────────────────────
+
+  static const double proximityThresholdKm = 0.5; // 500 m
+
+  /// Returns distance in km from current position to the route start.
+  /// Returns -1 if location is unavailable (allow start in that case).
+  Future<double> distanceToStartKm() async {
+    final pos = await LocationService.instance.getCurrentPosition();
+    if (pos == null) return -1;
+    final metres = Geolocator.distanceBetween(
+      pos.latitude,
+      pos.longitude,
+      initialLocation.latitude,
+      initialLocation.longitude,
+    );
+    return metres / 1000;
   }
 
   // ── My tracking ───────────────────────────────────────────────────────────

@@ -9,13 +9,15 @@ class CommentService {
 
   final _db = FirebaseDatabase.instance;
 
-  /// Converts a storage path to a safe RTDB key.
-  String eventKey(String storagePath) =>
-      storagePath.replaceAll(RegExp(r'[.#\$\[\]/]'), '-');
+  /// Converts a storage path / event id to a safe RTDB key.
+  String eventKey(String path) =>
+      path.replaceAll(RegExp(r'[.#\$\[\]/]'), '-');
 
-  Stream<List<CommentModel>> watchComments(String storagePath) {
+  // ── Watching ──────────────────────────────────────────────────────────────
+
+  Stream<List<CommentModel>> watchComments(String eventId) {
     return _db
-        .ref('event_comments/${eventKey(storagePath)}')
+        .ref('event_comments/${eventKey(eventId)}')
         .orderByChild('timestamp')
         .onValue
         .map((event) {
@@ -31,14 +33,16 @@ class CommentService {
     });
   }
 
-  Stream<int> watchCommentCount(String storagePath) =>
-      watchComments(storagePath).map((list) => list.length);
+  Stream<int> watchCommentCount(String eventId) =>
+      watchComments(eventId).map((list) => list.length);
 
-  Future<void> addComment(String storagePath, String text) async {
+  // ── Comments ──────────────────────────────────────────────────────────────
+
+  Future<void> addComment(String eventId, String text) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null || text.trim().isEmpty) return;
     final ref =
-        _db.ref('event_comments/${eventKey(storagePath)}').push();
+        _db.ref('event_comments/${eventKey(eventId)}').push();
     await ref.set({
       'uid': user.uid,
       'email': user.email ?? '',
@@ -51,10 +55,52 @@ class CommentService {
     });
   }
 
-  Future<void> deleteComment(
-      String storagePath, String commentId) async {
+  Future<void> deleteComment(String eventId, String commentId) async {
     await _db
-        .ref('event_comments/${eventKey(storagePath)}/$commentId')
+        .ref('event_comments/${eventKey(eventId)}/$commentId')
+        .remove();
+  }
+
+  // ── Likes ─────────────────────────────────────────────────────────────────
+
+  Future<void> toggleLike(String eventId, String commentId) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final ref = _db.ref(
+        'event_comments/${eventKey(eventId)}/$commentId/likes/${user.uid}');
+    final snap = await ref.get();
+    if (snap.exists) {
+      await ref.remove();
+    } else {
+      await ref.set(true);
+    }
+  }
+
+  // ── Replies ───────────────────────────────────────────────────────────────
+
+  Future<void> addReply(
+      String eventId, String commentId, String text) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || text.trim().isEmpty) return;
+    final ref = _db
+        .ref('event_comments/${eventKey(eventId)}/$commentId/replies')
+        .push();
+    await ref.set({
+      'uid': user.uid,
+      'displayName': user.displayName ??
+          user.email?.split('@').first ??
+          'Runner',
+      'photoUrl': user.photoURL ?? '',
+      'text': text.trim(),
+      'timestamp': DateTime.now().millisecondsSinceEpoch,
+    });
+  }
+
+  Future<void> deleteReply(
+      String eventId, String commentId, String replyId) async {
+    await _db
+        .ref(
+            'event_comments/${eventKey(eventId)}/$commentId/replies/$replyId')
         .remove();
   }
 }

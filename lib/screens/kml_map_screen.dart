@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -33,14 +35,67 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
     _ctrl.showRunnerInfo(r);
   }
 
+  Future<void> _onStartTap() async {
+    final distKm = await _ctrl.distanceToStartKm();
+    // -1 means location unavailable — allow start
+    if (distKm >= 0 && distKm > KmlMapController.proximityThresholdKm) {
+      if (!mounted) return;
+      _showTooFarDialog(distKm);
+    } else {
+      _ctrl.startTracking();
+    }
+  }
+
+  void _showTooFarDialog(double distKm) {
+    final distStr = distKm.toStringAsFixed(2);
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        icon: const Icon(Icons.location_off_outlined,
+            color: Colors.orange, size: 40),
+        title: Text('too_far_title'.tr,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+        content: Text(
+          'too_far_body'.tr.replaceAll('@dist', distStr),
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 14),
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('cancel'.tr),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _ctrl.startTracking();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('start_anyway'.tr),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Obx(() {
       final runners = _ctrl.activeRunners.toList();
 
+      // AppBar title: category label if available, else localised fallback
+      final title =
+          _ctrl.routeLabel.isNotEmpty ? _ctrl.routeLabel : 'map_view_title'.tr;
+
       return Scaffold(
         appBar: AppBar(
-          title: const Text('マップビュー'),
+          title: Text(title),
           actions: [
             Padding(
               padding: const EdgeInsets.only(right: 4),
@@ -49,9 +104,7 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
                 children: [
                   IconButton(
                     icon: Icon(
-                      _panelOpen
-                          ? Icons.close
-                          : Icons.people_alt_outlined,
+                      _panelOpen ? Icons.close : Icons.people_alt_outlined,
                     ),
                     color: Colors.white,
                     onPressed: _togglePanel,
@@ -143,13 +196,7 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
           left: 0,
           right: 0,
           child: Center(
-            child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.black54,
-                borderRadius: BorderRadius.circular(20),
-              ),
+            child: _GlassChip(
               child: Text(
                 _ctrl.formatTime(elapsedSecs),
                 style: const TextStyle(
@@ -170,11 +217,9 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
         right: 0,
         child: Center(
           child: GestureDetector(
-            onTap: isTracking ? _ctrl.stopTracking : _ctrl.startTracking,
+            onTap: isTracking ? _ctrl.stopTracking : _onStartTap,
             child: Image.asset(
-              isTracking
-                  ? 'assets/images/stop.png'
-                  : 'assets/images/start.png',
+              isTracking ? 'assets/images/stop.png' : 'assets/images/start.png',
               height: 80,
               width: 80,
             ),
@@ -182,7 +227,7 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
         ),
       ),
 
-      // ── Transparent dismiss layer (closes panel on outside tap) ───────────
+      // ── Transparent dismiss layer ─────────────────────────────────────────
       if (_panelOpen)
         Positioned.fill(
           child: GestureDetector(
@@ -191,7 +236,7 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
           ),
         ),
 
-      // ── Sliding runner panel (from right) — always on top ─────────────────
+      // ── Sliding runner panel ──────────────────────────────────────────────
       Positioned(
         top: 0,
         right: 0,
@@ -235,19 +280,44 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
       if (isSaving)
         Container(
           color: Colors.black45,
-          child: const Center(
+          child: Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                CircularProgressIndicator(color: Colors.white),
-                SizedBox(height: 14),
-                Text('保存中...',
-                    style: TextStyle(color: Colors.white, fontSize: 16)),
+                const CircularProgressIndicator(color: Colors.white),
+                const SizedBox(height: 14),
+                Text('saving'.tr,
+                    style: const TextStyle(color: Colors.white, fontSize: 16)),
               ],
             ),
           ),
         ),
     ]);
+  }
+}
+
+// ── Frosted glass chip ────────────────────────────────────────────────────────
+
+class _GlassChip extends StatelessWidget {
+  final Widget child;
+  const _GlassChip({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.35),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: child,
+        ),
+      ),
+    );
   }
 }
 
@@ -267,8 +337,8 @@ class _RunnerPanelContent extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(14, 16, 14, 6),
           child: Text(
             runners.isEmpty
-                ? 'No runners live'
-                : '${runners.length} Runner${runners.length > 1 ? 's' : ''} Live',
+                ? 'no_runners_live'.tr
+                : '${runners.length} ${'runners_live'.tr}',
             style: const TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
@@ -279,16 +349,16 @@ class _RunnerPanelContent extends StatelessWidget {
         ),
         const Divider(height: 1),
         if (runners.isEmpty)
-          const Padding(
-            padding: EdgeInsets.all(16),
+          Padding(
+            padding: const EdgeInsets.all(16),
             child: Text(
-              'No one is running yet.',
-              style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+              'no_runners_running'.tr,
+              style:
+                  const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
             ),
           )
         else
-          ...runners
-              .map((r) => _RunnerTile(runner: r, onTap: () => onTap(r))),
+          ...runners.map((r) => _RunnerTile(runner: r, onTap: () => onTap(r))),
         const SizedBox(height: 8),
       ],
     );
@@ -306,7 +376,7 @@ class _RunnerTile extends StatelessWidget {
         ? runner.displayName
         : runner.email.isNotEmpty
             ? runner.email.split('@').first
-            : 'Runner';
+            : 'runner'.tr;
 
     return InkWell(
       onTap: onTap,
@@ -350,31 +420,40 @@ class _RunnerTile extends StatelessWidget {
   }
 }
 
-// ── Stats panel ───────────────────────────────────────────────────────────────
+// ── Stats panel (transparent glass card) ─────────────────────────────────────
 
 class _StatsPanel extends StatelessWidget {
   final String time;
   final double distance;
   final double pace;
+
   const _StatsPanel(
       {required this.time, required this.distance, required this.pace});
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      elevation: 6,
+    return ClipRRect(
       borderRadius: BorderRadius.circular(14),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _col(Icons.timer, time, '時間'),
-            _divider(),
-            _col(Icons.straighten, '${distance.toStringAsFixed(2)} km', '距離'),
-            _divider(),
-            _col(Icons.speed, '${pace.toStringAsFixed(1)} km/h', 'ペース'),
-          ],
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.45),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _col(Icons.timer, time, 'time_label'.tr),
+              _divider(),
+              _col(Icons.straighten, '${distance.toStringAsFixed(2)} km',
+                  'distance_label'.tr),
+              _divider(),
+              _col(Icons.speed, '${pace.toStringAsFixed(1)} km/h',
+                  'pace_label'.tr),
+            ],
+          ),
         ),
       ),
     );
@@ -383,17 +462,18 @@ class _StatsPanel extends StatelessWidget {
   Widget _col(IconData icon, String value, String label) => Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: AppTheme.primary, size: 17),
+          Icon(icon, color: Colors.white70, size: 17),
           const SizedBox(height: 3),
           Text(value,
-              style:
-                  const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-          Text(label,
               style: const TextStyle(
-                  fontSize: 10, color: AppTheme.textSecondary)),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                  color: Colors.white)),
+          Text(label,
+              style: const TextStyle(fontSize: 10, color: Colors.white60)),
         ],
       );
 
-  Widget _divider() =>
-      Container(height: 32, width: 1, color: const Color(0xFFE5E7EB));
+  Widget _divider() => Container(
+      height: 32, width: 1, color: Colors.white.withValues(alpha: 0.25));
 }

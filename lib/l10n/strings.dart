@@ -59,6 +59,12 @@ class AppStrings extends Translations {
           // Map view
           'map_view_title': 'Map View',
           'saving': 'Saving...',
+          'time_label': 'Time',
+          'distance_label': 'Distance',
+          'pace_label': 'Pace',
+          'runners_live': 'runners live',
+          'no_runners_live': 'No runners live',
+          'no_runners_running': 'No one is running yet.',
 
           // Leaderboard / Profile
           'search_hint': 'Search by email or username',
@@ -80,6 +86,11 @@ class AppStrings extends Translations {
           'your_name': 'Your name',
           'chat': 'Chat',
           'coming_soon': 'Coming soon!',
+
+          // Proximity check
+          'too_far_title': 'Too Far from Start',
+          'too_far_body': 'You are @dist km from the event start point. Please move closer before starting.',
+          'start_anyway': 'Start Anyway',
 
           // Common
           'runner': 'Runner',
@@ -145,6 +156,12 @@ class AppStrings extends Translations {
           // Map view
           'map_view_title': 'マップビュー',
           'saving': '保存中...',
+          'time_label': '時間',
+          'distance_label': '距離',
+          'pace_label': 'ペース',
+          'runners_live': '人 ライブ中',
+          'no_runners_live': 'ライブランナーなし',
+          'no_runners_running': 'まだ走っている人はいません',
 
           // Leaderboard / Profile
           'search_hint': 'メールまたはユーザー名で検索',
@@ -166,6 +183,11 @@ class AppStrings extends Translations {
           'your_name': 'お名前',
           'chat': 'チャット',
           'coming_soon': '近日公開！',
+
+          // Proximity check
+          'too_far_title': 'スタート地点から離れすぎです',
+          'too_far_body': 'イベントのスタート地点から @dist km 離れています。近づいてから開始してください。',
+          'start_anyway': 'このまま開始',
 
           // Common
           'runner': 'ランナー',
