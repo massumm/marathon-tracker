@@ -55,6 +55,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '157462453434',
     projectId: 'medishop-40923',
     authDomain: 'medishop-40923.firebaseapp.com',
+    databaseURL: 'https://medishop-40923-default-rtdb.firebaseio.com',
     storageBucket: 'medishop-40923.firebasestorage.app',
   );
 
@@ -63,6 +64,7 @@ class DefaultFirebaseOptions {
     appId: '1:157462453434:android:fb87af59b08a4ec74c7683',
     messagingSenderId: '157462453434',
     projectId: 'medishop-40923',
+    databaseURL: 'https://medishop-40923-default-rtdb.firebaseio.com',
     storageBucket: 'medishop-40923.firebasestorage.app',
   );
 }

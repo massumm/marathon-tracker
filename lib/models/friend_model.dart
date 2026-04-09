@@ -2,6 +2,7 @@ class FriendModel {
   final String uid;
   final String email;
   final String displayName;
+  final String photoUrl;
   final int since;
   bool isRunning;
 
@@ -9,6 +10,7 @@ class FriendModel {
     required this.uid,
     required this.email,
     required this.displayName,
+    required this.photoUrl,
     required this.since,
     this.isRunning = false,
   });
@@ -18,6 +20,7 @@ class FriendModel {
       uid: uid,
       email: map['email'] as String? ?? '',
       displayName: map['displayName'] as String? ?? '',
+      photoUrl: map['photoUrl'] as String? ?? '',
       since: (map['since'] as num?)?.toInt() ?? 0,
     );
   }
@@ -25,6 +28,7 @@ class FriendModel {
   Map<String, dynamic> toMap() => {
         'email': email,
         'displayName': displayName,
+        'photoUrl': photoUrl,
         'since': since,
       };
 
@@ -36,12 +40,14 @@ class FriendRequestModel {
   final String fromUid;
   final String email;
   final String displayName;
+  final String photoUrl;
   final int sentAt;
 
   const FriendRequestModel({
     required this.fromUid,
     required this.email,
     required this.displayName,
+    required this.photoUrl,
     required this.sentAt,
   });
 
@@ -50,6 +56,7 @@ class FriendRequestModel {
       fromUid: fromUid,
       email: map['email'] as String? ?? '',
       displayName: map['displayName'] as String? ?? '',
+      photoUrl: map['photoUrl'] as String? ?? '',
       sentAt: (map['sentAt'] as num?)?.toInt() ?? 0,
     );
   }

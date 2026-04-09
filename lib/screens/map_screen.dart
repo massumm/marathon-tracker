@@ -1,13 +1,10 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../app/routes/app_routes.dart';
 import '../controllers/map_controller.dart';
 import '../core/theme.dart';
-import '../models/comment_model.dart';
-import '../models/kml_route.dart';
-import '../services/comment_service.dart';
+import '../models/event_model.dart';
 
 class MapScreen extends GetView<MapController> {
   const MapScreen({super.key});
@@ -21,7 +18,7 @@ class MapScreen extends GetView<MapController> {
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'refresh'.tr,
-            onPressed: controller.fetchRoutes,
+            onPressed: controller.fetchEvents,
           ),
         ],
       ),
@@ -38,18 +35,17 @@ class MapScreen extends GetView<MapController> {
                     size: 48, color: Colors.redAccent),
                 const SizedBox(height: 12),
                 Text('error_loading'.tr,
-                    style:
-                        const TextStyle(color: AppTheme.textSecondary)),
+                    style: const TextStyle(color: AppTheme.textSecondary)),
                 const SizedBox(height: 12),
                 ElevatedButton(
-                  onPressed: controller.fetchRoutes,
+                  onPressed: controller.fetchEvents,
                   child: Text('refresh'.tr),
                 ),
               ],
             ),
           );
         }
-        if (controller.routes.isEmpty) {
+        if (controller.events.isEmpty) {
           return Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -65,12 +61,12 @@ class MapScreen extends GetView<MapController> {
           );
         }
         return RefreshIndicator(
-          onRefresh: controller.fetchRoutes,
+          onRefresh: controller.fetchEvents,
           child: ListView.builder(
             padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: controller.routes.length,
+            itemCount: controller.events.length,
             itemBuilder: (_, i) =>
-                _EventCard(route: controller.routes[i]),
+                _EventCard(event: controller.events[i]),
           ),
         );
       }),
@@ -81,448 +77,281 @@ class MapScreen extends GetView<MapController> {
 // ── Event card ────────────────────────────────────────────────────────────────
 
 class _EventCard extends StatelessWidget {
-  final KmlRoute route;
-  const _EventCard({required this.route});
+  final EventModel event;
+  const _EventCard({required this.event});
 
   @override
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // ── Tap row to open map ─────────────────────────────────────────
-          InkWell(
-            borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(14)),
-            onTap: () =>
-                Get.toNamed(AppRoutes.kmlMap, arguments: route.storagePath),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 12, 14),
-              child: Row(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => _showCategoryPicker(context),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // ── Banner image ────────────────────────────────────────────
+            if (event.bannerUrl.isNotEmpty)
+              ClipRRect(
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(14)),
+                child: Image.network(
+                  event.bannerUrl,
+                  height: 140,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => _defaultBanner(),
+                ),
+              )
+            else
+              _defaultBanner(),
+
+            // ── Event info ──────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: AppTheme.primary.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
+                  Text(
+                    event.name,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textPrimary,
                     ),
-                    child: const Icon(Icons.directions_run,
-                        color: AppTheme.primary, size: 22),
                   ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          route.displayName,
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      const Icon(Icons.calendar_today_outlined,
+                          size: 13, color: AppTheme.textSecondary),
+                      const SizedBox(width: 5),
+                      Text(event.date,
                           style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: AppTheme.textPrimary,
+                              fontSize: 12, color: AppTheme.textSecondary)),
+                      const SizedBox(width: 16),
+                      const Icon(Icons.location_on_outlined,
+                          size: 13, color: AppTheme.textSecondary),
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: Text(event.location,
+                            style: const TextStyle(
+                                fontSize: 12, color: AppTheme.textSecondary),
+                            overflow: TextOverflow.ellipsis),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  // Category count
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${event.categories.length} カテゴリー',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.primary,
                           ),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          route.fileName,
-                          style: const TextStyle(
-                              fontSize: 11,
-                              color: AppTheme.textSecondary),
-                        ),
-                      ],
-                    ),
+                      ),
+                      const Spacer(),
+                      const Icon(Icons.chevron_right,
+                          color: AppTheme.textSecondary, size: 20),
+                    ],
                   ),
-                  const Icon(Icons.chevron_right,
-                      color: AppTheme.textSecondary),
                 ],
               ),
             ),
-          ),
-
-          const Divider(height: 1, indent: 16, endIndent: 16),
-
-          // ── Footer: comment count + view map button ─────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
-            child: Row(
-              children: [
-                StreamBuilder<int>(
-                  stream: CommentService.instance
-                      .watchCommentCount(route.storagePath),
-                  builder: (ctx, snap) {
-                    final count = snap.data ?? 0;
-                    return TextButton.icon(
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppTheme.textSecondary,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        minimumSize: Size.zero,
-                        tapTargetSize:
-                            MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      icon: const Icon(Icons.chat_bubble_outline,
-                          size: 17),
-                      label: Text(
-                        '$count ${'comments'.tr}',
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                      onPressed: () =>
-                          _openComments(ctx, route),
-                    );
-                  },
-                ),
-                const Spacer(),
-                TextButton.icon(
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppTheme.primary,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  icon: const Icon(Icons.map_outlined, size: 16),
-                  label: Text(
-                    'view_map'.tr,
-                    style: const TextStyle(
-                        fontSize: 12, fontWeight: FontWeight.w600),
-                  ),
-                  onPressed: () =>
-                      Get.toNamed(AppRoutes.kmlMap, arguments: route.storagePath),
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  void _openComments(BuildContext context, KmlRoute route) {
+  Widget _defaultBanner() {
+    return Container(
+      height: 80,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppTheme.primary,
+            AppTheme.primary.withValues(alpha: 0.7),
+          ],
+        ),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+      ),
+      child: const Center(
+        child: Icon(Icons.directions_run, color: Colors.white, size: 36),
+      ),
+    );
+  }
+
+  void _showCategoryPicker(BuildContext context) {
+    final cats = event.categories.values
+        .where((c) => c.kmlUrl.isNotEmpty || c.kmlPath.isNotEmpty)
+        .toList();
+
+    if (cats.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('このイベントにはルートがまだありません'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // If only one category, go directly
+    if (cats.length == 1) {
+      _openMap(cats.first);
+      return;
+    }
+
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => _CommentSheet(route: route),
-    );
-  }
-}
-
-// ── Comment bottom sheet ──────────────────────────────────────────────────────
-
-class _CommentSheet extends StatefulWidget {
-  final KmlRoute route;
-  const _CommentSheet({required this.route});
-
-  @override
-  State<_CommentSheet> createState() => _CommentSheetState();
-}
-
-class _CommentSheetState extends State<_CommentSheet> {
-  final _textCtrl = TextEditingController();
-  bool _sending = false;
-
-  @override
-  void dispose() {
-    _textCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _send() async {
-    final text = _textCtrl.text.trim();
-    if (text.isEmpty) return;
-    setState(() => _sending = true);
-    _textCtrl.clear();
-    await CommentService.instance
-        .addComment(widget.route.storagePath, text);
-    if (mounted) setState(() => _sending = false);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: 0.6,
-      minChildSize: 0.4,
-      maxChildSize: 0.92,
-      builder: (_, scrollCtrl) => Column(
-        children: [
-          // Drag handle
-          Container(
-            width: 40,
-            height: 4,
-            margin: const EdgeInsets.symmetric(vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          // Title row
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 8, 0),
-            child: Row(
-              children: [
-                Text(
-                  'comments'.tr,
-                  style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.textPrimary),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    widget.route.displayName,
-                    style: const TextStyle(
-                        fontSize: 13,
-                        color: AppTheme.textSecondary),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close, size: 20),
-                  onPressed: Navigator.of(context).pop,
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
-          // Comments list
-          Expanded(
-            child: StreamBuilder<List<CommentModel>>(
-              stream: CommentService.instance
-                  .watchComments(widget.route.storagePath),
-              builder: (_, snap) {
-                if (snap.connectionState == ConnectionState.waiting) {
-                  return const Center(
-                      child: CircularProgressIndicator());
-                }
-                final comments = snap.data ?? [];
-                if (comments.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.chat_bubble_outline,
-                            size: 48, color: Color(0xFFB0BEC5)),
-                        const SizedBox(height: 12),
-                        Text(
-                          'no_comments'.tr,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                              color: AppTheme.textSecondary,
-                              fontSize: 13),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-                return ListView.builder(
-                  controller: scrollCtrl,
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  itemCount: comments.length,
-                  itemBuilder: (_, i) => _CommentTile(
-                    comment: comments[i],
-                    storagePath: widget.route.storagePath,
-                  ),
-                );
-              },
-            ),
-          ),
-          // Input area
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border:
-                  Border(top: BorderSide(color: Colors.grey.shade200)),
-            ),
-            padding: EdgeInsets.fromLTRB(
-              12,
-              8,
-              12,
-              8 + MediaQuery.of(context).viewInsets.bottom,
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _textCtrl,
-                    textInputAction: TextInputAction.send,
-                    onSubmitted: (_) => _send(),
-                    decoration: InputDecoration(
-                      hintText: 'add_comment'.tr,
-                      hintStyle: const TextStyle(
-                          color: AppTheme.textSecondary),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide:
-                            BorderSide(color: Colors.grey.shade300),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide:
-                            BorderSide(color: Colors.grey.shade300),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide: const BorderSide(
-                            color: AppTheme.primary, width: 1.5),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 10),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                _sending
-                    ? const SizedBox(
-                        width: 40,
-                        height: 40,
-                        child: Padding(
-                          padding: EdgeInsets.all(10),
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: AppTheme.primary),
-                        ),
-                      )
-                    : IconButton(
-                        onPressed: _send,
-                        icon: const Icon(Icons.send_rounded,
-                            color: AppTheme.primary),
-                        style: IconButton.styleFrom(
-                          backgroundColor:
-                              AppTheme.primary.withValues(alpha: 0.1),
-                          minimumSize: const Size(40, 40),
-                        ),
-                      ),
-              ],
-            ),
-          ),
-        ],
+      builder: (_) => _CategoryPickerSheet(
+        eventName: event.name,
+        categories: cats,
+        onSelect: (cat) {
+          Navigator.pop(context);
+          _openMap(cat);
+        },
       ),
     );
   }
+
+  void _openMap(RaceCategory cat) {
+    // Pass KML info as arguments
+    Get.toNamed(
+      AppRoutes.kmlMap,
+      arguments: {
+        'kmlUrl': cat.kmlUrl,
+        'storagePath': cat.kmlPath,
+        'label': cat.label,
+      },
+    );
+  }
 }
 
-// ── Comment tile ──────────────────────────────────────────────────────────────
+// ── Category picker bottom sheet ──────────────────────────────────────────────
 
-class _CommentTile extends StatelessWidget {
-  final CommentModel comment;
-  final String storagePath;
-  const _CommentTile(
-      {required this.comment, required this.storagePath});
+class _CategoryPickerSheet extends StatelessWidget {
+  final String eventName;
+  final List<RaceCategory> categories;
+  final void Function(RaceCategory) onSelect;
+
+  const _CategoryPickerSheet({
+    required this.eventName,
+    required this.categories,
+    required this.onSelect,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final myUid = FirebaseAuth.instance.currentUser?.uid;
-    final isOwn = comment.uid == myUid;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Avatar
-          Container(
-            width: 34,
-            height: 34,
-            decoration: const BoxDecoration(
-              color: Color(0xFF1976D2),
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                comment.label.isNotEmpty
-                    ? comment.label[0].toUpperCase()
-                    : '?',
-                style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white),
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(0, 8, 0, 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Drag handle
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
               ),
             ),
-          ),
-          const SizedBox(width: 10),
-          // Content
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      comment.label,
-                      style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.textPrimary),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      comment.timeAgo,
-                      style: const TextStyle(
-                          fontSize: 10,
-                          color: AppTheme.textSecondary),
-                    ),
-                    const Spacer(),
-                    if (isOwn)
-                      GestureDetector(
-                        onTap: () => _confirmDelete(context),
-                        child: const Icon(Icons.delete_outline,
-                            size: 16,
-                            color: AppTheme.textSecondary),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: isOwn
-                        ? AppTheme.primary.withValues(alpha: 0.08)
-                        : const Color(0xFFF3F6FF),
-                    borderRadius: const BorderRadius.only(
-                      topRight: Radius.circular(12),
-                      bottomLeft: Radius.circular(12),
-                      bottomRight: Radius.circular(12),
-                    ),
-                  ),
-                  child: Text(
-                    comment.text,
+            // Title
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                children: [
+                  Text(
+                    eventName,
                     style: const TextStyle(
-                        fontSize: 13, color: AppTheme.textPrimary),
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textPrimary,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                ),
-              ],
+                  const SizedBox(height: 4),
+                  const Text(
+                    'カテゴリーを選択してください',
+                    style: TextStyle(
+                        fontSize: 13, color: AppTheme.textSecondary),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 16),
+            const Divider(height: 1),
+            // Category list
+            ...categories.map((cat) => InkWell(
+                  onTap: () => onSelect(cat),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 14),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: AppTheme.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.directions_run,
+                              color: AppTheme.primary, size: 22),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                cat.label,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.textPrimary,
+                                ),
+                              ),
+                              if (cat.cutoff.isNotEmpty) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Cut-Off: ${cat.cutoff}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppTheme.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.chevron_right,
+                            color: AppTheme.textSecondary),
+                      ],
+                    ),
+                  ),
+                )),
+          ],
+        ),
       ),
     );
-  }
-
-  void _confirmDelete(BuildContext context) {
-    Get.dialog(AlertDialog(
-      title: Text('delete_comment'.tr),
-      actions: [
-        TextButton(
-            onPressed: Get.back, child: Text('cancel'.tr)),
-        TextButton(
-          onPressed: () {
-            Get.back();
-            CommentService.instance
-                .deleteComment(storagePath, comment.commentId);
-          },
-          style:
-              TextButton.styleFrom(foregroundColor: Colors.red),
-          child: Text('delete'.tr),
-        ),
-      ],
-    ));
   }
 }

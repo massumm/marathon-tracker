@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import '../core/theme.dart';
+import 'user_avatar.dart';
 
 class RunnerInfoSheet extends StatelessWidget {
   final String label;
   final String email;
+  final String photoUrl;
   final String durationLabel;
 
   const RunnerInfoSheet({
     super.key,
     required this.label,
     required this.email,
+    required this.photoUrl,
     required this.durationLabel,
   });
 
@@ -31,18 +34,7 @@ class RunnerInfoSheet extends StatelessWidget {
           ),
           Row(
             children: [
-              CircleAvatar(
-                radius: 28,
-                backgroundColor: AppTheme.secondary.withValues(alpha: 0.15),
-                child: Text(
-                  label[0].toUpperCase(),
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.secondary,
-                  ),
-                ),
-              ),
+              UserAvatar(label: label, photoUrl: photoUrl, size: 56),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(

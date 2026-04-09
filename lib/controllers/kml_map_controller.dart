@@ -49,13 +49,22 @@ class KmlMapController extends GetxController {
   BitmapDescriptor? _walkingIcon;
 
   late final String kmlFilePath;
+  late final String? kmlDirectUrl;
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
   @override
   void onInit() {
     super.onInit();
-    kmlFilePath = Get.arguments as String;
+    final args = Get.arguments;
+    if (args is Map) {
+      kmlDirectUrl = args['kmlUrl'] as String? ?? '';
+      kmlFilePath = args['storagePath'] as String? ?? '';
+    } else {
+      // Legacy: single string storagePath
+      kmlFilePath = args as String;
+      kmlDirectUrl = null;
+    }
     _loadKml();
     _initWalkingIcon();
     _loadFriendsAndSubscribe();
@@ -266,6 +275,7 @@ class KmlMapController extends GetxController {
       RunnerInfoSheet(
         label: _runnerLabel(runner),
         email: runner.email,
+        photoUrl: runner.photoUrl,
         durationLabel: durationLabel,
       ),
       shape: const RoundedRectangleBorder(

@@ -45,6 +45,7 @@ class CommentService {
       'displayName': user.displayName ??
           user.email?.split('@').first ??
           'Runner',
+      'photoUrl': user.photoURL ?? '',
       'text': text.trim(),
       'timestamp': DateTime.now().millisecondsSinceEpoch,
     });

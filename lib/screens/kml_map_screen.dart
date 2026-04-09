@@ -5,6 +5,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../controllers/kml_map_controller.dart';
 import '../core/theme.dart';
 import '../models/runner_data.dart';
+import '../widgets/user_avatar.dart';
 
 class KmlMapScreen extends StatefulWidget {
   const KmlMapScreen({super.key});
@@ -313,22 +314,10 @@ class _RunnerTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
         child: Row(
           children: [
-            Container(
-              width: 34,
-              height: 34,
-              decoration: const BoxDecoration(
-                color: Color(0xFF1976D2),
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: Text(
-                  label[0].toUpperCase(),
-                  style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white),
-                ),
-              ),
+            UserAvatar(
+              label: label,
+              photoUrl: runner.photoUrl,
+              size: 34,
             ),
             const SizedBox(width: 10),
             Expanded(

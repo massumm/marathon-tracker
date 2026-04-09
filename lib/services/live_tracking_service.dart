@@ -23,6 +23,7 @@ class LiveTrackingService {
       uid: user.uid,
       email: user.email ?? '',
       displayName: user.displayName ?? user.email ?? 'Runner',
+      photoUrl: user.photoURL ?? '',
       lat: lat,
       lng: lng,
       startedAt: DateTime.now().millisecondsSinceEpoch,

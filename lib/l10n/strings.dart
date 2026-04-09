@@ -61,6 +61,11 @@ class AppStrings extends Translations {
           'saving': 'Saving...',
 
           // Leaderboard / Profile
+          'search_hint': 'Search by email or username',
+          'my_qr_code': 'My QR Code',
+          'qr_share_hint': 'Share this code so friends can add you',
+          'scan_qr': 'Scan QR Code',
+          'scan_qr_hint': 'Point at a friend\'s QR code to add them',
           'leaderboard': 'Leaderboard',
           'profile': 'Profile',
           'no_runners_yet': 'No runners yet',
@@ -142,6 +147,11 @@ class AppStrings extends Translations {
           'saving': '保存中...',
 
           // Leaderboard / Profile
+          'search_hint': 'メールまたはユーザー名で検索',
+          'my_qr_code': 'マイQRコード',
+          'qr_share_hint': 'このコードを友達に見せて追加してもらいましょう',
+          'scan_qr': 'QRコードをスキャン',
+          'scan_qr_hint': '友達のQRコードをカメラで読み取ってください',
           'leaderboard': 'ランキング',
           'profile': 'プロフィール',
           'no_runners_yet': 'まだランナーがいません',

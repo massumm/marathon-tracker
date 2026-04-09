@@ -16,28 +16,46 @@ class FriendsService {
   Future<void> registerProfile() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
+    final displayName = user.displayName ?? '';
     await _db.ref('users/${user.uid}').set({
       'email': user.email ?? '',
-      'displayName': user.displayName ?? '',
+      'displayName': displayName,
+      'displayNameLower': displayName.toLowerCase(),
     });
   }
 
-  /// Search a user by exact email. Returns uid+data map or null.
-  Future<Map<String, dynamic>?> searchByEmail(String email) async {
-    final snap = await _db
-        .ref('users')
-        .orderByChild('email')
-        .equalTo(email.trim().toLowerCase())
-        .get();
-    if (!snap.exists) return null;
-    final map = snap.value as Map<dynamic, dynamic>;
-    final entry = map.entries.first;
-    final data = entry.value as Map<dynamic, dynamic>;
-    return {
-      'uid': entry.key as String,
-      'email': data['email'] as String? ?? '',
-      'displayName': data['displayName'] as String? ?? '',
-    };
+  /// Partial prefix search on email AND displayName. Returns up to 10 results.
+  Future<List<Map<String, dynamic>>> searchByQuery(String query) async {
+    final q = query.trim().toLowerCase();
+    if (q.isEmpty) return [];
+
+    // Run both queries in parallel
+    final results = await Future.wait([
+      _db.ref('users').orderByChild('email')
+          .startAt(q).endAt('$q\uf8ff').limitToFirst(10).get(),
+      _db.ref('users').orderByChild('displayNameLower')
+          .startAt(q).endAt('$q\uf8ff').limitToFirst(10).get(),
+    ]);
+
+    final seen = <String>{};
+    final list = <Map<String, dynamic>>[];
+
+    for (final snap in results) {
+      if (!snap.exists) continue;
+      final map = snap.value as Map<dynamic, dynamic>;
+      for (final entry in map.entries) {
+        final uid = entry.key as String;
+        if (seen.contains(uid)) continue;
+        seen.add(uid);
+        final data = entry.value as Map<dynamic, dynamic>;
+        list.add({
+          'uid': uid,
+          'email': data['email'] as String? ?? '',
+          'displayName': data['displayName'] as String? ?? '',
+        });
+      }
+    }
+    return list;
   }
 
   // ── Friend requests ───────────────────────────────────────────────────────
@@ -49,6 +67,7 @@ class FriendsService {
     await _db.ref('friend_requests/$targetUid/$_uid').set({
       'email': user.email ?? '',
       'displayName': user.displayName ?? user.email ?? '',
+      'photoUrl': user.photoURL ?? '',
       'sentAt': DateTime.now().millisecondsSinceEpoch,
     });
   }
@@ -64,11 +83,13 @@ class FriendsService {
     await _db.ref('friends/$uid/$fromUid').set({
       'email': fromEmail,
       'displayName': fromDisplayName,
+      'photoUrl': '',
       'since': now,
     });
     await _db.ref('friends/$fromUid/$uid').set({
       'email': user.email ?? '',
       'displayName': user.displayName ?? user.email ?? '',
+      'photoUrl': user.photoURL ?? '',
       'since': now,
     });
 

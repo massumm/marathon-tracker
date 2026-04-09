@@ -15,11 +15,10 @@ class FriendsController extends GetxController {
   final requests = <FriendRequestModel>[].obs;
 
   final searchState = SearchState.idle.obs;
-  final searchResult = Rxn<Map<String, dynamic>>();
-  // Indicates the relationship to the searched user
-  final searchStatus = ''.obs; // '', 'self', 'friends', 'sent', 'add'
-
-  final isSendingRequest = false.obs;
+  // Each entry: {uid, email, displayName, status}
+  final searchResults = <Map<String, dynamic>>[].obs;
+  // uids currently sending a friend request
+  final sendingUids = <String>{}.obs;
 
   final searchCtrl = TextEditingController();
 
@@ -77,46 +76,52 @@ class FriendsController extends GetxController {
   // ── Search ────────────────────────────────────────────────────────────────
 
   Future<void> searchUser() async {
-    final email = searchCtrl.text.trim().toLowerCase();
-    if (email.isEmpty) return;
+    final query = searchCtrl.text.trim();
+    if (query.isEmpty) return;
 
     searchState.value = SearchState.loading;
-    searchResult.value = null;
-    searchStatus.value = '';
+    searchResults.clear();
 
-    final result = await FriendsService.instance.searchByEmail(email);
-    if (result == null) {
+    final results = await FriendsService.instance.searchByQuery(query);
+    if (results.isEmpty) {
       searchState.value = SearchState.notFound;
       return;
     }
 
     final myUid = FirebaseAuth.instance.currentUser?.uid;
-    if (result['uid'] == myUid) {
-      searchStatus.value = 'self';
-    } else if (await FriendsService.instance.isFriend(result['uid'] as String)) {
-      searchStatus.value = 'friends';
-    } else if (await FriendsService.instance
-        .requestSent(result['uid'] as String)) {
-      searchStatus.value = 'sent';
-    } else {
-      searchStatus.value = 'add';
+    final enriched = <Map<String, dynamic>>[];
+
+    for (final r in results) {
+      final uid = r['uid'] as String;
+      String status;
+      if (uid == myUid) {
+        status = 'self';
+      } else if (await FriendsService.instance.isFriend(uid)) {
+        status = 'friends';
+      } else if (await FriendsService.instance.requestSent(uid)) {
+        status = 'sent';
+      } else {
+        status = 'add';
+      }
+      enriched.add({...r, 'status': status});
     }
 
-    searchResult.value = result;
+    searchResults.value = enriched;
     searchState.value = SearchState.found;
   }
 
-  Future<void> sendRequest() async {
-    final r = searchResult.value;
-    if (r == null) return;
-    isSendingRequest.value = true;
-    await FriendsService.instance.sendRequest(
-      r['uid'] as String,
-      r['email'] as String,
-      r['displayName'] as String,
-    );
-    searchStatus.value = 'sent';
-    isSendingRequest.value = false;
+  Future<void> sendRequest(String uid, String email, String displayName) async {
+    sendingUids.add(uid);
+    sendingUids.refresh();
+    await FriendsService.instance.sendRequest(uid, email, displayName);
+    // Update status in the results list
+    final idx = searchResults.indexWhere((r) => r['uid'] == uid);
+    if (idx != -1) {
+      searchResults[idx] = {...searchResults[idx], 'status': 'sent'};
+      searchResults.refresh();
+    }
+    sendingUids.remove(uid);
+    sendingUids.refresh();
   }
 
   Future<void> acceptRequest(FriendRequestModel req) async {
@@ -135,7 +140,6 @@ class FriendsController extends GetxController {
   void clearSearch() {
     searchCtrl.clear();
     searchState.value = SearchState.idle;
-    searchResult.value = null;
-    searchStatus.value = '';
+    searchResults.clear();
   }
 }

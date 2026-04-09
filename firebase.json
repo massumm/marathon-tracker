@@ -1,1 +1,25 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"medishop-40923","appId":"1:157462453434:android:fb87af59b08a4ec74c7683","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"medishop-40923","configurations":{"android":"1:157462453434:android:fb87af59b08a4ec74c7683","web":"1:157462453434:web:57233170ff3a84ca4c7683"}}}}}}
+{
+  "database": {
+    "rules": "database.rules.json"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "medishop-40923",
+          "appId": "1:157462453434:android:fb87af59b08a4ec74c7683",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "medishop-40923",
+          "configurations": {
+            "android": "1:157462453434:android:fb87af59b08a4ec74c7683",
+            "web": "1:157462453434:web:57233170ff3a84ca4c7683"
+          }
+        }
+      }
+    }
+  }
+}

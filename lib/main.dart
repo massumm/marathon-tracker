@@ -15,13 +15,24 @@ import 'screens/kml_map_screen.dart';
 import 'screens/leaderboard_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/my_page_map_screen.dart';
+import 'screens/my_routes_screen.dart';
+import 'screens/qr_scanner_screen.dart';
 import 'screens/user_profile_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await _initFirebase();
   WakelockPlus.enable();
   runApp(const MapApp());
+}
+
+Future<void> _initFirebase() async {
+  try {
+    await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform);
+  } on FirebaseException catch (e) {
+    if (e.code != 'duplicate-app') rethrow;
+  }
 }
 
 class MapApp extends StatelessWidget {
@@ -56,6 +67,14 @@ class MapApp extends StatelessWidget {
         GetPage(
           name: AppRoutes.myPageMap,
           page: () => const MyPageMapScreen(),
+        ),
+        GetPage(
+          name: AppRoutes.myRoutes,
+          page: () => const MyRoutesScreen(),
+        ),
+        GetPage(
+          name: AppRoutes.qrScanner,
+          page: () => const QrScannerScreen(),
         ),
         GetPage(
           name: AppRoutes.leaderboard,

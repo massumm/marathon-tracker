@@ -1,0 +1,131 @@
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
+import 'dart:typed_data';
+
+import 'package:firebase_database/firebase_database.dart';
+import 'package:firebase_storage/firebase_storage.dart' as fs;
+
+import '../models/event_model.dart';
+
+class AdminService {
+  AdminService._();
+  static final AdminService instance = AdminService._();
+
+  final _db = FirebaseDatabase.instance;
+  final _storage = fs.FirebaseStorage.instance;
+
+  // ── Dashboard stats ───────────────────────────────────────────────────────
+
+  Future<Map<String, int>> fetchStats() async {
+    final results = await Future.wait([
+      _db.ref('user_stats').get(),
+      _db.ref('events').get(),
+    ]);
+    final userCount =
+        results[0].exists ? (results[0].value as Map).length : 0;
+    final eventCount =
+        results[1].exists ? (results[1].value as Map).length : 0;
+    return {'users': userCount, 'events': eventCount};
+  }
+
+  // ── Events ────────────────────────────────────────────────────────────────
+
+  Stream<List<EventModel>> watchEvents() {
+    return _db.ref('events').orderByChild('createdAt').onValue.map((e) {
+      final data = e.snapshot.value;
+      if (data == null) return <EventModel>[];
+      final map = data as Map<dynamic, dynamic>;
+      return map.entries
+          .map((entry) => EventModel.fromMap(
+              entry.key as String, entry.value as Map<dynamic, dynamic>))
+          .toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    });
+  }
+
+  Future<String> createEvent(Map<String, dynamic> data) async {
+    final ref = _db.ref('events').push();
+    await ref.set(data);
+    return ref.key!;
+  }
+
+  Future<void> updateEvent(String id, Map<String, dynamic> data) async {
+    await _db.ref('events/$id').update(data);
+  }
+
+  Future<void> deleteEvent(String id) async {
+    await _db.ref('events/$id').remove();
+    // Best-effort clean up storage
+    try {
+      final storageRef = _storage.ref('events/$id');
+      await _deleteFolder(storageRef);
+    } catch (_) {}
+  }
+
+  Future<void> _deleteFolder(fs.Reference ref) async {
+    final list = await ref.listAll();
+    for (final item in list.items) {
+      await item.delete();
+    }
+    for (final prefix in list.prefixes) {
+      await _deleteFolder(prefix);
+    }
+  }
+
+  // ── File uploads ──────────────────────────────────────────────────────────
+
+  /// Opens a file picker and returns (fileName, bytes). Returns null if cancelled.
+  Future<({String name, Uint8List bytes})?> pickFile(String accept) async {
+    final input = html.FileUploadInputElement()..accept = accept;
+    input.click();
+    await input.onChange.first;
+    final file = input.files?.first;
+    if (file == null) return null;
+    final reader = html.FileReader();
+    reader.readAsArrayBuffer(file);
+    await reader.onLoad.first;
+    return (
+      name: file.name,
+      bytes: Uint8List.fromList(reader.result as List<int>),
+    );
+  }
+
+  Future<String> uploadBanner(String eventId, Uint8List bytes) async {
+    final ref = _storage.ref('events/$eventId/banner.jpg');
+    await ref.putData(bytes, fs.SettableMetadata(contentType: 'image/jpeg'));
+    return ref.getDownloadURL();
+  }
+
+  Future<String> uploadKml(
+      String eventId, String categoryId, String fileName, Uint8List bytes) async {
+    final storagePath = 'events/$eventId/kml/$categoryId.kml';
+    final ref = _storage.ref(storagePath);
+    await ref.putData(
+        bytes, fs.SettableMetadata(contentType: 'application/vnd.google-earth.kml+xml'));
+    final url = await ref.getDownloadURL();
+    return url;
+  }
+
+  // ── Users ─────────────────────────────────────────────────────────────────
+
+  Future<List<Map<String, dynamic>>> fetchUsers() async {
+    final snap = await _db.ref('user_stats').get();
+    if (!snap.exists) return [];
+    final map = snap.value as Map<dynamic, dynamic>;
+    return map.entries.map((e) {
+      final data = e.value as Map<dynamic, dynamic>;
+      return {
+        'uid': e.key as String,
+        'displayName': data['displayName'] as String? ?? '',
+        'email': data['email'] as String? ?? '',
+        'photoUrl': data['photoUrl'] as String? ?? '',
+        'totalDistanceKm':
+            (data['totalDistanceKm'] as num?)?.toDouble() ?? 0.0,
+        'totalRuns': (data['totalRuns'] as num?)?.toInt() ?? 0,
+        'totalSeconds': (data['totalSeconds'] as num?)?.toInt() ?? 0,
+      };
+    }).toList()
+      ..sort((a, b) => (b['totalDistanceKm'] as double)
+          .compareTo(a['totalDistanceKm'] as double));
+  }
+}

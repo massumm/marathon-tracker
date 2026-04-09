@@ -6,4 +6,6 @@ abstract class AppRoutes {
   static const myPageMap = '/my-page-map';
   static const leaderboard = '/leaderboard';
   static const userProfile = '/user-profile';
+  static const myRoutes = '/my-routes';
+  static const qrScanner = '/qr-scanner';
 }

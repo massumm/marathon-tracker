@@ -5,9 +5,7 @@ import '../app/routes/app_routes.dart';
 import '../controllers/home_controller.dart';
 import '../controllers/my_page_controller.dart';
 import '../core/theme.dart';
-import '../models/tracked_route.dart';
 import '../models/user_stats.dart';
-import '../widgets/route_list_card.dart';
 
 class MyPageScreen extends GetView<MyPageController> {
   const MyPageScreen({super.key});
@@ -89,7 +87,7 @@ class MyPageScreen extends GetView<MyPageController> {
                       icon: Icons.map_outlined,
                       label: 'my_routes'.tr,
                       color: AppTheme.primary,
-                      onTap: () {}, // scrolls down naturally
+                      onTap: () => Get.toNamed(AppRoutes.myRoutes),
                     ),
                     _ActionCard(
                       icon: Icons.people_outline,
@@ -113,79 +111,6 @@ class MyPageScreen extends GetView<MyPageController> {
                 ),
               ),
 
-              const SizedBox(height: 20),
-
-              // ── My routes section ──────────────────────────────────────
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 16, 8),
-                child: Row(
-                  children: [
-                    Text(
-                      'my_routes'.tr,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.textSecondary,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 7, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primary.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        '${controller.routeRefs.length}',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.primary,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              if (controller.isLoading.value)
-                const Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Center(child: CircularProgressIndicator()),
-                )
-              else if (controller.routeRefs.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    children: [
-                      Icon(Icons.directions_run,
-                          size: 56, color: Colors.grey.shade300),
-                      const SizedBox(height: 12),
-                      Text('no_routes'.tr,
-                          style: const TextStyle(
-                              fontSize: 15,
-                              color: AppTheme.textSecondary)),
-                      const SizedBox(height: 4),
-                      Text('no_routes_subtitle'.tr,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                              fontSize: 12,
-                              color: AppTheme.textSecondary)),
-                    ],
-                  ),
-                )
-              else
-                ...controller.routeRefs.map((ref) => RouteListCard(
-                      title: TrackedRoute.parseDateFromFileName(ref.name),
-                      subtitle: ref.name,
-                      leadingIcon: Icons.flag_rounded,
-                      onTap: () => Get.toNamed(
-                        AppRoutes.myPageMap,
-                        arguments: ref.fullPath,
-                      ),
-                    )),
             ],
           )),
     );

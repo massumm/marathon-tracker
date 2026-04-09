@@ -3,6 +3,7 @@ class CommentModel {
   final String uid;
   final String email;
   final String displayName;
+  final String photoUrl;
   final String text;
   final int timestamp;
 
@@ -11,6 +12,7 @@ class CommentModel {
     required this.uid,
     required this.email,
     required this.displayName,
+    required this.photoUrl,
     required this.text,
     required this.timestamp,
   });
@@ -21,6 +23,7 @@ class CommentModel {
       uid: map['uid'] as String? ?? '',
       email: map['email'] as String? ?? '',
       displayName: map['displayName'] as String? ?? '',
+      photoUrl: map['photoUrl'] as String? ?? '',
       text: map['text'] as String? ?? '',
       timestamp: (map['timestamp'] as num?)?.toInt() ?? 0,
     );
