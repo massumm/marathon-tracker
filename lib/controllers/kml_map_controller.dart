@@ -48,7 +48,8 @@ class KmlMapController extends GetxController {
   final activeRunners = <RunnerData>[].obs;
   final runnerMarkers = <String, Marker>{}.obs;
   StreamSubscription<List<RunnerData>>? _runnersSub;
-  BitmapDescriptor? _walkingIcon;
+  // icon cache keyed by '{uid}_{photoUrl}'
+  final _iconCache = <String, BitmapDescriptor>{};
 
   late final String kmlFilePath;
   late final String? kmlDirectUrl;
@@ -71,7 +72,6 @@ class KmlMapController extends GetxController {
       routeLabel = '';
     }
     _loadKml();
-    _initWalkingIcon();
     _loadFriendsAndSubscribe();
   }
 
@@ -85,42 +85,83 @@ class KmlMapController extends GetxController {
     _timer?.cancel();
     _positionSub?.cancel();
     _runnersSub?.cancel();
+    _iconCache.clear();
     if (isLive.value) LiveTrackingService.instance.stopBroadcasting();
     super.onClose();
   }
 
-  // ── Walking icon ──────────────────────────────────────────────────────────
+  // ── Runner profile icon ───────────────────────────────────────────────────
 
-  Future<void> _initWalkingIcon() async {
-    const double size = 96;
+  Future<BitmapDescriptor> _getRunnerIcon(RunnerData runner) async {
+    final key = '${runner.uid}_${runner.photoUrl}';
+    if (_iconCache.containsKey(key)) return _iconCache[key]!;
+    final icon = await _buildRunnerIcon(runner);
+    _iconCache[key] = icon;
+    return icon;
+  }
+
+  Future<BitmapDescriptor> _buildRunnerIcon(RunnerData runner) async {
+    const double size = 44;
+    const double border = 3;
+    const double inner = size / 2 - border;
+
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
 
-    // Blue circle background
-    canvas.drawCircle(
-      const Offset(size / 2, size / 2),
-      size / 2,
-      Paint()..color = const Color(0xFF1976D2),
-    );
+    // White border ring
+    canvas.drawCircle(const Offset(size / 2, size / 2), size / 2,
+        Paint()..color = Colors.white);
 
-    // Walking man icon
-    final tp = TextPainter(textDirection: TextDirection.ltr)
-      ..text = TextSpan(
-        text: String.fromCharCode(Icons.directions_walk.codePoint),
-        style: TextStyle(
-          fontSize: 60,
-          fontFamily: Icons.directions_walk.fontFamily,
-          package: Icons.directions_walk.fontPackage,
-          color: Colors.white,
-        ),
-      )
-      ..layout();
-    tp.paint(canvas, Offset((size - tp.width) / 2, (size - tp.height) / 2));
+    // Clip to inner circle for photo / initial
+    canvas.save();
+    canvas.clipPath(Path()
+      ..addOval(Rect.fromCircle(
+          center: const Offset(size / 2, size / 2), radius: inner)));
+
+    bool drewPhoto = false;
+    if (runner.photoUrl.isNotEmpty) {
+      try {
+        final resp = await http.get(Uri.parse(runner.photoUrl));
+        if (resp.statusCode == 200) {
+          final completer = Completer<ui.Image>();
+          ui.decodeImageFromList(resp.bodyBytes, completer.complete);
+          final img = await completer.future;
+          final minSide = img.width < img.height
+              ? img.width.toDouble()
+              : img.height.toDouble();
+          final src = Rect.fromLTWH((img.width - minSide) / 2,
+              (img.height - minSide) / 2, minSide, minSide);
+          const dst = Rect.fromLTWH(
+              border, border, size - 2 * border, size - 2 * border);
+          canvas.drawImageRect(img, src, dst, Paint());
+          drewPhoto = true;
+        }
+      } catch (_) {}
+    }
+
+    if (!drewPhoto) {
+      canvas.drawCircle(const Offset(size / 2, size / 2), inner,
+          Paint()..color = AppTheme.primary);
+      final initial = runner.displayName.isNotEmpty
+          ? runner.displayName[0].toUpperCase()
+          : runner.email.isNotEmpty
+              ? runner.email[0].toUpperCase()
+              : 'R';
+      final tp = TextPainter(textDirection: TextDirection.ltr)
+        ..text = TextSpan(
+            text: initial,
+            style: const TextStyle(
+                fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white))
+        ..layout();
+      tp.paint(canvas, Offset((size - tp.width) / 2, (size - tp.height) / 2));
+    }
+
+    canvas.restore();
 
     final img =
         await recorder.endRecording().toImage(size.toInt(), size.toInt());
     final bytes = await img.toByteData(format: ui.ImageByteFormat.png);
-    _walkingIcon = BitmapDescriptor.bytes(bytes!.buffer.asUint8List());
+    return BitmapDescriptor.bytes(bytes!.buffer.asUint8List());
   }
 
   // ── KML loading ───────────────────────────────────────────────────────────
@@ -239,10 +280,12 @@ class KmlMapController extends GetxController {
     };
 
     await FirebaseService.instance.saveTrackedRoute(fileName, jsonEncode(data));
-    await UserStatsService.instance.addRunStats(totalDistance, elapsedSeconds.value);
+    await UserStatsService.instance
+        .addRunStats(totalDistance, elapsedSeconds.value);
     isSaving.value = false;
 
-    Get.find<HomeController>().changeTab(2); // MyPage is index 2 (0=Events,1=Friends,2=MyPage)
+    Get.find<HomeController>()
+        .changeTab(2); // MyPage is index 2 (0=Events,1=Friends,2=MyPage)
     Get.offAllNamed(AppRoutes.home);
   }
 
@@ -251,19 +294,18 @@ class KmlMapController extends GetxController {
   void _subscribeToRunners(List<String> friendUids) {
     final friendSet = friendUids.toSet();
     _runnersSub = LiveTrackingService.instance.watchRunners().listen(
-      (runners) {
-        // Only show friends' live locations
-        final filtered =
-            friendSet.isEmpty ? <RunnerData>[] : runners.where((r) => friendSet.contains(r.uid)).toList();
+      (runners) async {
+        final filtered = friendSet.isEmpty
+            ? <RunnerData>[]
+            : runners.where((r) => friendSet.contains(r.uid)).toList();
         final updated = <String, Marker>{};
         for (final r in filtered) {
           final label = _runnerLabel(r);
+          final icon = await _getRunnerIcon(r);
           updated[r.uid] = Marker(
             markerId: MarkerId(r.uid),
             position: LatLng(r.lat, r.lng),
-            icon: _walkingIcon ??
-                BitmapDescriptor.defaultMarkerWithHue(
-                    BitmapDescriptor.hueAzure),
+            icon: icon,
             infoWindow: InfoWindow(title: label, snippet: r.email),
             onTap: () => showRunnerInfo(r),
           );
