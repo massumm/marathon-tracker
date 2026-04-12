@@ -147,7 +147,10 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
     final isTracking = _ctrl.isTracking.value;
     final isSaving = _ctrl.isSaving.value;
     final elapsedSecs = _ctrl.elapsedSeconds.value;
-    final points = _ctrl.trackingPoints.toList();
+    // Prefer road-snapped points; fall back to raw GPS while snapping is pending
+    final snapped = _ctrl.snappedPoints.toList();
+    final raw = _ctrl.trackingPoints.toList();
+    final points = snapped.isNotEmpty ? snapped : raw;
     final runnerMarkersSet = _ctrl.runnerMarkers.values.toSet();
 
     return Stack(children: [

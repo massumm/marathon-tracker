@@ -172,7 +172,7 @@ class _EventCardState extends State<_EventCard> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      '${widget.event.categories.length} カテゴリー',
+                      'categories_label'.tr.replaceAll('@count', '${widget.event.categories.length}'),
                       style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
@@ -202,8 +202,8 @@ class _EventCardState extends State<_EventCard> {
 
     if (cats.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('このイベントにはカテゴリーがまだありません'),
+        SnackBar(
+          content: Text('no_categories'.tr),
           backgroundColor: Colors.orange,
         ),
       );
@@ -382,7 +382,7 @@ class _CommentBar extends StatelessWidget {
                     size: 16, color: AppTheme.textSecondary),
                 const SizedBox(width: 6),
                 Text(
-                  count == 0 ? 'コメントを追加' : '$count コメント',
+                  count == 0 ? 'add_comment_hint'.tr : 'comment_count'.tr.replaceAll('@count', '$count'),
                   style: const TextStyle(
                       fontSize: 13, color: AppTheme.textSecondary),
                 ),
@@ -475,10 +475,9 @@ class _CommentSheetState extends State<_CommentSheet> {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2),
-                  const Text(
-                    'コメント',
-                    style:
-                        TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                  Text(
+                    'comments'.tr,
+                    style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
                   ),
                 ],
               ),
@@ -495,15 +494,15 @@ class _CommentSheetState extends State<_CommentSheet> {
                   }
                   final comments = snap.data ?? [];
                   if (comments.isEmpty) {
-                    return const Center(
+                    return Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.chat_bubble_outline,
+                          const Icon(Icons.chat_bubble_outline,
                               size: 40, color: Color(0xFFB0BEC5)),
-                          SizedBox(height: 8),
-                          Text('最初のコメントを投稿しよう',
-                              style: TextStyle(color: AppTheme.textSecondary)),
+                          const SizedBox(height: 8),
+                          Text('first_comment'.tr,
+                              style: const TextStyle(color: AppTheme.textSecondary)),
                         ],
                       ),
                     );
@@ -533,7 +532,7 @@ class _CommentSheetState extends State<_CommentSheet> {
                       maxLines: 3,
                       textCapitalization: TextCapitalization.sentences,
                       decoration: InputDecoration(
-                        hintText: 'コメントを入力...',
+                        hintText: 'comment_input_hint'.tr,
                         hintStyle: const TextStyle(
                             color: AppTheme.textSecondary, fontSize: 14),
                         filled: true,
@@ -829,7 +828,7 @@ class _CommentTileState extends State<_CommentTile> {
                     minLines: 1,
                     maxLines: 3,
                     decoration: InputDecoration(
-                      hintText: '返信を入力...',
+                      hintText: 'reply_input_hint'.tr,
                       hintStyle: const TextStyle(
                           color: AppTheme.textSecondary, fontSize: 13),
                       filled: true,
@@ -912,10 +911,9 @@ class _CategoryPickerSheet extends StatelessWidget {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 4),
-                  const Text(
-                    'カテゴリーを選択してください',
-                    style:
-                        TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                  Text(
+                    'select_category'.tr,
+                    style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
                   ),
                 ],
               ),
@@ -969,9 +967,9 @@ class _CategoryPickerSheet extends StatelessWidget {
                               ],
                               if (!hasKml) ...[
                                 const SizedBox(height: 2),
-                                const Text(
-                                  'ルートマップ未設定',
-                                  style: TextStyle(
+                                Text(
+                                  'no_route_set'.tr,
+                                  style: const TextStyle(
                                     fontSize: 11,
                                     color: Colors.orange,
                                   ),

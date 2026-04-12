@@ -56,7 +56,7 @@ class UserStatsService {
         uid, snap.value as Map<dynamic, dynamic>);
   }
 
-  /// Sorted leaderboard stream (highest distance first).
+  /// Sorted leaderboard stream (highest distance first, runs as tiebreaker).
   Stream<List<UserStats>> watchLeaderboard() {
     return _db
         .ref('user_stats')
@@ -70,11 +70,31 @@ class UserStatsService {
           .map((e) => UserStats.fromMap(
               e.key as String, e.value as Map<dynamic, dynamic>))
           .toList()
-        ..sort((a, b) => b.totalDistanceKm.compareTo(a.totalDistanceKm));
+        ..sort((a, b) {
+          final distCmp = b.totalDistanceKm.compareTo(a.totalDistanceKm);
+          if (distCmp != 0) return distCmp;
+          return b.totalRuns.compareTo(a.totalRuns);
+        });
       for (int i = 0; i < list.length; i++) {
         list[i].rank = i + 1;
       }
       return list;
+    });
+  }
+
+  /// Friends-only leaderboard — filtered by [friendUids], sorted by distance
+  /// then runs. Pass an empty list to get an empty result.
+  Stream<List<UserStats>> watchFriendLeaderboard(List<String> friendUids) {
+    if (friendUids.isEmpty) return Stream.value([]);
+    final allowed = friendUids.toSet();
+    return watchLeaderboard().map((all) {
+      final filtered =
+          all.where((s) => allowed.contains(s.uid)).toList();
+      // Re-rank within the filtered set
+      for (int i = 0; i < filtered.length; i++) {
+        filtered[i].rank = i + 1;
+      }
+      return filtered;
     });
   }
 }

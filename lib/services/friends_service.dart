@@ -159,4 +159,16 @@ class FriendsService {
     final map = snap.value as Map<dynamic, dynamic>;
     return map.keys.cast<String>().toList();
   }
+
+  /// Live stream of friend UIDs (including self so current user appears in leaderboard).
+  Stream<List<String>> watchFriendUids() {
+    final uid = _uid;
+    if (uid == null) return const Stream.empty();
+    return _db.ref('friends/$uid').onValue.map((event) {
+      final data = event.snapshot.value;
+      final uids = <String>[uid]; // always include self
+      if (data is Map) uids.addAll(data.keys.cast<String>());
+      return uids;
+    });
+  }
 }

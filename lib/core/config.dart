@@ -11,4 +11,8 @@ class AppConfig {
   // Run metadata
   static const String eventName = 'Iwaki Sunshine Marathon';
   static const String eventType = 'Full Marathon';
+
+  // Google APIs
+  static const String googleMapsApiKey =
+      'AIzaSyBpC0p4Ii20PRsABxxuJrZTeRhc4ysRnfA';
 }

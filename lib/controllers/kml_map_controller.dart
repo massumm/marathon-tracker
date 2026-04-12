@@ -206,8 +206,14 @@ class KmlMapController extends GetxController {
 
   // ── My tracking ───────────────────────────────────────────────────────────
 
+  // Accumulates raw GPS points; snapped to road every 10 points
+  final _rawBuffer = <LatLng>[];
+  final snappedPoints = <LatLng>[].obs;
+
   Future<void> startTracking() async {
     trackingPoints.clear();
+    snappedPoints.clear();
+    _rawBuffer.clear();
     elapsedSeconds.value = 0;
     _timer?.cancel();
 
@@ -222,15 +228,28 @@ class KmlMapController extends GetxController {
     });
 
     _positionSub =
-        LocationService.instance.getPositionStream().listen((position) {
+        LocationService.instance.getPositionStream().listen((position) async {
       final latLng = LatLng(position.latitude, position.longitude);
       mapController?.animateCamera(CameraUpdate.newLatLng(latLng));
       currentPosition.value = latLng;
       trackingPoints.add(latLng);
+      _rawBuffer.add(latLng);
 
       if (isLive.value) {
         LiveTrackingService.instance
             .updateLocation(position.latitude, position.longitude);
+      }
+
+      // Snap buffer to roads every 10 points (Roads API limit: 100/call)
+      if (_rawBuffer.length >= 10) {
+        final snapped = await _snapToRoads(List.from(_rawBuffer));
+        if (snapped.isNotEmpty) {
+          snappedPoints.addAll(snapped);
+        } else {
+          // API unavailable — fall back to raw
+          snappedPoints.addAll(_rawBuffer);
+        }
+        _rawBuffer.clear();
       }
     });
 
@@ -241,6 +260,33 @@ class KmlMapController extends GetxController {
     isLive.value = true;
 
     isTracking.value = true;
+  }
+
+  /// Calls the Google Roads Snap-to-Roads API.
+  /// Returns snapped points, or empty list on failure.
+  Future<List<LatLng>> _snapToRoads(List<LatLng> points) async {
+    if (points.isEmpty) return [];
+    try {
+      final path =
+          points.map((p) => '${p.latitude},${p.longitude}').join('|');
+      final uri = Uri.parse(
+          'https://roads.googleapis.com/v1/snapToRoads'
+          '?path=$path&interpolate=true&key=${AppConfig.googleMapsApiKey}');
+      final resp = await http.get(uri);
+      if (resp.statusCode != 200) return [];
+      final json = jsonDecode(resp.body) as Map<String, dynamic>;
+      final snappedList = json['snappedPoints'] as List<dynamic>?;
+      if (snappedList == null) return [];
+      return snappedList.map((sp) {
+        final loc = sp['location'] as Map<String, dynamic>;
+        return LatLng(
+          (loc['latitude'] as num).toDouble(),
+          (loc['longitude'] as num).toDouble(),
+        );
+      }).toList();
+    } catch (_) {
+      return [];
+    }
   }
 
   Future<void> stopTracking() async {
@@ -254,12 +300,23 @@ class KmlMapController extends GetxController {
     await LiveTrackingService.instance.stopBroadcasting();
     isLive.value = false;
 
+    // Flush remaining raw buffer
+    if (_rawBuffer.isNotEmpty) {
+      final snapped = await _snapToRoads(List.from(_rawBuffer));
+      snappedPoints.addAll(snapped.isNotEmpty ? snapped : _rawBuffer);
+      _rawBuffer.clear();
+    }
+
+    // Use snapped points for saved route; fall back to raw if snapping produced nothing
+    final routePoints =
+        snappedPoints.isNotEmpty ? snappedPoints.toList() : trackingPoints.toList();
+
     final now = DateTime.now();
     final fileName = 'my_route_${now.millisecondsSinceEpoch}.json';
     final elapsed = Duration(seconds: elapsedSeconds.value);
     final startTime = now.subtract(elapsed);
     final totalDistance =
-        LocationService.instance.totalDistanceKm(trackingPoints);
+        LocationService.instance.totalDistanceKm(routePoints);
     final pace = elapsedSeconds.value > 0
         ? totalDistance / (elapsedSeconds.value / 3600)
         : 0.0;
@@ -274,7 +331,7 @@ class KmlMapController extends GetxController {
       'time': formatTime(elapsedSeconds.value),
       'distance': '${totalDistance.toStringAsFixed(1)} km',
       'pace': '${pace.toStringAsFixed(1)} km/h',
-      'route': trackingPoints
+      'route': routePoints
           .map((p) => {'lat': p.latitude, 'lng': p.longitude})
           .toList(),
     };

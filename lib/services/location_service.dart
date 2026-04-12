@@ -1,9 +1,14 @@
+import 'dart:io';
+
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class LocationService {
   LocationService._();
   static final LocationService instance = LocationService._();
+
+  /// Max acceptable GPS horizontal error in metres.
+  static const double _maxAccuracyMetres = 20.0;
 
   Future<Position?> getCurrentPosition() async {
     if (!await Geolocator.isLocationServiceEnabled()) return null;
@@ -16,15 +21,52 @@ class LocationService {
         permission == LocationPermission.deniedForever) {
       return null;
     }
-    return await Geolocator.getCurrentPosition();
+    return await Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.bestForNavigation,
+      ),
+    );
   }
 
-  Stream<Position> getPositionStream() => Geolocator.getPositionStream(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          distanceFilter: 5, // emit every 5 metres of movement
+  Stream<Position> getPositionStream() {
+    if (Platform.isAndroid) {
+      return Geolocator.getPositionStream(
+        locationSettings: AndroidSettings(
+          accuracy: LocationAccuracy.bestForNavigation,
+          distanceFilter: 2,
+          intervalDuration: const Duration(seconds: 2),
+          forceLocationManager: false,
+          foregroundNotificationConfig: const ForegroundNotificationConfig(
+            notificationTitle: 'Run Tracker Active',
+            notificationText:
+                'Tracking your run. Tap to return to the app.',
+            enableWakeLock: true,
+            notificationIcon: AndroidResource(
+              name: 'ic_launcher',
+              defType: 'mipmap',
+            ),
+          ),
         ),
-      );
+      ).where((p) => p.accuracy <= _maxAccuracyMetres);
+    } else if (Platform.isIOS) {
+      return Geolocator.getPositionStream(
+        locationSettings: AppleSettings(
+          accuracy: LocationAccuracy.bestForNavigation,
+          distanceFilter: 2,
+          activityType: ActivityType.fitness,
+          pauseLocationUpdatesAutomatically: false,
+          allowBackgroundLocationUpdates: true,
+          showBackgroundLocationIndicator: true,
+        ),
+      ).where((p) => p.accuracy <= _maxAccuracyMetres);
+    }
+    return Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.bestForNavigation,
+        distanceFilter: 2,
+      ),
+    ).where((p) => p.accuracy <= _maxAccuracyMetres);
+  }
 
   double totalDistanceKm(List<LatLng> points) {
     double total = 0;

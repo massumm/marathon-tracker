@@ -20,6 +20,15 @@ class AppStrings extends Translations {
           'add_comment': 'Write a comment...',
           'send': 'Send',
           'delete_comment': 'Delete comment?',
+          'add_comment_hint': 'Add a comment',
+          'comment_count': '@count comments',
+          'first_comment': 'Be the first to comment!',
+          'comment_input_hint': 'Write a comment...',
+          'reply_input_hint': 'Write a reply...',
+          'select_category': 'Select a category',
+          'no_categories': 'No categories available yet',
+          'no_route_set': 'Route not set',
+          'categories_label': '@count categories',
 
           // Auth
           'sign_in': 'Sign In',
@@ -117,6 +126,15 @@ class AppStrings extends Translations {
           'add_comment': 'コメントを入力...',
           'send': '送信',
           'delete_comment': 'コメントを削除しますか？',
+          'add_comment_hint': 'コメントを追加',
+          'comment_count': '@count コメント',
+          'first_comment': '最初のコメントを投稿しよう',
+          'comment_input_hint': 'コメントを入力...',
+          'reply_input_hint': '返信を入力...',
+          'select_category': 'カテゴリーを選択してください',
+          'no_categories': 'このイベントにはカテゴリーがまだありません',
+          'no_route_set': 'ルートマップ未設定',
+          'categories_label': '@count カテゴリー',
 
           // Auth
           'sign_in': 'サインイン',

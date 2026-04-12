@@ -45,8 +45,8 @@ class MapApp extends StatelessWidget {
       theme: AppTheme.theme,
       debugShowCheckedModeBanner: false,
       translations: AppStrings(),
-      locale: const Locale('ja', 'JP'),
-      fallbackLocale: const Locale('en', 'US'),
+      locale: const Locale('en', 'US'),
+      fallbackLocale: const Locale('ja', 'JP'),
       initialBinding: InitialBinding(),
       initialRoute: AppRoutes.login,
       getPages: [
