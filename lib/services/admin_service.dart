@@ -106,6 +106,15 @@ class AdminService {
     return url;
   }
 
+  /// Downloads KML bytes directly from Firebase Storage (avoids CORS issues on web).
+  Future<Uint8List?> downloadKml(String kmlPath) async {
+    try {
+      return await _storage.ref(kmlPath).getData();
+    } catch (_) {
+      return null;
+    }
+  }
+
   // ── Users ─────────────────────────────────────────────────────────────────
 
   Future<List<Map<String, dynamic>>> fetchUsers() async {

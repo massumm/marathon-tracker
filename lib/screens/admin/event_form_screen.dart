@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme.dart';
 import '../../models/event_model.dart';
 import '../../services/admin_service.dart';
+import 'route_editor_screen.dart';
 
 class EventFormScreen extends StatefulWidget {
   final EventModel? existing;
@@ -20,6 +21,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
   late final TextEditingController _dateCtrl;
   late final TextEditingController _locationCtrl;
 
+  late final String _tmpEventId;
   bool _saving = false;
 
   // Banner
@@ -36,6 +38,8 @@ class _EventFormScreenState extends State<EventFormScreen> {
     _nameCtrl = TextEditingController(text: e?.name ?? '');
     _dateCtrl = TextEditingController(text: e?.date ?? '');
     _locationCtrl = TextEditingController(text: e?.location ?? '');
+    _tmpEventId =
+        widget.existing?.id ?? DateTime.now().millisecondsSinceEpoch.toString();
     _bannerUrl = e?.bannerUrl ?? '';
 
     if (e != null && e.categories.isNotEmpty) {
@@ -81,8 +85,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
   }
 
   Future<void> _pickBanner() async {
-    final result =
-        await AdminService.instance.pickFile('image/jpeg,image/png');
+    final result = await AdminService.instance.pickFile('image/jpeg,image/png');
     if (result == null) return;
     setState(() => _bannerPreview = result.bytes);
   }
@@ -94,6 +97,28 @@ class _EventFormScreenState extends State<EventFormScreen> {
       _categories[index].pickedFileName = result.name;
       _categories[index].pickedBytes = result.bytes;
     });
+  }
+
+  Future<void> _openRouteEditor(int index) async {
+    final catId = 'cat_$index';
+    final result = await Navigator.of(context).push<RouteEditorResult>(
+      MaterialPageRoute(
+        builder: (_) => RouteEditorScreen(
+          eventId: _tmpEventId,
+          categoryId: catId,
+          //existingKmlPath: _categories[index].existingKmlPath,
+        ),
+        fullscreenDialog: true,
+      ),
+    );
+    if (result != null) {
+      setState(() {
+        _categories[index].existingKmlPath = result.kmlPath;
+        _categories[index].existingKmlUrl = result.kmlUrl;
+        _categories[index].pickedBytes = null;
+        _categories[index].pickedFileName = '';
+      });
+    }
   }
 
   Future<void> _save() async {
@@ -113,14 +138,12 @@ class _EventFormScreenState extends State<EventFormScreen> {
     setState(() => _saving = true);
     try {
       final existingId = widget.existing?.id;
-      final tmpId =
-          existingId ?? DateTime.now().millisecondsSinceEpoch.toString();
 
       // Upload banner if new
       String bannerUrl = _bannerUrl;
       if (_bannerPreview != null) {
-        bannerUrl =
-            await AdminService.instance.uploadBanner(tmpId, _bannerPreview!);
+        bannerUrl = await AdminService.instance
+            .uploadBanner(_tmpEventId, _bannerPreview!);
       }
 
       // Build categories map
@@ -132,9 +155,9 @@ class _EventFormScreenState extends State<EventFormScreen> {
         String kmlUrl = entry.existingKmlUrl;
 
         if (entry.pickedBytes != null) {
-          kmlPath = 'events/$tmpId/kml/$catId.kml';
-          kmlUrl = await AdminService.instance
-              .uploadKml(tmpId, catId, entry.pickedFileName, entry.pickedBytes!);
+          kmlPath = 'events/$_tmpEventId/kml/$catId.kml';
+          kmlUrl = await AdminService.instance.uploadKml(
+              _tmpEventId, catId, entry.pickedFileName, entry.pickedBytes!);
         }
 
         catMaps[catId] = {
@@ -361,8 +384,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
                               style: TextStyle(
                                   color: Colors.grey.shade500, fontSize: 14)),
                           const SizedBox(height: 6),
-                          Text(
-                              'Click "Add Category" to add race distances',
+                          Text('Click "Add Category" to add race distances',
                               style: TextStyle(
                                   color: Colors.grey.shade400, fontSize: 12)),
                         ],
@@ -479,32 +501,60 @@ class _EventFormScreenState extends State<EventFormScreen> {
 
                           const SizedBox(height: 14),
 
-                          // KML upload
-                          OutlinedButton.icon(
-                            onPressed: _saving ? null : () => _pickKml(i),
-                            icon: Icon(
-                              hasKml ? Icons.swap_horiz : Icons.upload_file,
-                              size: 16,
-                            ),
-                            label: Text(
-                              entry.pickedFileName.isNotEmpty
-                                  ? entry.pickedFileName
-                                  : entry.existingKmlPath.isNotEmpty
-                                      ? entry.existingKmlPath.split('/').last
-                                      : 'Upload KML File',
-                              style: const TextStyle(fontSize: 13),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppTheme.primary,
-                              side: BorderSide(
-                                  color:
-                                      AppTheme.primary.withValues(alpha: 0.4)),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8)),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 10),
-                            ),
+                          // KML: upload or draw on map
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: _saving ? null : () => _pickKml(i),
+                                  icon: Icon(
+                                    hasKml
+                                        ? Icons.swap_horiz
+                                        : Icons.upload_file,
+                                    size: 16,
+                                  ),
+                                  label: Text(
+                                    entry.pickedFileName.isNotEmpty
+                                        ? entry.pickedFileName
+                                        : entry.existingKmlPath.isNotEmpty
+                                            ? entry.existingKmlPath
+                                                .split('/')
+                                                .last
+                                            : 'Upload KML',
+                                    style: const TextStyle(fontSize: 13),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppTheme.primary,
+                                    side: BorderSide(
+                                        color: AppTheme.primary
+                                            .withValues(alpha: 0.4)),
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8)),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 14, vertical: 10),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              OutlinedButton.icon(
+                                onPressed:
+                                    _saving ? null : () => _openRouteEditor(i),
+                                icon: const Icon(Icons.map_outlined, size: 16),
+                                label: const Text('Draw on Map',
+                                    style: TextStyle(fontSize: 13)),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.deepOrange,
+                                  side: BorderSide(
+                                      color: Colors.deepOrange
+                                          .withValues(alpha: 0.5)),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8)),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 10),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),

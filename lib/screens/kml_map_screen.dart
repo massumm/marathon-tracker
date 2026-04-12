@@ -7,8 +7,9 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../controllers/kml_map_controller.dart';
 import '../core/theme.dart';
-import '../models/runner_data.dart';
 import '../widgets/user_avatar.dart';
+
+const _medals = ['🥇', '🥈', '🥉'];
 
 class KmlMapScreen extends StatefulWidget {
   const KmlMapScreen({super.key});
@@ -19,7 +20,7 @@ class KmlMapScreen extends StatefulWidget {
 
 class _KmlMapScreenState extends State<KmlMapScreen> {
   late final KmlMapController _ctrl;
-  bool _panelOpen = false;
+  bool _leaderOpen = false;
 
   @override
   void initState() {
@@ -27,17 +28,7 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
     _ctrl = Get.find<KmlMapController>();
   }
 
-  void _togglePanel() => setState(() => _panelOpen = !_panelOpen);
-  void _closePanel() => setState(() => _panelOpen = false);
-
-  void _handleRunnerTap(RunnerData r) {
-    _closePanel();
-    _ctrl.flyToRunner(r);
-    _ctrl.showRunnerInfo(r);
-  }
-
   Future<void> _onStartTap() async {
-    // 1. Check if location service is enabled on device
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       if (!mounted) return;
@@ -45,7 +36,6 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
       return;
     }
 
-    // 2. Check / request permission
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
@@ -58,7 +48,6 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
       return;
     }
 
-    // 3. Proximity check
     final distKm = await _ctrl.distanceToStartKm();
     if (!mounted) return;
     if (distKm >= 0 && distKm > KmlMapController.proximityThresholdKm) {
@@ -75,31 +64,25 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         icon: const Icon(Icons.location_disabled,
             color: Colors.redAccent, size: 40),
-        title: Text(
-          'location_off_title'.tr,
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-        ),
-        content: Text(
-          'location_off_body'.tr,
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 14),
-        ),
+        title: Text('location_off_title'.tr,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+        content: Text('location_off_body'.tr,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 14)),
         actionsAlignment: MainAxisAlignment.center,
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('cancel'.tr),
-          ),
+              onPressed: () => Navigator.pop(context),
+              child: Text('cancel'.tr)),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               Geolocator.openLocationSettings();
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primary,
-              foregroundColor: Colors.white,
-            ),
+                backgroundColor: AppTheme.primary,
+                foregroundColor: Colors.white),
             child: Text('open_settings'.tr),
           ),
         ],
@@ -114,24 +97,20 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         icon: const Icon(Icons.location_off_outlined,
             color: Colors.orange, size: 40),
-        title: Text(
-          'location_permission_title'.tr,
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-        ),
+        title: Text('location_permission_title'.tr,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
         content: Text(
-          forever
-              ? 'location_permission_forever'.tr
-              : 'location_permission_denied'.tr,
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 14),
-        ),
+            forever
+                ? 'location_permission_forever'.tr
+                : 'location_permission_denied'.tr,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 14)),
         actionsAlignment: MainAxisAlignment.center,
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('cancel'.tr),
-          ),
+              onPressed: () => Navigator.pop(context),
+              child: Text('cancel'.tr)),
           if (forever)
             ElevatedButton(
               onPressed: () {
@@ -139,9 +118,8 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
                 Geolocator.openAppSettings();
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primary,
-                foregroundColor: Colors.white,
-              ),
+                  backgroundColor: AppTheme.primary,
+                  foregroundColor: Colors.white),
               child: Text('open_settings'.tr),
             ),
         ],
@@ -150,7 +128,6 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
   }
 
   void _showTooFarDialog(double distKm) {
-    final distStr = distKm.toStringAsFixed(2);
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -161,25 +138,21 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
             textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
         content: Text(
-          'too_far_body'.tr.replaceAll('@dist', distStr),
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 14),
-        ),
+            'too_far_body'.tr.replaceAll('@dist', distKm.toStringAsFixed(2)),
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 14)),
         actionsAlignment: MainAxisAlignment.center,
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('cancel'.tr),
-          ),
+              onPressed: () => Navigator.pop(context),
+              child: Text('cancel'.tr)),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               _ctrl.startTracking();
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
-              foregroundColor: Colors.white,
-            ),
+                backgroundColor: Colors.orange, foregroundColor: Colors.white),
             child: Text('start_anyway'.tr),
           ),
         ],
@@ -190,9 +163,8 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final runners = _ctrl.activeRunners.toList();
-
-      // AppBar title: category label if available, else localised fallback
+      final lb = _ctrl.leaderboard.toList();
+      final myRank = lb.where((e) => e.isSelf).firstOrNull?.rank;
       final title =
           _ctrl.routeLabel.isNotEmpty ? _ctrl.routeLabel : 'map_view_title'.tr;
 
@@ -200,49 +172,55 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
         appBar: AppBar(
           title: Text(title),
           actions: [
-            Padding(
-              padding: const EdgeInsets.only(right: 4),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  IconButton(
-                    icon: Icon(
-                      _panelOpen ? Icons.close : Icons.people_alt_outlined,
+            if (lb.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    IconButton(
+                      icon: Icon(
+                        _leaderOpen
+                            ? Icons.leaderboard
+                            : Icons.leaderboard_outlined,
+                        color: _leaderOpen
+                            ? Colors.amberAccent
+                            : Colors.white,
+                      ),
+                      onPressed: () =>
+                          setState(() => _leaderOpen = !_leaderOpen),
                     ),
-                    color: Colors.white,
-                    onPressed: _togglePanel,
-                  ),
-                  if (runners.isNotEmpty && !_panelOpen)
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: Container(
-                        width: 16,
-                        height: 16,
-                        decoration: const BoxDecoration(
-                            color: Colors.green, shape: BoxShape.circle),
-                        child: Center(
+                    if (myRank != null && !_leaderOpen)
+                      Positioned(
+                        top: 8,
+                        right: 6,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 4, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: Colors.amber,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                           child: Text(
-                            '${runners.length}',
+                            '#$myRank',
                             style: const TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white),
+                                fontSize: 8,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.black),
                           ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
-            ),
           ],
         ),
-        body: _buildBody(runners),
+        body: _buildBody(lb),
       );
     });
   }
 
-  Widget _buildBody(List<RunnerData> runners) {
+  Widget _buildBody(List<LeaderboardEntry> lb) {
     if (!_ctrl.kmlLoaded.value) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -250,7 +228,6 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
     final isTracking = _ctrl.isTracking.value;
     final isSaving = _ctrl.isSaving.value;
     final elapsedSecs = _ctrl.elapsedSeconds.value;
-    // Prefer road-snapped points; fall back to raw GPS while snapping is pending
     final snapped = _ctrl.snappedPoints.toList();
     final raw = _ctrl.trackingPoints.toList();
     final points = snapped.isNotEmpty ? snapped : raw;
@@ -296,7 +273,6 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
           ),
         )
       else
-        // ── Timer chip (before tracking starts) ───────────────────────────
         Positioned(
           top: 12,
           left: 0,
@@ -318,7 +294,7 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
 
       // ── Start / Stop button ───────────────────────────────────────────────
       Positioned(
-        bottom: 48,
+        bottom: lb.isNotEmpty && _leaderOpen ? 200 : 48,
         left: 0,
         right: 0,
         child: Center(
@@ -327,7 +303,9 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
                 ? () => _ctrl.stopTracking()
                 : () => _onStartTap(),
             child: Image.asset(
-              isTracking ? 'assets/images/stop.png' : 'assets/images/start.png',
+              isTracking
+                  ? 'assets/images/stop.png'
+                  : 'assets/images/start.png',
               height: 80,
               width: 80,
             ),
@@ -335,54 +313,34 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
         ),
       ),
 
-      // ── Transparent dismiss layer ─────────────────────────────────────────
-      if (_panelOpen)
-        Positioned.fill(
-          child: GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTap: _closePanel,
-          ),
-        ),
-
-      // ── Sliding runner panel ──────────────────────────────────────────────
-      Positioned(
-        top: 0,
-        right: 0,
-        bottom: 0,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 280),
-          curve: Curves.easeInOut,
-          width: _panelOpen ? 240 : 0,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(16),
-              bottomLeft: Radius.circular(16),
-            ),
-            boxShadow: _panelOpen
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.18),
-                      blurRadius: 16,
-                      offset: const Offset(-4, 0),
-                    ),
-                  ]
-                : [],
-          ),
-          child: ClipRRect(
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(16),
-              bottomLeft: Radius.circular(16),
-            ),
-            child: SingleChildScrollView(
-              child: _RunnerPanelContent(
-                runners: runners,
-                onTap: _handleRunnerTap,
+      // ── Live leaderboard panel ────────────────────────────────────────────
+      if (lb.isNotEmpty)
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 280),
+            curve: Curves.easeInOut,
+            height: _leaderOpen
+                ? (60 + lb.length * 56.0).clamp(120, 340)
+                : 0,
+            child: ClipRRect(
+              child: _LiveLeaderboard(
+                entries: lb,
+                onClose: () => setState(() => _leaderOpen = false),
+                onTapRunner: (e) {
+                  final r = _ctrl.activeRunners
+                      .where((r) => r.uid == e.uid)
+                      .firstOrNull;
+                  if (r != null) {
+                    _ctrl.flyToRunner(r);
+                  }
+                },
               ),
             ),
           ),
         ),
-      ),
 
       // ── Saving overlay ────────────────────────────────────────────────────
       if (isSaving)
@@ -395,7 +353,8 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
                 const CircularProgressIndicator(color: Colors.white),
                 const SizedBox(height: 14),
                 Text('saving'.tr,
-                    style: const TextStyle(color: Colors.white, fontSize: 16)),
+                    style:
+                        const TextStyle(color: Colors.white, fontSize: 16)),
               ],
             ),
           ),
@@ -429,106 +388,7 @@ class _GlassChip extends StatelessWidget {
   }
 }
 
-// ── Panel content ─────────────────────────────────────────────────────────────
-
-class _RunnerPanelContent extends StatelessWidget {
-  final List<RunnerData> runners;
-  final void Function(RunnerData) onTap;
-  const _RunnerPanelContent({required this.runners, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(14, 16, 14, 6),
-          child: Text(
-            runners.isEmpty
-                ? 'no_runners_live'.tr
-                : '${runners.length} ${'runners_live'.tr}',
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: AppTheme.textSecondary,
-              letterSpacing: 0.3,
-            ),
-          ),
-        ),
-        const Divider(height: 1),
-        if (runners.isEmpty)
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text(
-              'no_runners_running'.tr,
-              style:
-                  const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
-            ),
-          )
-        else
-          ...runners.map((r) => _RunnerTile(runner: r, onTap: () => onTap(r))),
-        const SizedBox(height: 8),
-      ],
-    );
-  }
-}
-
-class _RunnerTile extends StatelessWidget {
-  final RunnerData runner;
-  final VoidCallback onTap;
-  const _RunnerTile({required this.runner, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final label = runner.displayName.isNotEmpty
-        ? runner.displayName
-        : runner.email.isNotEmpty
-            ? runner.email.split('@').first
-            : 'runner'.tr;
-
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-        child: Row(
-          children: [
-            UserAvatar(
-              label: label,
-              photoUrl: runner.photoUrl,
-              size: 34,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.textPrimary),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Text(
-                    runner.email,
-                    style: const TextStyle(
-                        fontSize: 10, color: AppTheme.textSecondary),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 6),
-            const Icon(Icons.my_location, size: 15, color: Colors.green),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Stats panel (transparent glass card) ─────────────────────────────────────
+// ── Stats panel ───────────────────────────────────────────────────────────────
 
 class _StatsPanel extends StatelessWidget {
   final String time;
@@ -584,4 +444,146 @@ class _StatsPanel extends StatelessWidget {
 
   Widget _divider() => Container(
       height: 32, width: 1, color: Colors.white.withValues(alpha: 0.25));
+}
+
+// ── Live leaderboard panel ────────────────────────────────────────────────────
+
+class _LiveLeaderboard extends StatelessWidget {
+  final List<LeaderboardEntry> entries;
+  final VoidCallback onClose;
+  final void Function(LeaderboardEntry) onTapRunner;
+
+  const _LiveLeaderboard({
+    required this.entries,
+    required this.onClose,
+    required this.onTapRunner,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return BackdropFilter(
+      filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.78),
+          borderRadius:
+              const BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 8, 4),
+              child: Row(
+                children: [
+                  const Text('🏆', style: TextStyle(fontSize: 16)),
+                  const SizedBox(width: 8),
+                  Text(
+                    'live_leaderboard'.tr,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.keyboard_arrow_down,
+                        color: Colors.white70),
+                    onPressed: onClose,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    iconSize: 22,
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1, color: Colors.white12),
+            Flexible(
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                shrinkWrap: true,
+                itemCount: entries.length,
+                itemBuilder: (_, i) => _LeaderRow(
+                  entry: entries[i],
+                  onTap: entries[i].isSelf
+                      ? null
+                      : () => onTapRunner(entries[i]),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LeaderRow extends StatelessWidget {
+  final LeaderboardEntry entry;
+  final VoidCallback? onTap;
+  const _LeaderRow({required this.entry, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final isSelf = entry.isSelf;
+    final medal = entry.rank <= 3 ? _medals[entry.rank - 1] : null;
+
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        color: isSelf
+            ? Colors.white.withValues(alpha: 0.10)
+            : Colors.transparent,
+        child: Row(
+          children: [
+            SizedBox(
+              width: 32,
+              child: medal != null
+                  ? Text(medal,
+                      style: const TextStyle(fontSize: 18),
+                      textAlign: TextAlign.center)
+                  : Text(
+                      '${entry.rank}',
+                      style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white60),
+                      textAlign: TextAlign.center,
+                    ),
+            ),
+            const SizedBox(width: 8),
+            UserAvatar(
+              label: entry.name,
+              photoUrl: entry.photoUrl,
+              size: 32,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                isSelf ? '${'you_label'.tr} (${entry.name})' : entry.name,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight:
+                      isSelf ? FontWeight.w700 : FontWeight.w500,
+                  color: isSelf ? Colors.amberAccent : Colors.white,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Text(
+              '${entry.distanceKm.toStringAsFixed(2)} km',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: isSelf ? Colors.amberAccent : Colors.white70,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

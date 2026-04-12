@@ -6,6 +6,7 @@ class RunnerData {
   final double lat;
   final double lng;
   final int startedAt;
+  final double distanceKm;
 
   const RunnerData({
     required this.uid,
@@ -15,6 +16,7 @@ class RunnerData {
     required this.lat,
     required this.lng,
     required this.startedAt,
+    this.distanceKm = 0.0,
   });
 
   factory RunnerData.fromMap(String uid, Map<dynamic, dynamic> map) {
@@ -27,6 +29,7 @@ class RunnerData {
       lng: (map['lng'] as num).toDouble(),
       startedAt: (map['startedAt'] as num?)?.toInt() ??
           DateTime.now().millisecondsSinceEpoch,
+      distanceKm: (map['distanceKm'] as num?)?.toDouble() ?? 0.0,
     );
   }
 
@@ -37,5 +40,6 @@ class RunnerData {
         'lat': lat,
         'lng': lng,
         'startedAt': startedAt,
+        'distanceKm': distanceKm,
       };
 }

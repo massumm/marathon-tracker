@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:ui' as ui;
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -21,6 +22,37 @@ import '../services/live_tracking_service.dart';
 import '../services/location_service.dart';
 import '../widgets/runner_info_sheet.dart';
 import 'home_controller.dart';
+
+// ── Leaderboard entry ─────────────────────────────────────────────────────────
+
+class LeaderboardEntry {
+  final String uid;
+  final String name;
+  final String photoUrl;
+  final double distanceKm;
+  final bool isSelf;
+  final int rank;
+
+  const LeaderboardEntry({
+    required this.uid,
+    required this.name,
+    required this.photoUrl,
+    required this.distanceKm,
+    required this.isSelf,
+    required this.rank,
+  });
+
+  LeaderboardEntry withRank(int r) => LeaderboardEntry(
+        uid: uid,
+        name: name,
+        photoUrl: photoUrl,
+        distanceKm: distanceKm,
+        isSelf: isSelf,
+        rank: r,
+      );
+}
+
+// ── Controller ────────────────────────────────────────────────────────────────
 
 class KmlMapController extends GetxController {
   // ── Map ───────────────────────────────────────────────────────────────────
@@ -46,6 +78,10 @@ class KmlMapController extends GetxController {
   // ── Live runners ──────────────────────────────────────────────────────────
   final isLive = false.obs;
   final activeRunners = <RunnerData>[].obs;
+
+  // ── Leaderboard ───────────────────────────────────────────────────────────
+  final leaderboard = <LeaderboardEntry>[].obs;
+  int _lbTickCount = 0;
   final runnerMarkers = <String, Marker>{}.obs;
   StreamSubscription<List<RunnerData>>? _runnersSub;
   // icon cache keyed by '{uid}_{photoUrl}'
@@ -164,6 +200,47 @@ class KmlMapController extends GetxController {
     return BitmapDescriptor.bytes(bytes!.buffer.asUint8List());
   }
 
+  // ── Leaderboard helpers ───────────────────────────────────────────────────
+
+  void _rebuildLeaderboard() {
+    final entries = <LeaderboardEntry>[];
+
+    // Add self when actively tracking — use live GPS-tracked distance
+    final user = FirebaseAuth.instance.currentUser;
+    if (isTracking.value && user != null) {
+      entries.add(LeaderboardEntry(
+        uid: user.uid,
+        name: user.displayName?.isNotEmpty == true
+            ? user.displayName!
+            : user.email?.split('@').first ?? 'You',
+        photoUrl: user.photoURL ?? '',
+        distanceKm: currentDistanceKm,
+        isSelf: true,
+        rank: 0,
+      ));
+    }
+
+    // Add friend runners — use the distanceKm they broadcast
+    for (final r in activeRunners) {
+      entries.add(LeaderboardEntry(
+        uid: r.uid,
+        name: r.displayName.isNotEmpty
+            ? r.displayName
+            : r.email.split('@').first,
+        photoUrl: r.photoUrl,
+        distanceKm: r.distanceKm,
+        isSelf: false,
+        rank: 0,
+      ));
+    }
+
+    // Sort descending — most distance = 1st
+    entries.sort((a, b) => b.distanceKm.compareTo(a.distanceKm));
+    leaderboard.value = [
+      for (var i = 0; i < entries.length; i++) entries[i].withRank(i + 1)
+    ];
+  }
+
   // ── KML loading ───────────────────────────────────────────────────────────
 
   Future<void> _loadKml() async {
@@ -234,10 +311,15 @@ class KmlMapController extends GetxController {
       currentPosition.value = latLng;
       trackingPoints.add(latLng);
       _rawBuffer.add(latLng);
+      _lbTickCount++;
+      if (_lbTickCount % 4 == 0) _rebuildLeaderboard();
 
       if (isLive.value) {
-        LiveTrackingService.instance
-            .updateLocation(position.latitude, position.longitude);
+        LiveTrackingService.instance.updateLocation(
+          position.latitude,
+          position.longitude,
+          currentDistanceKm,
+        );
       }
 
       // Snap buffer to roads every 10 points (Roads API limit: 100/call)
@@ -296,6 +378,7 @@ class KmlMapController extends GetxController {
     _timer?.cancel();
     _timer = null;
     isTracking.value = false;
+    _rebuildLeaderboard();
 
     await LiveTrackingService.instance.stopBroadcasting();
     isLive.value = false;
@@ -369,6 +452,7 @@ class KmlMapController extends GetxController {
         }
         runnerMarkers.value = updated;
         activeRunners.value = filtered;
+        _rebuildLeaderboard();
       },
       onError: (e) {
         final msg = '$e'.contains('Permission denied')

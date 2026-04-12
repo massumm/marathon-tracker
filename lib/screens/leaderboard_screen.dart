@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -8,68 +10,76 @@ import '../services/friends_service.dart';
 import '../services/user_stats_service.dart';
 import '../widgets/user_avatar.dart';
 
-class LeaderboardScreen extends StatelessWidget {
+class LeaderboardScreen extends StatefulWidget {
   const LeaderboardScreen({super.key});
+
+  @override
+  State<LeaderboardScreen> createState() => _LeaderboardScreenState();
+}
+
+class _LeaderboardScreenState extends State<LeaderboardScreen> {
+  // Combines friend-uid stream + stats stream into one flat stream.
+  // Whenever friend list changes the leaderboard automatically re-queries.
+  late final Stream<List<UserStats>> _leaderboardStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _leaderboardStream = FriendsService.instance
+        .watchFriendUids()
+        .asyncExpand((uids) =>
+            UserStatsService.instance.watchFriendLeaderboard(uids));
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('leaderboard'.tr)),
-      body: StreamBuilder<List<String>>(
-        stream: FriendsService.instance.watchFriendUids(),
-        builder: (_, friendSnap) {
-          final friendUids = friendSnap.data ?? [];
+      body: StreamBuilder<List<UserStats>>(
+        stream: _leaderboardStream,
+        builder: (_, snap) {
+          if (snap.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final list = snap.data ?? [];
 
-          return StreamBuilder<List<UserStats>>(
-            stream:
-                UserStatsService.instance.watchFriendLeaderboard(friendUids),
-            builder: (_, snap) {
-              if (snap.connectionState == ConnectionState.waiting ||
-                  friendSnap.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              final list = snap.data ?? [];
-
-              if (list.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.emoji_events_outlined,
-                          size: 64, color: Color(0xFFB0BEC5)),
-                      const SizedBox(height: 16),
-                      Text('no_runners_yet'.tr,
-                          style: const TextStyle(
-                              fontSize: 16,
-                              color: AppTheme.textSecondary)),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Add friends to see them here',
-                        style: TextStyle(
-                            fontSize: 13, color: AppTheme.textSecondary),
-                      ),
-                    ],
-                  ),
-                );
-              }
-
-              return Column(
+          if (list.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // ── Top 3 podium ──────────────────────────────────────
-                  if (list.length >= 3) _Podium(top3: list.take(3).toList()),
-                  // ── Rest of list ──────────────────────────────────────
-                  Expanded(
-                    child: ListView.builder(
-                      padding: const EdgeInsets.only(
-                          top: 8, bottom: 16, left: 0, right: 0),
-                      itemCount: list.length > 3 ? list.length - 3 : 0,
-                      itemBuilder: (_, i) =>
-                          _LeaderRow(stats: list[i + 3]),
-                    ),
+                  const Icon(Icons.emoji_events_outlined,
+                      size: 64, color: Color(0xFFB0BEC5)),
+                  const SizedBox(height: 16),
+                  Text('no_runners_yet'.tr,
+                      style: const TextStyle(
+                          fontSize: 16, color: AppTheme.textSecondary)),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Add friends to see them here',
+                    style: TextStyle(
+                        fontSize: 13, color: AppTheme.textSecondary),
                   ),
                 ],
-              );
-            },
+              ),
+            );
+          }
+
+          return Column(
+            children: [
+              // ── Top 3 podium ────────────────────────────────────────
+              if (list.length >= 3) _Podium(top3: list.take(3).toList()),
+              // ── Rank 4+ list ────────────────────────────────────────
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.only(
+                      top: 8, bottom: 16),
+                  itemCount: list.length > 3 ? list.length - 3 : 0,
+                  itemBuilder: (_, i) =>
+                      _LeaderRow(stats: list[i + 3]),
+                ),
+              ),
+            ],
           );
         },
       ),
@@ -103,10 +113,8 @@ class _Podium extends StatelessWidget {
                   Get.toNamed(AppRoutes.userProfile, arguments: s.uid),
               child: Column(
                 children: [
-                  // Crown for 1st
                   if (isFirst)
-                    const Text('👑',
-                        style: TextStyle(fontSize: 20)),
+                    const Text('👑', style: TextStyle(fontSize: 20)),
                   const SizedBox(height: 4),
                   UserAvatar(
                       label: s.label,
@@ -118,9 +126,8 @@ class _Podium extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
-                      color: isFirst
-                          ? _medalColor(1)
-                          : AppTheme.textPrimary,
+                      color:
+                          isFirst ? _medalColor(1) : AppTheme.textPrimary,
                     ),
                     textAlign: TextAlign.center,
                     maxLines: 1,
@@ -140,17 +147,18 @@ class _Podium extends StatelessWidget {
                         fontSize: 10, color: AppTheme.textSecondary),
                   ),
                   const SizedBox(height: 6),
-                  // Podium block
                   Container(
                     height: heights[i],
                     decoration: BoxDecoration(
-                      color: _medalColor(s.rank).withValues(alpha: 0.15),
+                      color:
+                          _medalColor(s.rank).withValues(alpha: 0.15),
                       borderRadius: const BorderRadius.only(
                         topLeft: Radius.circular(8),
                         topRight: Radius.circular(8),
                       ),
                       border: Border.all(
-                          color: _medalColor(s.rank).withValues(alpha: 0.4),
+                          color: _medalColor(s.rank)
+                              .withValues(alpha: 0.4),
                           width: 1.5),
                     ),
                     child: Center(
@@ -207,7 +215,6 @@ class _LeaderRow extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Rank number
             SizedBox(
               width: 32,
               child: Text(
@@ -249,7 +256,6 @@ class _LeaderRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            // Distance + runs
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [

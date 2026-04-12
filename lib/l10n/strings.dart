@@ -74,6 +74,7 @@ class AppStrings extends Translations {
           'runners_live': 'runners live',
           'no_runners_live': 'No runners live',
           'no_runners_running': 'No one is running yet.',
+          'live_leaderboard': 'Live Leaderboard',
 
           // Leaderboard / Profile
           'search_hint': 'Search by email or username',
@@ -188,6 +189,7 @@ class AppStrings extends Translations {
           'runners_live': '人 ライブ中',
           'no_runners_live': 'ライブランナーなし',
           'no_runners_running': 'まだ走っている人はいません',
+          'live_leaderboard': 'ライブ順位',
 
           // Leaderboard / Profile
           'search_hint': 'メールまたはユーザー名で検索',
