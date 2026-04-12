@@ -96,6 +96,14 @@ class AppStrings extends Translations {
           'chat': 'Chat',
           'coming_soon': 'Coming soon!',
 
+          // Location service / permission
+          'location_off_title': 'Location is Off',
+          'location_off_body': 'Please turn on your device\'s location (GPS) to track your run.',
+          'location_permission_title': 'Location Permission Required',
+          'location_permission_denied': 'Location permission was denied. Please allow location access to start tracking.',
+          'location_permission_forever': 'Location permission is permanently denied. Please enable it in app settings.',
+          'open_settings': 'Open Settings',
+
           // Proximity check
           'too_far_title': 'Too Far from Start',
           'too_far_body': 'You are @dist km from the event start point. Please move closer before starting.',
@@ -201,6 +209,14 @@ class AppStrings extends Translations {
           'your_name': 'お名前',
           'chat': 'チャット',
           'coming_soon': '近日公開！',
+
+          // Location service / permission
+          'location_off_title': '位置情報がオフです',
+          'location_off_body': 'ランの記録を開始するには、デバイスの位置情報（GPS）をオンにしてください。',
+          'location_permission_title': '位置情報の許可が必要です',
+          'location_permission_denied': '位置情報の許可が拒否されました。追跡を開始するには位置情報を許可してください。',
+          'location_permission_forever': '位置情報の許可が永久に拒否されています。アプリ設定から有効にしてください。',
+          'open_settings': '設定を開く',
 
           // Proximity check
           'too_far_title': 'スタート地点から離れすぎです',

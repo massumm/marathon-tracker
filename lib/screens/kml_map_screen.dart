@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -36,14 +37,116 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
   }
 
   Future<void> _onStartTap() async {
-    final distKm = await _ctrl.distanceToStartKm();
-    // -1 means location unavailable — allow start
-    if (distKm >= 0 && distKm > KmlMapController.proximityThresholdKm) {
+    // 1. Check if location service is enabled on device
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
       if (!mounted) return;
+      _showLocationOffDialog();
+      return;
+    }
+
+    // 2. Check / request permission
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      if (!mounted) return;
+      _showPermissionDeniedDialog(
+          forever: permission == LocationPermission.deniedForever);
+      return;
+    }
+
+    // 3. Proximity check
+    final distKm = await _ctrl.distanceToStartKm();
+    if (!mounted) return;
+    if (distKm >= 0 && distKm > KmlMapController.proximityThresholdKm) {
       _showTooFarDialog(distKm);
     } else {
       _ctrl.startTracking();
     }
+  }
+
+  void _showLocationOffDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        icon: const Icon(Icons.location_disabled,
+            color: Colors.redAccent, size: 40),
+        title: Text(
+          'location_off_title'.tr,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+        ),
+        content: Text(
+          'location_off_body'.tr,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 14),
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('cancel'.tr),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Geolocator.openLocationSettings();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primary,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('open_settings'.tr),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPermissionDeniedDialog({required bool forever}) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        icon: const Icon(Icons.location_off_outlined,
+            color: Colors.orange, size: 40),
+        title: Text(
+          'location_permission_title'.tr,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+        ),
+        content: Text(
+          forever
+              ? 'location_permission_forever'.tr
+              : 'location_permission_denied'.tr,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 14),
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('cancel'.tr),
+          ),
+          if (forever)
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Geolocator.openAppSettings();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                foregroundColor: Colors.white,
+              ),
+              child: Text('open_settings'.tr),
+            ),
+        ],
+      ),
+    );
   }
 
   void _showTooFarDialog(double distKm) {
@@ -220,7 +323,9 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
         right: 0,
         child: Center(
           child: GestureDetector(
-            onTap: isTracking ? _ctrl.stopTracking : _onStartTap,
+            onTap: isTracking
+                ? () => _ctrl.stopTracking()
+                : () => _onStartTap(),
             child: Image.asset(
               isTracking ? 'assets/images/stop.png' : 'assets/images/start.png',
               height: 80,
