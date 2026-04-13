@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../controllers/kml_map_controller.dart';
 import '../core/theme.dart';
+import '../services/firebase_service.dart';
 import '../widgets/user_avatar.dart';
 
 const _medals = ['🥇', '🥈', '🥉'];
@@ -26,6 +28,15 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
   void initState() {
     super.initState();
     _ctrl = Get.find<KmlMapController>();
+  }
+
+  Future<void> _takePhoto() async {
+    final picker = ImagePicker();
+    final photo =
+        await picker.pickImage(source: ImageSource.camera, imageQuality: 70);
+    if (photo == null) return;
+    final bytes = await photo.readAsBytes();
+    await FirebaseService.instance.saveRunPhoto(_ctrl.runStartMs, bytes);
   }
 
   Future<void> _onStartTap() async {
@@ -160,63 +171,115 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
     );
   }
 
+  Future<bool> _confirmExit() async {
+    if (!_ctrl.isTracking.value) return true;
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        icon: const Icon(Icons.directions_run, color: Colors.redAccent, size: 40),
+        title: Text('exit_run_title'.tr,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+        content: Text('exit_run_body'.tr,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 14)),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('cancel'.tr),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
+            child: Text('exit_run_confirm'.tr),
+          ),
+        ],
+      ),
+    );
+    if (result == true) await _ctrl.stopTracking();
+    return false; // navigation handled by stopTracking via Get.offAllNamed
+  }
+
   @override
   Widget build(BuildContext context) {
     return Obx(() {
       final lb = _ctrl.leaderboard.toList();
       final myRank = lb.where((e) => e.isSelf).firstOrNull?.rank;
-      final title =
-          _ctrl.routeLabel.isNotEmpty ? _ctrl.routeLabel : 'map_view_title'.tr;
+      final isTracking = _ctrl.isTracking.value;
+      final isSharing = _ctrl.isSharing.value;
 
-      return Scaffold(
+      return PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) _confirmExit();
+        },
+        child: Scaffold(
         appBar: AppBar(
-          title: Text(title),
+          title: null,
           actions: [
+            // ── Share / Unshare ────────────────────────────────────────────
+            if (isTracking)
+              IconButton(
+                tooltip: isSharing ? 'unshare'.tr : 'share'.tr,
+                icon: Icon(
+                  isSharing ? Icons.wifi_tethering : Icons.wifi_tethering_off,
+                  color: isSharing ? Colors.white : Colors.white38,
+                ),
+                onPressed: () => _ctrl.toggleSharing(),
+              ),
+            // ── Leaderboard ────────────────────────────────────────────────
             if (lb.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    IconButton(
-                      icon: Icon(
-                        _leaderOpen
-                            ? Icons.leaderboard
-                            : Icons.leaderboard_outlined,
-                        color: _leaderOpen
-                            ? Colors.amberAccent
-                            : Colors.white,
-                      ),
-                      onPressed: () =>
-                          setState(() => _leaderOpen = !_leaderOpen),
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      _leaderOpen
+                          ? Icons.leaderboard
+                          : Icons.leaderboard_outlined,
+                      color: _leaderOpen ? Colors.amberAccent : Colors.white,
                     ),
-                    if (myRank != null && !_leaderOpen)
-                      Positioned(
-                        top: 8,
-                        right: 6,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 4, vertical: 1),
-                          decoration: BoxDecoration(
-                            color: Colors.amber,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            '#$myRank',
-                            style: const TextStyle(
-                                fontSize: 8,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.black),
-                          ),
+                    onPressed: () =>
+                        setState(() => _leaderOpen = !_leaderOpen),
+                  ),
+                  if (myRank != null && !_leaderOpen)
+                    Positioned(
+                      top: 8,
+                      right: 6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 4, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: Colors.amber,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '#$myRank',
+                          style: const TextStyle(
+                              fontSize: 8,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.black),
                         ),
                       ),
-                  ],
-                ),
+                    ),
+                ],
               ),
+            // ── Terminate ──────────────────────────────────────────────────
+            if (isTracking)
+              IconButton(
+                tooltip: 'terminate'.tr,
+                icon: const Icon(Icons.stop_circle_outlined, color: Colors.white),
+                onPressed: () => _ctrl.stopTracking(),
+              ),
+            const SizedBox(width: 4),
           ],
         ),
         body: _buildBody(lb),
-      );
+      ),
+    );
     });
   }
 
@@ -271,24 +334,19 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
             distance: _ctrl.currentDistanceKm,
             pace: _ctrl.currentPaceKmH,
           ),
-        )
-      else
+        ),
+
+      // ── Camera button (visible during tracking) ───────────────────────────
+      if (isTracking)
         Positioned(
-          top: 12,
-          left: 0,
-          right: 0,
-          child: Center(
-            child: _GlassChip(
-              child: Text(
-                _ctrl.formatTime(elapsedSecs),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 2,
-                ),
-              ),
-            ),
+          bottom: lb.isNotEmpty && _leaderOpen ? 204 : 52,
+          right: 16,
+          child: FloatingActionButton.small(
+            heroTag: 'camera',
+            backgroundColor: Colors.white,
+            foregroundColor: AppTheme.primary,
+            onPressed: () => _takePhoto(),
+            child: const Icon(Icons.camera_alt),
           ),
         ),
 
@@ -363,30 +421,6 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
   }
 }
 
-// ── Frosted glass chip ────────────────────────────────────────────────────────
-
-class _GlassChip extends StatelessWidget {
-  final Widget child;
-  const _GlassChip({required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.35),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: child,
-        ),
-      ),
-    );
-  }
-}
 
 // ── Stats panel ───────────────────────────────────────────────────────────────
 

@@ -75,6 +75,13 @@ class AppStrings extends Translations {
           'no_runners_live': 'No runners live',
           'no_runners_running': 'No one is running yet.',
           'live_leaderboard': 'Live Leaderboard',
+          'event_finished': 'Event Finished',
+          'terminate': 'Terminate',
+          'share': 'Share location',
+          'unshare': 'Hide location',
+          'exit_run_title': 'Exit Run?',
+          'exit_run_body': 'Your run is in progress. Exiting will stop and save your session.',
+          'exit_run_confirm': 'Exit & Save',
 
           // Leaderboard / Profile
           'search_hint': 'Search by email or username',
@@ -109,6 +116,13 @@ class AppStrings extends Translations {
           'too_far_title': 'Too Far from Start',
           'too_far_body': 'You are @dist km from the event start point. Please move closer before starting.',
           'start_anyway': 'Start Anyway',
+
+          // Route detail
+          'my_route_tab': 'My Route',
+          'photos_tab': 'Photos',
+          'no_photos': 'No photos yet',
+          'no_photos_subtitle': 'Tap the camera button while running to take photos',
+          'event': 'Event',
 
           // Common
           'runner': 'Runner',
@@ -190,6 +204,13 @@ class AppStrings extends Translations {
           'no_runners_live': 'ライブランナーなし',
           'no_runners_running': 'まだ走っている人はいません',
           'live_leaderboard': 'ライブ順位',
+          'event_finished': 'イベント終了',
+          'terminate': '終了',
+          'share': '位置を共有',
+          'unshare': '位置を非表示',
+          'exit_run_title': '退出しますか？',
+          'exit_run_body': 'ランが進行中です。退出するとセッションが停止・保存されます。',
+          'exit_run_confirm': '退出して保存',
 
           // Leaderboard / Profile
           'search_hint': 'メールまたはユーザー名で検索',
@@ -224,6 +245,13 @@ class AppStrings extends Translations {
           'too_far_title': 'スタート地点から離れすぎです',
           'too_far_body': 'イベントのスタート地点から @dist km 離れています。近づいてから開始してください。',
           'start_anyway': 'このまま開始',
+
+          // Route detail
+          'my_route_tab': 'ルート',
+          'photos_tab': '写真',
+          'no_photos': 'まだ写真がありません',
+          'no_photos_subtitle': 'ランニング中にカメラボタンをタップして写真を撮りましょう',
+          'event': 'イベント',
 
           // Common
           'runner': 'ランナー',

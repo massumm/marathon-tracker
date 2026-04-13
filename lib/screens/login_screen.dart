@@ -145,10 +145,11 @@ class _LoginBodyState extends State<_LoginBody> {
               ),
             ],
           ),
-          child: const Icon(Icons.directions_run, color: Colors.white, size: 44),
+          child:
+              const Icon(Icons.directions_run, color: Colors.white, size: 44),
         ),
         const SizedBox(height: 20),
-        const Text('Marathon Map',
+        const Text('RunMate',
             textAlign: TextAlign.center,
             style: TextStyle(
                 fontSize: 26,
@@ -188,10 +189,13 @@ class _LoginBodyState extends State<_LoginBody> {
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.next,
             decoration: _inputDeco(
-                label: 'Email', hint: 'you@example.com', icon: Icons.email_outlined),
+                label: 'Email',
+                hint: 'you@example.com',
+                icon: Icons.email_outlined),
             validator: (v) {
               if (v == null || v.trim().isEmpty) return 'Email is required';
-              if (!v.contains('@') || !v.contains('.')) return 'Enter a valid email';
+              if (!v.contains('@') || !v.contains('.'))
+                return 'Enter a valid email';
               return null;
             },
           ),
@@ -202,7 +206,8 @@ class _LoginBodyState extends State<_LoginBody> {
             textInputAction: _mode == _AuthMode.signUp
                 ? TextInputAction.next
                 : TextInputAction.done,
-            onFieldSubmitted: _mode == _AuthMode.signIn ? (_) => _submit() : null,
+            onFieldSubmitted:
+                _mode == _AuthMode.signIn ? (_) => _submit() : null,
             decoration: _inputDeco(
               label: 'Password',
               hint: '••••••••',
@@ -249,7 +254,8 @@ class _LoginBodyState extends State<_LoginBody> {
                 ),
               ),
               validator: (v) {
-                if (v == null || v.isEmpty) return 'Please confirm your password';
+                if (v == null || v.isEmpty)
+                  return 'Please confirm your password';
                 if (v != _passwordCtrl.text) return 'Passwords do not match';
                 return null;
               },
@@ -302,8 +308,8 @@ class _LoginBodyState extends State<_LoginBody> {
           style: ElevatedButton.styleFrom(
             backgroundColor: AppTheme.primary,
             foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             elevation: 0,
           ),
           child: _auth.isLoading.value
@@ -312,8 +318,7 @@ class _LoginBodyState extends State<_LoginBody> {
                   height: 22,
                   child: CircularProgressIndicator(
                       strokeWidth: 2.5, color: Colors.white))
-              : Text(
-                  _mode == _AuthMode.signIn ? 'Sign In' : 'Create Account',
+              : Text(_mode == _AuthMode.signIn ? 'Sign In' : 'Create Account',
                   style: const TextStyle(
                       fontSize: 15, fontWeight: FontWeight.w700)),
         ),
@@ -337,8 +342,8 @@ class _LoginBodyState extends State<_LoginBody> {
           onPressed: _auth.isLoading.value ? null : _signInWithGoogle,
           style: OutlinedButton.styleFrom(
             side: const BorderSide(color: Color(0xFFDDE1E7), width: 1.5),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             backgroundColor: Colors.white,
           ),
           child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
@@ -363,7 +368,8 @@ class _ToggleTab extends StatelessWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
-  const _ToggleTab({required this.label, required this.selected, required this.onTap});
+  const _ToggleTab(
+      {required this.label, required this.selected, required this.onTap});
 
   @override
   Widget build(BuildContext context) => Expanded(
@@ -388,8 +394,7 @@ class _ToggleTab extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                     fontSize: 13,
-                    fontWeight:
-                        selected ? FontWeight.w700 : FontWeight.w500,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                     color: selected
                         ? AppTheme.textPrimary
                         : AppTheme.textSecondary)),

@@ -59,7 +59,7 @@ class MyRoutesScreen extends GetView<MyPageController> {
               subtitle: ref.name,
               leadingIcon: Icons.flag_rounded,
               onTap: () => Get.toNamed(
-                AppRoutes.myPageMap,
+                AppRoutes.routeDetail,
                 arguments: ref.fullPath,
               ),
             );

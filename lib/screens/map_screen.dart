@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -118,10 +119,10 @@ class _EventCardState extends State<_EventCard> {
     final now = DateTime.now();
     final diff = eventDay.difference(DateTime(now.year, now.month, now.day));
 
-    if (diff.isNegative) return null;
+    if (diff.isNegative) return 'finished';
     if (diff.inDays == 0) {
       final todayDiff = eventDay.difference(now);
-      if (todayDiff.isNegative) return null;
+      if (todayDiff.isNegative) return 'finished';
       final h = todayDiff.inHours;
       final m = todayDiff.inMinutes % 60;
       if (h == 0) return '$m min remaining';
@@ -131,26 +132,49 @@ class _EventCardState extends State<_EventCard> {
     return '${diff.inDays} days remaining';
   }
 
+  bool get _isFinished {
+    final parts = widget.event.date.split('-');
+    if (parts.length != 3) return false;
+    final year = int.tryParse(parts[0]);
+    final month = int.tryParse(parts[1]);
+    final day = int.tryParse(parts[2]);
+    if (year == null || month == null || day == null) return false;
+    final eventDay = DateTime(year, month, day + 1); // day ends at midnight
+    return DateTime.now().isAfter(eventDay);
+  }
+
   @override
   Widget build(BuildContext context) {
     final countdown = _countdown();
+    final finished = _isFinished;
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => _showCategoryPicker(context),
+        onTap: finished ? null : () => _showCategoryPicker(context),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // ── Banner with floating title / date / place overlay ──────
-            _BannerWithOverlay(event: widget.event),
+            _BannerWithOverlay(event: widget.event, finished: finished),
 
             // ── Countdown + category row ───────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
               child: Row(
                 children: [
-                  if (countdown != null) ...[
+                  if (finished) ...[
+                    const Icon(Icons.flag, size: 13, color: Colors.grey),
+                    const SizedBox(width: 4),
+                    Text(
+                      'event_finished'.tr,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ] else if (countdown != null && countdown != 'finished') ...[
                     const Icon(Icons.timer_outlined,
                         size: 13, color: Colors.redAccent),
                     const SizedBox(width: 4),
@@ -251,7 +275,8 @@ class _EventCardState extends State<_EventCard> {
 
 class _BannerWithOverlay extends StatelessWidget {
   final EventModel event;
-  const _BannerWithOverlay({required this.event});
+  final bool finished;
+  const _BannerWithOverlay({required this.event, this.finished = false});
 
   @override
   Widget build(BuildContext context) {
@@ -260,12 +285,13 @@ class _BannerWithOverlay extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // Background: network image or gradient fallback
+          // Background: cached network image or gradient fallback
           if (event.bannerUrl.isNotEmpty)
-            Image.network(
-              event.bannerUrl,
+            CachedNetworkImage(
+              imageUrl: event.bannerUrl,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => _gradientBg(),
+              placeholder: (_, __) => _gradientBg(),
+              errorWidget: (_, __, ___) => _gradientBg(),
             )
           else
             _gradientBg(),
@@ -284,6 +310,40 @@ class _BannerWithOverlay extends StatelessWidget {
               ),
             ),
           ),
+
+          // Finished dimming overlay
+          if (finished)
+            Container(color: Colors.black.withValues(alpha: 0.45)),
+
+          // Finished badge top-right
+          if (finished)
+            Positioned(
+              top: 10,
+              right: 10,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.65),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.white24),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.flag, size: 13, color: Colors.white70),
+                    const SizedBox(width: 5),
+                    Text(
+                      'event_finished'.tr,
+                      style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white70),
+                    ),
+                  ],
+                ),
+              ),
+            ),
 
           // Title + date + location floating bottom-left
           Positioned(

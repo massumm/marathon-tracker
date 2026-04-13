@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart' as fs;
 import '../core/config.dart';
@@ -37,5 +39,32 @@ class FirebaseService {
         .toList()
       ..sort((a, b) => b.name.compareTo(a.name));
     return filtered;
+  }
+
+  /// Saves a photo taken during a run.
+  /// [runStartMs] must match the timestamp in the route filename.
+  Future<void> saveRunPhoto(int runStartMs, Uint8List bytes) async {
+    final photoTs = DateTime.now().millisecondsSinceEpoch;
+    final ref = _storage.ref(
+        '${AppConfig.routesStoragePath}/$_uid/photos/$runStartMs/photo_$photoTs.jpg');
+    await ref.putData(
+        bytes, fs.SettableMetadata(contentType: 'image/jpeg'));
+  }
+
+  /// Lists photo references for a saved route identified by its storage path.
+  Future<List<fs.Reference>> fetchRunPhotoRefs(
+      String routeStoragePath) async {
+    try {
+      final parts = routeStoragePath.split('/');
+      // path: routes/{uid}/my_route_{ts}.json  → parts[1]=uid, parts[2]=filename
+      final uid = parts[1];
+      final ts = parts.last.replaceAll('.json', '').split('_').last;
+      final photoPath =
+          '${AppConfig.routesStoragePath}/$uid/photos/$ts';
+      final result = await _storage.ref(photoPath).listAll();
+      return result.items;
+    } catch (_) {
+      return [];
+    }
   }
 }

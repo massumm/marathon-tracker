@@ -31,10 +31,20 @@ class FriendsService {
 
     // Run both queries in parallel
     final results = await Future.wait([
-      _db.ref('users').orderByChild('email')
-          .startAt(q).endAt('$q\uf8ff').limitToFirst(10).get(),
-      _db.ref('users').orderByChild('displayNameLower')
-          .startAt(q).endAt('$q\uf8ff').limitToFirst(10).get(),
+      _db
+          .ref('users')
+          .orderByChild('email')
+          .startAt(q)
+          .endAt('$q\uf8ff')
+          .limitToFirst(10)
+          .get(),
+      _db
+          .ref('users')
+          .orderByChild('displayNameLower')
+          .startAt(q)
+          .endAt('$q\uf8ff')
+          .limitToFirst(10)
+          .get(),
     ]);
 
     final seen = <String>{};
@@ -72,8 +82,8 @@ class FriendsService {
     });
   }
 
-  Future<void> acceptRequest(String fromUid, String fromEmail,
-      String fromDisplayName) async {
+  Future<void> acceptRequest(
+      String fromUid, String fromEmail, String fromDisplayName) async {
     final uid = _uid;
     final user = FirebaseAuth.instance.currentUser;
     if (uid == null || user == null) return;
@@ -126,7 +136,9 @@ class FriendsService {
   // ── Streams ───────────────────────────────────────────────────────────────
 
   Stream<List<FriendModel>> watchFriends() {
+    print("watchFriends: $_uid");
     if (_uid == null) return const Stream.empty();
+
     return _db.ref('friends/$_uid').onValue.map((event) {
       final data = event.snapshot.value;
       if (data == null) return <FriendModel>[];

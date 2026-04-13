@@ -16,6 +16,7 @@ import 'screens/leaderboard_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/my_page_map_screen.dart';
 import 'screens/my_routes_screen.dart';
+import 'screens/route_detail_screen.dart';
 import 'screens/qr_scanner_screen.dart';
 import 'screens/user_profile_screen.dart';
 
@@ -67,6 +68,10 @@ class MapApp extends StatelessWidget {
         GetPage(
           name: AppRoutes.myPageMap,
           page: () => const MyPageMapScreen(),
+        ),
+        GetPage(
+          name: AppRoutes.routeDetail,
+          page: () => const RouteDetailScreen(),
         ),
         GetPage(
           name: AppRoutes.myRoutes,

@@ -74,9 +74,13 @@ class KmlMapController extends GetxController {
 
   Timer? _timer;
   StreamSubscription? _positionSub;
+  int _runStartMs = 0;
+
+  int get runStartMs => _runStartMs;
 
   // ── Live runners ──────────────────────────────────────────────────────────
   final isLive = false.obs;
+  final isSharing = true.obs;
   final activeRunners = <RunnerData>[].obs;
 
   // ── Leaderboard ───────────────────────────────────────────────────────────
@@ -287,11 +291,28 @@ class KmlMapController extends GetxController {
   final _rawBuffer = <LatLng>[];
   final snappedPoints = <LatLng>[].obs;
 
+  Future<void> toggleSharing() async {
+    if (isSharing.value) {
+      isSharing.value = false;
+      isLive.value = false;
+      await LiveTrackingService.instance.stopBroadcasting();
+    } else {
+      isSharing.value = true;
+      final pos = currentPosition.value;
+      final lat = pos?.latitude ?? initialLocation.latitude;
+      final lng = pos?.longitude ?? initialLocation.longitude;
+      await LiveTrackingService.instance.startBroadcasting(lat, lng);
+      isLive.value = true;
+    }
+  }
+
   Future<void> startTracking() async {
     trackingPoints.clear();
     snappedPoints.clear();
     _rawBuffer.clear();
     elapsedSeconds.value = 0;
+    isSharing.value = true;
+    _runStartMs = DateTime.now().millisecondsSinceEpoch;
     _timer?.cancel();
 
     final pos = await LocationService.instance.getCurrentPosition();
@@ -395,7 +416,7 @@ class KmlMapController extends GetxController {
         snappedPoints.isNotEmpty ? snappedPoints.toList() : trackingPoints.toList();
 
     final now = DateTime.now();
-    final fileName = 'my_route_${now.millisecondsSinceEpoch}.json';
+    final fileName = 'my_route_$_runStartMs.json';
     final elapsed = Duration(seconds: elapsedSeconds.value);
     final startTime = now.subtract(elapsed);
     final totalDistance =

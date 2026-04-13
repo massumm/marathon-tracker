@@ -1,7 +1,10 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../core/theme.dart';
 
-/// Shared avatar widget — shows network photo when available, falls back to initial.
+/// Shared avatar widget — shows cached network photo when available,
+/// falls back to initial letter. Images are cached to disk so they
+/// don't re-download on every app launch.
 class UserAvatar extends StatelessWidget {
   final String label;
   final String photoUrl;
@@ -20,21 +23,60 @@ class UserAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final initial = label.isNotEmpty ? label[0].toUpperCase() : '?';
     final bg = bgColor ?? AppTheme.primary;
+    final radius = size / 2;
 
+    if (photoUrl.isEmpty) {
+      return _InitialAvatar(initial: initial, bg: bg, radius: radius, size: size);
+    }
+
+    return CachedNetworkImage(
+      imageUrl: photoUrl,
+      imageBuilder: (_, imageProvider) => CircleAvatar(
+        radius: radius,
+        backgroundImage: imageProvider,
+      ),
+      placeholder: (_, __) => _InitialAvatar(
+        initial: initial,
+        bg: bg,
+        radius: radius,
+        size: size,
+      ),
+      errorWidget: (_, __, ___) => _InitialAvatar(
+        initial: initial,
+        bg: bg,
+        radius: radius,
+        size: size,
+      ),
+    );
+  }
+}
+
+class _InitialAvatar extends StatelessWidget {
+  final String initial;
+  final Color bg;
+  final double radius;
+  final double size;
+
+  const _InitialAvatar({
+    required this.initial,
+    required this.bg,
+    required this.radius,
+    required this.size,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return CircleAvatar(
-      radius: size / 2,
+      radius: radius,
       backgroundColor: bg.withValues(alpha: 0.15),
-      backgroundImage: photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
-      child: photoUrl.isEmpty
-          ? Text(
-              initial,
-              style: TextStyle(
-                fontSize: size * 0.38,
-                fontWeight: FontWeight.w700,
-                color: bg,
-              ),
-            )
-          : null,
+      child: Text(
+        initial,
+        style: TextStyle(
+          fontSize: size * 0.38,
+          fontWeight: FontWeight.w700,
+          color: bg,
+        ),
+      ),
     );
   }
 }

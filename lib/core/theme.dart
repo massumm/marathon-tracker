@@ -22,7 +22,7 @@ class AppTheme {
         ),
         scaffoldBackgroundColor: background,
         appBarTheme: const AppBarTheme(
-          backgroundColor: primary,
+          backgroundColor: Color(0xFFFF6B35),
           foregroundColor: Colors.white,
           elevation: 0,
           centerTitle: true,
@@ -55,12 +55,11 @@ class AppTheme {
             backgroundColor: primary,
             foregroundColor: Colors.white,
             elevation: 0,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-            textStyle: const TextStyle(
-                fontSize: 15, fontWeight: FontWeight.w600),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+            textStyle:
+                const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
           ),
         ),
       );
