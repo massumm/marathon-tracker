@@ -91,28 +91,30 @@ class KmlMapController extends GetxController {
   // icon cache keyed by '{uid}_{photoUrl}'
   final _iconCache = <String, BitmapDescriptor>{};
 
-  late final String kmlFilePath;
-  late final String? kmlDirectUrl;
-  late final String routeLabel;
+  String kmlFilePath = '';
+  String? kmlDirectUrl;
+  String routeLabel = '';
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
-  @override
-  void onInit() {
-    super.onInit();
-    final args = Get.arguments;
+  /// Called by KmlMapBinding each time the route is opened.
+  /// Skips KML reload when a run is already in progress.
+  void prepareRoute(dynamic args) {
+    if (isTracking.value) return; // run continues — don't reload KML
+    kmlLoaded.value = false;
+    kmlPolylines = {};
+    kmlMarkers = {};
+    _loadFriendsAndSubscribe(); // safe here — user is authenticated
     if (args is Map) {
       kmlDirectUrl = args['kmlUrl'] as String? ?? '';
       kmlFilePath = args['storagePath'] as String? ?? '';
       routeLabel = args['label'] as String? ?? '';
-    } else {
-      // Legacy: single string storagePath
-      kmlFilePath = args as String;
+    } else if (args is String) {
+      kmlFilePath = args;
       kmlDirectUrl = null;
       routeLabel = '';
     }
     _loadKml();
-    _loadFriendsAndSubscribe();
   }
 
   Future<void> _loadFriendsAndSubscribe() async {

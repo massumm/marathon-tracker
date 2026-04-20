@@ -32,7 +32,7 @@ Future<void> _initFirebase() async {
     await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform);
   } on FirebaseException catch (e) {
-    if (e.code != 'duplicate-app') rethrow;
+    if (!e.code.contains('duplicate-app')) rethrow;
   }
 }
 

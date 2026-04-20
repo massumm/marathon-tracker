@@ -1,0 +1,1477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>RunMate – UI Design Screens</title>
+<style>
+  :root {
+    --primary: #FF6B35;
+    --primary-dark: #E05520;
+    --secondary: #00B4D8;
+    --bg: #F5F6FA;
+    --surface: #FFFFFF;
+    --text1: #1A202C;
+    --text2: #718096;
+    --border: #DDE1E7;
+    --green: #48BB78;
+    --red: #E53E3E;
+    --gold: #FFB300;
+    --silver: #90A4AE;
+    --bronze: #BF8970;
+    --phone-w: 375px;
+    --phone-h: 812px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #1A202C;
+    font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
+    color: var(--text1);
+    padding: 40px 20px 80px;
+  }
+
+  h1.page-title {
+    color: #fff;
+    font-size: 28px;
+    font-weight: 800;
+    text-align: center;
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+  }
+  .page-subtitle {
+    color: #718096;
+    text-align: center;
+    font-size: 14px;
+    margin-bottom: 48px;
+  }
+
+  /* Section labels */
+  .section-label {
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    text-align: center;
+    margin: 60px 0 24px;
+    opacity: 0.5;
+  }
+
+  /* Row of phones */
+  .phone-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 40px;
+    margin-bottom: 20px;
+  }
+
+  /* Phone shell */
+  .phone {
+    width: var(--phone-w);
+    height: var(--phone-h);
+    background: #000;
+    border-radius: 50px;
+    padding: 12px;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.6), inset 0 0 0 2px #333;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .phone::before {
+    content: '';
+    position: absolute;
+    top: 20px; left: 50%; transform: translateX(-50%);
+    width: 120px; height: 30px;
+    background: #000;
+    border-radius: 0 0 20px 20px;
+    z-index: 10;
+  }
+  .phone-label {
+    color: #718096;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+    margin-top: 16px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .screen {
+    width: 100%;
+    height: 100%;
+    background: var(--bg);
+    border-radius: 40px;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Status bar */
+  .status-bar {
+    height: 44px;
+    background: transparent;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding: 0 28px 6px;
+    flex-shrink: 0;
+    z-index: 5;
+  }
+  .status-time { font-size: 15px; font-weight: 700; }
+  .status-icons { display: flex; gap: 6px; align-items: center; }
+  .status-icons svg { width: 16px; height: 16px; }
+
+  /* AppBar */
+  .appbar {
+    background: var(--primary);
+    height: 56px;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    flex-shrink: 0;
+  }
+  .appbar-title {
+    color: #fff;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    flex: 1;
+    text-align: center;
+  }
+  .appbar-icon { color: #fff; font-size: 20px; cursor: pointer; }
+  .appbar-back { color: #fff; font-size: 22px; margin-right: 8px; }
+
+  /* Content scroll area */
+  .content {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ─── LOGIN SCREEN ─── */
+  .login-screen .status-bar { background: #fff; }
+  .login-screen .screen { background: #fff; }
+  .login-body {
+    padding: 24px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    overflow-y: auto;
+    height: 100%;
+  }
+  .login-logo {
+    width: 80px; height: 80px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    border-radius: 22px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 18px rgba(255,107,53,0.35);
+    font-size: 36px;
+    align-self: center;
+    margin-bottom: 16px;
+    margin-top: 8px;
+  }
+  .login-title { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; text-align: center; }
+  .login-tagline { font-size: 13px; color: var(--text2); text-align: center; margin-top: 6px; margin-bottom: 24px; line-height: 1.5; }
+  .auth-toggle {
+    background: #EEF0F5;
+    border-radius: 12px;
+    padding: 4px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    margin-bottom: 24px;
+  }
+  .toggle-tab {
+    padding: 9px;
+    border-radius: 9px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text2);
+    cursor: pointer;
+  }
+  .toggle-tab.active {
+    background: #fff;
+    font-weight: 700;
+    color: var(--text1);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  }
+  .input-field {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 13px 14px 13px 40px;
+    font-size: 14px;
+    color: var(--text1);
+    width: 100%;
+    margin-bottom: 14px;
+    position: relative;
+  }
+  .input-wrap { position: relative; margin-bottom: 14px; }
+  .input-wrap input {
+    background: #fff;
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 13px 14px 13px 42px;
+    font-size: 14px;
+    color: var(--text1);
+    width: 100%;
+  }
+  .input-wrap input:focus { outline: none; border-color: var(--primary); }
+  .input-icon {
+    position: absolute;
+    left: 14px; top: 50%; transform: translateY(-50%);
+    color: var(--text2); font-size: 18px;
+  }
+  .input-suffix {
+    position: absolute;
+    right: 12px; top: 50%; transform: translateY(-50%);
+    color: var(--text2); font-size: 18px; cursor: pointer;
+  }
+  .btn-primary {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    height: 50px;
+    width: 100%;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-bottom: 16px;
+    letter-spacing: 0.2px;
+  }
+  .divider-or {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 14px;
+  }
+  .divider-or hr { flex: 1; border: none; border-top: 1px solid var(--border); }
+  .divider-or span { font-size: 12px; color: var(--text2); opacity: 0.8; white-space: nowrap; }
+  .btn-google {
+    background: #fff;
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    height: 50px;
+    width: 100%;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--primary);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    margin-bottom: 14px;
+  }
+  .google-g {
+    width: 20px; height: 20px;
+    background: conic-gradient(from -45deg, #EA4335 110deg, #4285F4 110deg 235deg, #34A853 235deg 360deg);
+    border-radius: 50%;
+    position: relative;
+  }
+  .google-g::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%; transform: translate(-50%,-50%);
+    width: 8px; height: 8px;
+    background: #fff;
+    border-radius: 50%;
+  }
+  .terms-text { font-size: 11px; color: var(--text2); opacity: 0.7; text-align: center; line-height: 1.5; }
+
+  /* ─── HOME / NAV ─── */
+  .bottom-nav {
+    background: #fff;
+    height: 60px;
+    border-top: 1px solid #F0F0F0;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    flex-shrink: 0;
+    box-shadow: 0 -4px 12px rgba(0,0,0,0.06);
+  }
+  .nav-item {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    font-size: 11px; font-weight: 500; color: #B0B7C3; cursor: pointer;
+    padding: 0 16px;
+  }
+  .nav-item.active { color: var(--primary); font-weight: 600; }
+  .nav-item .nav-icon { font-size: 22px; }
+
+  /* ─── EVENT LIST (Map Screen) ─── */
+  .event-list { overflow-y: auto; height: 100%; padding: 8px 0; }
+  .event-card {
+    background: #fff;
+    border-radius: 14px;
+    margin: 5px 16px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .event-banner {
+    height: 190px;
+    position: relative;
+    overflow: hidden;
+  }
+  .event-banner-bg {
+    width: 100%; height: 100%;
+    object-fit: cover;
+  }
+  .event-banner-gradient {
+    position: absolute; inset: 0;
+    background: linear-gradient(to bottom, transparent 35%, rgba(0,0,0,0.78));
+  }
+  .event-banner-placeholder {
+    width: 100%; height: 100%;
+    background: linear-gradient(135deg, var(--primary), rgba(255,107,53,0.65));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 54px; opacity: 0.4;
+  }
+  .event-banner-text {
+    position: absolute; bottom: 12px; left: 14px; right: 14px;
+  }
+  .event-name { color: #fff; font-size: 17px; font-weight: 800; text-shadow: 0 1px 4px rgba(0,0,0,0.4); }
+  .event-meta { color: rgba(255,255,255,0.7); font-size: 12px; display: flex; gap: 6px; margin-top: 3px; align-items: center; }
+  .finished-badge {
+    position: absolute; top: 10px; right: 10px;
+    background: rgba(0,0,0,0.65);
+    border: 1px solid rgba(255,255,255,0.24);
+    border-radius: 20px;
+    padding: 5px 10px;
+    color: rgba(255,255,255,0.7);
+    font-size: 11px; font-weight: 700;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .event-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px;
+  }
+  .countdown { color: var(--red); font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 4px; }
+  .cat-badge {
+    background: rgba(255,107,53,0.1);
+    color: var(--primary);
+    border-radius: 12px;
+    padding: 3px 10px;
+    font-size: 11px; font-weight: 600;
+  }
+  .comment-bar {
+    border-top: 1px solid #F0F0F0;
+    padding: 10px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    color: var(--text2); font-size: 13px;
+  }
+
+  /* ─── KML MAP SCREEN ─── */
+  .map-appbar {
+    background: transparent;
+    position: absolute;
+    top: 44px; left: 0; right: 0;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0 8px;
+    z-index: 5;
+    gap: 4px;
+  }
+  .map-appbar-btn {
+    width: 40px; height: 40px;
+    border-radius: 20px;
+    background: rgba(0,0,0,0.4);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 20px; cursor: pointer;
+  }
+  .map-bg {
+    position: absolute; inset: 0;
+    background: #e8e0d8;
+    overflow: hidden;
+  }
+  .map-road { position: absolute; background: #fff; border-radius: 2px; }
+  .map-road-h { height: 8px; left: 0; right: 0; }
+  .map-road-v { width: 8px; top: 0; bottom: 0; }
+  .map-green { position: absolute; background: #c8e6c9; border-radius: 4px; }
+  .map-route {
+    position: absolute;
+    border: 3px dashed var(--primary);
+    border-radius: 50px;
+  }
+  .map-tracking-line {
+    position: absolute;
+    border: 4px solid var(--green);
+    border-radius: 50px;
+  }
+  .stats-panel {
+    position: absolute; top: 110px; left: 12px;
+    backdrop-filter: blur(10px);
+    background: rgba(0,0,0,0.45);
+    border-radius: 14px;
+    padding: 10px 12px;
+    display: flex; gap: 12px; align-items: center;
+  }
+  .stat-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .stat-value { color: #fff; font-size: 15px; font-weight: 700; }
+  .stat-label { color: rgba(255,255,255,0.6); font-size: 10px; }
+  .stat-divider { width: 1px; height: 30px; background: rgba(255,255,255,0.25); }
+  .start-btn {
+    position: absolute; bottom: 48px; left: 50%; transform: translateX(-50%);
+    width: 80px; height: 80px;
+    border-radius: 40px;
+    background: var(--primary);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 28px;
+    box-shadow: 0 8px 24px rgba(255,107,53,0.5);
+    cursor: pointer;
+  }
+  .camera-fab {
+    position: absolute; bottom: 56px; right: 16px;
+    width: 44px; height: 44px;
+    border-radius: 22px;
+    background: #fff;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--primary); font-size: 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
+  .leaderboard-panel {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: rgba(0,0,0,0.82);
+    backdrop-filter: blur(12px);
+    border-radius: 16px 16px 0 0;
+    padding: 14px 0 0;
+  }
+  .leader-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 16px 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .leader-title { color: #fff; font-size: 13px; font-weight: 700; letter-spacing: 0.4px; }
+  .leader-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 16px;
+  }
+  .leader-row.self { background: rgba(255,179,0,0.1); }
+  .leader-rank { width: 28px; font-size: 16px; text-align: center; }
+  .leader-avatar {
+    width: 32px; height: 32px; border-radius: 16px;
+    background: var(--primary);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 13px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .leader-name { color: #fff; font-size: 13px; font-weight: 500; flex: 1; }
+  .leader-name.self { font-weight: 700; color: #FFB300; }
+  .leader-dist { color: rgba(255,255,255,0.7); font-size: 12px; font-weight: 600; }
+  .leader-dist.self { color: #FFB300; }
+
+  /* ─── LEADERBOARD SCREEN ─── */
+  .podium-container {
+    padding: 20px 16px 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 4px;
+  }
+  .podium-col {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    flex: 1;
+  }
+  .podium-avatar {
+    border-radius: 50%;
+    background: var(--primary);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .podium-name { font-size: 12px; font-weight: 700; color: var(--text1); text-align: center; }
+  .podium-dist { font-size: 11px; font-weight: 600; text-align: center; }
+  .podium-runs { font-size: 10px; color: var(--text2); text-align: center; }
+  .podium-base {
+    width: 100%;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 8px 8px 0 0;
+    font-size: 22px;
+    border: 1.5px solid;
+  }
+  .rank-list { overflow-y: auto; padding: 8px 0 16px; }
+  .rank-row {
+    background: #fff;
+    border-radius: 14px;
+    margin: 4px 16px;
+    padding: 11px 14px;
+    display: flex; align-items: center; gap: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+  }
+  .rank-num { width: 32px; font-size: 13px; font-weight: 700; color: var(--text2); text-align: center; }
+  .rank-avatar {
+    width: 40px; height: 40px; border-radius: 20px;
+    background: var(--primary);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 15px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .rank-info { flex: 1; }
+  .rank-name { font-size: 14px; font-weight: 700; color: var(--text1); }
+  .rank-email { font-size: 11px; color: var(--text2); }
+  .rank-stats { text-align: right; }
+  .rank-dist { font-size: 14px; font-weight: 800; color: var(--primary); }
+  .rank-runs { font-size: 11px; color: var(--text2); }
+
+  /* ─── COMMENT SHEET ─── */
+  .sheet-handle { width: 40px; height: 4px; background: #e0e0e0; border-radius: 2px; margin: 14px auto 10px; }
+  .sheet-header { padding: 0 16px 12px; border-bottom: 1px solid #f0f0f0; }
+  .sheet-title { font-size: 15px; font-weight: 700; color: var(--primary); }
+  .sheet-sub { font-size: 12px; color: var(--text2); }
+  .comment-list { overflow-y: auto; flex: 1; padding: 8px 16px; }
+  .comment-item { display: flex; gap: 10px; margin-bottom: 16px; }
+  .c-avatar { width: 36px; height: 36px; border-radius: 18px; background: var(--primary); color: #fff; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .c-body { flex: 1; }
+  .c-name { font-size: 13px; font-weight: 600; color: var(--primary); }
+  .c-time { font-size: 11px; color: var(--text2); margin-bottom: 3px; }
+  .c-text { font-size: 14px; color: var(--text1); line-height: 1.4; }
+  .c-actions { display: flex; gap: 14px; margin-top: 6px; align-items: center; }
+  .c-action { font-size: 12px; color: var(--text2); display: flex; align-items: center; gap: 3px; cursor: pointer; }
+  .c-action.liked { color: #E53E3E; }
+  .comment-input-bar {
+    padding: 10px 12px;
+    border-top: 1px solid #f0f0f0;
+    display: flex; align-items: center; gap: 8px;
+    flex-shrink: 0;
+  }
+  .comment-input {
+    flex: 1; background: #f5f5f5;
+    border-radius: 22px; border: none;
+    padding: 10px 14px; font-size: 14px;
+  }
+  .send-btn { color: var(--primary); font-size: 22px; cursor: pointer; }
+
+  /* ─── RUNNING BANNER ─── */
+  .running-banner {
+    background: var(--green);
+    padding: 10px 16px;
+    display: flex; align-items: center; gap: 8px;
+    flex-shrink: 0;
+  }
+  .rb-text { flex: 1; }
+  .rb-label { color: #fff; font-size: 13px; font-weight: 600; }
+  .rb-time { color: #fff; font-size: 13px; font-weight: 700; letter-spacing: 1px; }
+
+  /* ─── CATEGORY SHEET ─── */
+  .cat-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #f5f5f5;
+    cursor: pointer;
+  }
+  .cat-icon {
+    width: 44px; height: 44px; border-radius: 12px;
+    background: rgba(255,107,53,0.1);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; flex-shrink: 0;
+  }
+  .cat-info { flex: 1; }
+  .cat-name { font-size: 15px; font-weight: 600; color: var(--primary); }
+  .cat-detail { font-size: 12px; color: var(--text2); }
+
+  /* ─── PROFILE / MY PAGE ─── */
+  .profile-header {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    padding: 24px 20px 20px;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+  .profile-avatar-big {
+    width: 72px; height: 72px; border-radius: 36px;
+    background: rgba(255,255,255,0.3);
+    border: 3px solid rgba(255,255,255,0.6);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 28px; font-weight: 700;
+  }
+  .profile-name { color: #fff; font-size: 18px; font-weight: 700; }
+  .profile-email { color: rgba(255,255,255,0.8); font-size: 12px; }
+  .stats-row {
+    display: flex; background: #fff;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .stat-box {
+    flex: 1; padding: 14px 8px; text-align: center;
+    border-right: 1px solid #f0f0f0;
+  }
+  .stat-box:last-child { border-right: none; }
+  .stat-box-val { font-size: 18px; font-weight: 800; color: var(--primary); }
+  .stat-box-lbl { font-size: 11px; color: var(--text2); margin-top: 2px; }
+  .menu-item {
+    background: #fff;
+    padding: 14px 16px;
+    display: flex; align-items: center; gap: 12px;
+    border-bottom: 1px solid #f5f5f5;
+  }
+  .menu-icon { font-size: 20px; width: 24px; text-align: center; }
+  .menu-text { flex: 1; font-size: 14px; font-weight: 500; color: var(--text1); }
+  .menu-arrow { color: var(--text2); font-size: 16px; }
+
+  /* ─── FRIENDS SCREEN ─── */
+  .search-bar {
+    margin: 12px 16px;
+    background: #fff;
+    border-radius: 12px;
+    border: 1.5px solid var(--border);
+    padding: 10px 14px 10px 40px;
+    font-size: 14px;
+    color: var(--text2);
+    position: relative;
+    display: flex; align-items: center;
+  }
+  .friend-row {
+    background: #fff;
+    margin: 4px 16px;
+    border-radius: 14px;
+    padding: 12px 14px;
+    display: flex; align-items: center; gap: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  }
+  .f-avatar { width: 44px; height: 44px; border-radius: 22px; background: var(--secondary); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 16px; font-weight: 700; flex-shrink: 0; }
+  .f-info { flex: 1; }
+  .f-name { font-size: 14px; font-weight: 600; color: var(--text1); }
+  .f-runs { font-size: 12px; color: var(--text2); }
+  .f-btn { background: rgba(255,107,53,0.1); color: var(--primary); border: none; border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .f-btn.remove { background: rgba(229,62,62,0.08); color: var(--red); }
+
+  /* ─── COLOR SWATCHES ─── */
+  .design-section {
+    max-width: 1100px; margin: 60px auto 0;
+    color: #fff;
+  }
+  .design-section h2 { font-size: 18px; font-weight: 700; margin-bottom: 20px; opacity: 0.6; text-transform: uppercase; letter-spacing: 1px; }
+  .swatch-row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 32px; }
+  .swatch { border-radius: 12px; padding: 16px 20px; min-width: 140px; }
+  .swatch-name { font-size: 12px; font-weight: 600; opacity: 0.85; }
+  .swatch-val { font-size: 11px; opacity: 0.65; margin-top: 2px; font-family: monospace; }
+  .type-row { display: flex; flex-direction: column; gap: 8px; background: rgba(255,255,255,0.04); border-radius: 12px; padding: 20px 24px; }
+  .type-sample { display: flex; align-items: baseline; gap: 12px; }
+  .type-label { font-size: 11px; color: #718096; width: 180px; flex-shrink: 0; font-family: monospace; }
+</style>
+</head>
+<body>
+
+<h1 class="page-title">🏃 RunMate — UI Design</h1>
+<p class="page-subtitle">All screens · Mobile (375 × 812) · Import into Figma via html.to.design or Anima</p>
+
+<!-- ══════════════ ROW 1: AUTH ══════════════ -->
+<div class="section-label">Authentication</div>
+<div class="phone-row">
+
+  <!-- LOGIN -->
+  <div>
+    <div class="phone">
+      <div class="screen login-screen">
+        <div class="status-bar" style="background:#fff">
+          <span class="status-time" style="color:#1A202C">9:41</span>
+          <div class="status-icons" style="color:#1A202C">📶 🔋</div>
+        </div>
+        <div class="login-body">
+          <div class="login-logo">🏃</div>
+          <div class="login-title">RunMate</div>
+          <div class="login-tagline">Track your marathon route<br>and relive every kilometer.</div>
+          <div class="auth-toggle">
+            <div class="toggle-tab active">Sign In</div>
+            <div class="toggle-tab">Sign Up</div>
+          </div>
+          <div class="input-wrap">
+            <span class="input-icon">✉️</span>
+            <input type="email" placeholder="Email address" style="font-family:inherit"/>
+          </div>
+          <div class="input-wrap">
+            <span class="input-icon">🔒</span>
+            <input type="password" placeholder="Min. 6 characters" style="font-family:inherit"/>
+            <span class="input-suffix">👁</span>
+          </div>
+          <button class="btn-primary">Sign In</button>
+          <div class="divider-or"><hr><span>or continue with</span><hr></div>
+          <button class="btn-google">
+            <div class="google-g"></div>
+            Sign in with Google
+          </button>
+          <div class="terms-text">By continuing you agree to our Terms of Service.</div>
+        </div>
+      </div>
+    </div>
+    <div class="phone-label">Sign In</div>
+  </div>
+
+  <!-- SIGN UP -->
+  <div>
+    <div class="phone">
+      <div class="screen login-screen">
+        <div class="status-bar" style="background:#fff">
+          <span class="status-time" style="color:#1A202C">9:41</span>
+          <div class="status-icons" style="color:#1A202C">📶 🔋</div>
+        </div>
+        <div class="login-body">
+          <div class="login-logo">🏃</div>
+          <div class="login-title">RunMate</div>
+          <div class="login-tagline">Track your marathon route<br>and relive every kilometer.</div>
+          <div class="auth-toggle">
+            <div class="toggle-tab">Sign In</div>
+            <div class="toggle-tab active">Sign Up</div>
+          </div>
+          <div class="input-wrap">
+            <span class="input-icon">✉️</span>
+            <input type="email" placeholder="Email address" style="font-family:inherit"/>
+          </div>
+          <div class="input-wrap">
+            <span class="input-icon">🔒</span>
+            <input type="password" placeholder="Min. 6 characters" style="font-family:inherit"/>
+            <span class="input-suffix">👁</span>
+          </div>
+          <div class="input-wrap">
+            <span class="input-icon">🔒</span>
+            <input type="password" placeholder="Re-enter password" style="font-family:inherit"/>
+            <span class="input-suffix">👁</span>
+          </div>
+          <button class="btn-primary">Create Account</button>
+          <div class="divider-or"><hr><span>or continue with</span><hr></div>
+          <button class="btn-google">
+            <div class="google-g"></div>
+            Sign up with Google
+          </button>
+          <div class="terms-text">By continuing you agree to our Terms of Service.</div>
+        </div>
+      </div>
+    </div>
+    <div class="phone-label">Sign Up</div>
+  </div>
+
+</div>
+
+<!-- ══════════════ ROW 2: HOME / EVENTS ══════════════ -->
+<div class="section-label">Home — Events List</div>
+<div class="phone-row">
+
+  <!-- HOME: EVENTS LIST -->
+  <div>
+    <div class="phone">
+      <div class="screen">
+        <div class="status-bar">
+          <span class="status-time" style="color:#fff">9:41</span>
+          <div class="status-icons" style="color:#fff">📶 🔋</div>
+        </div>
+        <div class="appbar">
+          <div style="width:40px"></div>
+          <div class="appbar-title">Events</div>
+          <div class="appbar-icon">🔄</div>
+        </div>
+        <div class="content">
+          <div class="event-list">
+            <!-- Card 1 -->
+            <div class="event-card">
+              <div class="event-banner" style="background:linear-gradient(135deg,#FF6B35,rgba(255,107,53,0.6))">
+                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:54px;opacity:0.3">🏃</div>
+                <div class="event-banner-gradient"></div>
+                <div class="event-banner-text">
+                  <div class="event-name">Tokyo Marathon 2025</div>
+                  <div class="event-meta"><span>📅</span>Mar 2, 2025<span style="margin-left:6px">📍</span>Tokyo, Japan</div>
+                </div>
+              </div>
+              <div class="event-footer">
+                <div class="countdown">⏱ 12d 4h 30m</div>
+                <div class="cat-badge">Full Marathon</div>
+                <div style="color:var(--text2)">›</div>
+              </div>
+              <div class="comment-bar">
+                <span>💬 3 comments</span>
+                <span style="color:var(--text2)">›</span>
+              </div>
+            </div>
+            <!-- Card 2: Finished -->
+            <div class="event-card">
+              <div class="event-banner" style="background:linear-gradient(135deg,#00B4D8,rgba(0,180,216,0.6))">
+                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:54px;opacity:0.3">🏅</div>
+                <div class="event-banner-gradient"></div>
+                <div class="finished-badge">🏁 Finished</div>
+                <div class="event-banner-text">
+                  <div class="event-name">Osaka Half Marathon</div>
+                  <div class="event-meta"><span>📅</span>Jan 26, 2025<span style="margin-left:6px">📍</span>Osaka, Japan</div>
+                </div>
+              </div>
+              <div class="event-footer">
+                <div style="color:var(--text2);font-size:12px;display:flex;align-items:center;gap:4px">🏁 Event finished</div>
+                <div class="cat-badge">Half Marathon</div>
+                <div style="color:var(--text2)">›</div>
+              </div>
+              <div class="comment-bar">
+                <span>💬 Add a comment…</span>
+                <span style="color:var(--text2)">›</span>
+              </div>
+            </div>
+            <!-- Card 3 -->
+            <div class="event-card">
+              <div class="event-banner" style="background:linear-gradient(135deg,#48BB78,rgba(72,187,120,0.6))">
+                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:54px;opacity:0.3">🌳</div>
+                <div class="event-banner-gradient"></div>
+                <div class="event-banner-text">
+                  <div class="event-name">Kyoto Forest Run</div>
+                  <div class="event-meta"><span>📅</span>Apr 20, 2025<span style="margin-left:6px">📍</span>Kyoto, Japan</div>
+                </div>
+              </div>
+              <div class="event-footer">
+                <div class="countdown">⏱ 42d 8h 15m</div>
+                <div class="cat-badge">10K</div>
+                <div style="color:var(--text2)">›</div>
+              </div>
+              <div class="comment-bar">
+                <span>💬 1 comment</span>
+                <span style="color:var(--text2)">›</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bottom-nav">
+          <div class="nav-item active"><div class="nav-icon">🗺️</div>Events</div>
+          <div class="nav-item"><div class="nav-icon">👥</div>Friends</div>
+          <div class="nav-item"><div class="nav-icon">👤</div>My Page</div>
+        </div>
+      </div>
+    </div>
+    <div class="phone-label">Events List</div>
+  </div>
+
+  <!-- HOME: RUN IN PROGRESS BANNER -->
+  <div>
+    <div class="phone">
+      <div class="screen">
+        <div class="status-bar">
+          <span class="status-time" style="color:#fff">9:41</span>
+          <div class="status-icons" style="color:#fff">📶 🔋</div>
+        </div>
+        <div class="appbar">
+          <div style="width:40px"></div>
+          <div class="appbar-title">Events</div>
+          <div class="appbar-icon">🔄</div>
+        </div>
+        <div class="running-banner">
+          <span style="color:#fff;font-size:18px">🏃</span>
+          <div class="rb-text">
+            <div class="rb-label">Run in Progress</div>
+          </div>
+          <div class="rb-time">00:23:14</div>
+          <span style="color:#fff;font-size:18px">›</span>
+        </div>
+        <div class="content">
+          <div class="event-list">
+            <div class="event-card">
+              <div class="event-banner" style="background:linear-gradient(135deg,#FF6B35,rgba(255,107,53,0.6))">
+                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:54px;opacity:0.3">🏃</div>
+                <div class="event-banner-gradient"></div>
+                <div class="event-banner-text">
+                  <div class="event-name">Tokyo Marathon 2025</div>
+                  <div class="event-meta"><span>📅</span>Mar 2, 2025<span style="margin-left:6px">📍</span>Tokyo, Japan</div>
+                </div>
+              </div>
+              <div class="event-footer">
+                <div class="countdown">⏱ 12d 4h 30m</div>
+                <div class="cat-badge">Full Marathon</div>
+                <div style="color:var(--text2)">›</div>
+              </div>
+              <div class="comment-bar">
+                <span>💬 3 comments</span>
+                <span style="color:var(--text2)">›</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bottom-nav">
+          <div class="nav-item active"><div class="nav-icon">🗺️</div>Events</div>
+          <div class="nav-item"><div class="nav-icon" style="position:relative">👥<span style="position:absolute;top:-4px;right:-6px;background:var(--red);color:#fff;border-radius:8px;font-size:9px;padding:1px 4px;font-weight:700">2</span></div>Friends</div>
+          <div class="nav-item"><div class="nav-icon">👤</div>My Page</div>
+        </div>
+      </div>
+    </div>
+    <div class="phone-label">Run In Progress</div>
+  </div>
+
+  <!-- CATEGORY PICKER SHEET -->
+  <div>
+    <div class="phone">
+      <div class="screen">
+        <div class="status-bar">
+          <span class="status-time" style="color:#fff">9:41</span>
+          <div class="status-icons" style="color:#fff">📶 🔋</div>
+        </div>
+        <div class="appbar">
+          <div style="width:40px"></div>
+          <div class="appbar-title">Events</div>
+          <div class="appbar-icon">🔄</div>
+        </div>
+        <div class="content">
+          <div class="event-list" style="opacity:0.3">
+            <div class="event-card">
+              <div class="event-banner" style="background:linear-gradient(135deg,#FF6B35,rgba(255,107,53,0.6));height:120px">
+                <div class="event-banner-gradient"></div>
+                <div class="event-banner-text"><div class="event-name">Tokyo Marathon 2025</div></div>
+              </div>
+            </div>
+          </div>
+          <!-- Bottom sheet overlay -->
+          <div style="position:absolute;inset:0;background:rgba(0,0,0,0.4)"></div>
+          <div style="position:absolute;bottom:0;left:0;right:0;background:#fff;border-radius:20px 20px 0 0;overflow:hidden">
+            <div class="sheet-handle"></div>
+            <div class="sheet-header">
+              <div class="sheet-title">Tokyo Marathon 2025</div>
+              <div class="sheet-sub">Select a category to start</div>
+            </div>
+            <div class="cat-item">
+              <div class="cat-icon">🏃</div>
+              <div class="cat-info">
+                <div class="cat-name">Full Marathon</div>
+                <div class="cat-detail">Cut-off: 7 hours</div>
+              </div>
+              <span style="color:var(--text2)">›</span>
+            </div>
+            <div class="cat-item">
+              <div class="cat-icon">🏃</div>
+              <div class="cat-info">
+                <div class="cat-name">Half Marathon</div>
+                <div class="cat-detail">Cut-off: 3.5 hours</div>
+              </div>
+              <span style="color:var(--text2)">›</span>
+            </div>
+            <div class="cat-item" style="opacity:0.4">
+              <div class="cat-icon">🏃</div>
+              <div class="cat-info">
+                <div class="cat-name">10K</div>
+                <div class="cat-detail" style="color:orange;font-size:11px">⚠ No route set</div>
+              </div>
+              <span style="color:var(--text2)">🔒</span>
+            </div>
+            <div style="height:20px"></div>
+          </div>
+        </div>
+        <div class="bottom-nav">
+          <div class="nav-item active"><div class="nav-icon">🗺️</div>Events</div>
+          <div class="nav-item"><div class="nav-icon">👥</div>Friends</div>
+          <div class="nav-item"><div class="nav-icon">👤</div>My Page</div>
+        </div>
+      </div>
+    </div>
+    <div class="phone-label">Category Picker</div>
+  </div>
+
+</div>
+
+<!-- ══════════════ ROW 3: MAP / TRACKER ══════════════ -->
+<div class="section-label">Run Tracker Map</div>
+<div class="phone-row">
+
+  <!-- MAP: IDLE (not tracking) -->
+  <div>
+    <div class="phone">
+      <div class="screen" style="background:#000">
+        <div class="status-bar" style="position:absolute;top:0;left:0;right:0;z-index:6">
+          <span class="status-time" style="color:#fff">9:41</span>
+          <div class="status-icons" style="color:#fff">📶 🔋</div>
+        </div>
+        <div class="content" style="position:relative;height:100%">
+          <!-- Map background -->
+          <div class="map-bg">
+            <div class="map-green" style="top:60px;left:40px;width:120px;height:80px"></div>
+            <div class="map-green" style="top:200px;right:20px;width:90px;height:60px"></div>
+            <div class="map-road map-road-h" style="top:160px"></div>
+            <div class="map-road map-road-h" style="top:280px"></div>
+            <div class="map-road map-road-v" style="left:140px"></div>
+            <div class="map-road map-road-v" style="right:100px"></div>
+            <!-- KML route outline -->
+            <div style="position:absolute;top:100px;left:60px;width:200px;height:280px;border:3px dashed rgba(255,107,53,0.6);border-radius:100px;transform:rotate(-15deg)"></div>
+            <!-- Start marker -->
+            <div style="position:absolute;top:148px;left:200px;font-size:24px">📍</div>
+          </div>
+          <!-- AppBar -->
+          <div class="map-appbar">
+            <div class="map-appbar-btn">📡</div>
+            <div class="map-appbar-btn">🏆</div>
+          </div>
+          <!-- Start button -->
+          <div class="start-btn">▶</div>
+        </div>
+      </div>
+    </div>
+    <div class="phone-label">Map · Ready</div>
+  </div>
+
+  <!-- MAP: TRACKING -->
+  <div>
+    <div class="phone">
+      <div class="screen" style="background:#000">
+        <div class="status-bar" style="position:absolute;top:0;left:0;right:0;z-index:6">
+          <span class="status-time" style="color:#fff">9:41</span>
+          <div class="status-icons" style="color:#fff">📶 🔋</div>
+        </div>
+        <div class="content" style="position:relative;height:100%">
+          <div class="map-bg">
+            <div class="map-green" style="top:60px;left:40px;width:120px;height:80px"></div>
+            <div class="map-road map-road-h" style="top:160px"></div>
+            <div class="map-road map-road-h" style="top:280px"></div>
+            <div class="map-road map-road-v" style="left:140px"></div>
+            <div class="map-road map-road-v" style="right:100px"></div>
+            <!-- route -->
+            <div style="position:absolute;top:100px;left:60px;width:200px;height:280px;border:3px dashed rgba(255,107,53,0.4);border-radius:100px;transform:rotate(-15deg)"></div>
+            <!-- tracking polyline -->
+            <div style="position:absolute;top:160px;left:60px;width:120px;height:4px;background:var(--green);border-radius:4px;transform:rotate(5deg)"></div>
+            <div style="position:absolute;top:164px;left:175px;width:4px;height:80px;background:var(--green);border-radius:4px"></div>
+            <!-- current position -->
+            <div style="position:absolute;top:224px;left:168px;font-size:20px">🔵</div>
+            <!-- friend marker -->
+            <div style="position:absolute;top:180px;left:80px">
+              <div style="width:32px;height:32px;border-radius:16px;background:#00B4D8;border:2px solid #fff;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,0.3)">R</div>
+            </div>
+          </div>
+          <!-- AppBar -->
+          <div class="map-appbar">
+            <div class="map-appbar-btn" style="background:rgba(72,187,120,0.7)">📡</div>
+            <div class="map-appbar-btn">
+              🏆
+              <div style="position:absolute;top:-2px;right:-2px;background:#FFB300;border-radius:8px;font-size:8px;padding:1px 3px;font-weight:800;color:#000">#2</div>
+            </div>
+          </div>
+          <!-- Stats panel -->
+          <div class="stats-panel">
+            <div class="stat-item"><span style="font-size:14px">⏱</span><div class="stat-value">23:14</div><div class="stat-label">TIME</div></div>
+            <div class="stat-divider"></div>
+            <div class="stat-item"><span style="font-size:14px">📏</span><div class="stat-value">3.42</div><div class="stat-label">KM</div></div>
+            <div class="stat-divider"></div>
+            <div class="stat-item"><span style="font-size:14px">⚡</span><div class="stat-value">5.8</div><div class="stat-label">KM/H</div></div>
+          </div>
+          <!-- Camera FAB -->
+          <div class="camera-fab">📷</div>
+          <!-- Stop button -->
+          <div class="start-btn" style="background:var(--red);box-shadow:0 8px 24px rgba(229,62,62,0.5)">⏹</div>
+        </div>
+      </div>
+    </div>
+    <div class="phone-label">Map · Tracking</div>
+  </div>
+
+  <!-- MAP: LEADERBOARD OPEN -->
+  <div>
+    <div class="phone">
+      <div class="screen" style="background:#000">
+        <div class="status-bar" style="position:absolute;top:0;left:0;right:0;z-index:6">
+          <span class="status-time" style="color:#fff">9:41</span>
+          <div class="status-icons" style="color:#fff">📶 🔋</div>
+        </div>
+        <div class="content" style="position:relative;height:100%">
+          <div class="map-bg" style="filter:brightness(0.7)">
+            <div class="map-green" style="top:60px;left:40px;width:120px;height:80px"></div>
+            <div class="map-road map-road-h" style="top:160px"></div>
+            <div class="map-road map-road-v" style="left:140px"></div>
+            <div style="position:absolute;top:100px;left:60px;width:200px;height:280px;border:3px dashed rgba(255,107,53,0.4);border-radius:100px;transform:rotate(-15deg)"></div>
+            <div style="position:absolute;top:160px;left:60px;width:120px;height:4px;background:var(--green);border-radius:4px;transform:rotate(5deg)"></div>
+          </div>
+          <!-- AppBar -->
+          <div class="map-appbar">
+            <div class="map-appbar-btn" style="background:rgba(72,187,120,0.7)">📡</div>
+            <div class="map-appbar-btn" style="background:rgba(255,179,0,0.3)">🏆</div>
+          </div>
+          <!-- Stats panel -->
+          <div class="stats-panel">
+            <div class="stat-item"><span style="font-size:14px">⏱</span><div class="stat-value">23:14</div><div class="stat-label">TIME</div></div>
+            <div class="stat-divider"></div>
+            <div class="stat-item"><span style="font-size:14px">📏</span><div class="stat-value">3.42</div><div class="stat-label">KM</div></div>
+            <div class="stat-divider"></div>
+            <div class="stat-item"><span style="font-size:14px">⚡</span><div class="stat-value">5.8</div><div class="stat-label">KM/H</div></div>
+          </div>
+          <!-- Camera FAB shifted up -->
+          <div class="camera-fab" style="bottom:210px">📷</div>
+          <!-- Stop button shifted up -->
+          <div class="start-btn" style="bottom:204px;background:var(--red);box-shadow:0 8px 24px rgba(229,62,62,0.5)">⏹</div>
+          <!-- Leaderboard panel -->
+          <div class="leaderboard-panel">
+            <div class="leader-header">
+              <div class="leader-title">🏆 LIVE LEADERBOARD</div>
+              <span style="color:rgba(255,255,255,0.6);font-size:20px;cursor:pointer">⌄</span>
+            </div>
+            <div class="leader-row">
+              <div class="leader-rank">🥇</div>
+              <div class="leader-avatar" style="background:#00B4D8">R</div>
+              <div class="leader-name">Reza</div>
+              <div class="leader-dist">5.12 km</div>
+            </div>
+            <div class="leader-row self">
+              <div class="leader-rank">🥈</div>
+              <div class="leader-avatar">Y</div>
+              <div class="leader-name self">You</div>
+              <div class="leader-dist self">3.42 km</div>
+            </div>
+            <div class="leader-row">
+              <div class="leader-rank">🥉</div>
+              <div class="leader-avatar" style="background:#48BB78">A</div>
+              <div class="leader-name">Ali</div>
+              <div class="leader-dist">2.88 km</div>
+            </div>
+            <div class="leader-row">
+              <div class="leader-rank" style="color:rgba(255,255,255,0.5);font-size:13px">#4</div>
+              <div class="leader-avatar" style="background:#718096">M</div>
+              <div class="leader-name">Mazumder</div>
+              <div class="leader-dist">1.95 km</div>
+            </div>
+            <div style="height:12px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="phone-label">Map · Leaderboard</div>
+  </div>
+
+</div>
+
+<!-- ══════════════ ROW 4: LEADERBOARD SCREEN ══════════════ -->
+<div class="section-label">Leaderboard</div>
+<div class="phone-row">
+
+  <div>
+    <div class="phone">
+      <div class="screen">
+        <div class="status-bar">
+          <span class="status-time" style="color:#fff">9:41</span>
+          <div class="status-icons" style="color:#fff">📶 🔋</div>
+        </div>
+        <div class="appbar">
+          <div style="width:40px"></div>
+          <div class="appbar-title">Leaderboard</div>
+          <div style="width:40px"></div>
+        </div>
+        <div class="content">
+          <!-- Podium -->
+          <div class="podium-container">
+            <!-- 2nd place (left) -->
+            <div class="podium-col">
+              <div class="podium-avatar" style="width:52px;height:52px;font-size:18px;background:#00B4D8">R</div>
+              <div class="podium-name">Reza</div>
+              <div class="podium-dist" style="color:var(--silver)">42.3 km</div>
+              <div class="podium-runs">18 runs</div>
+              <div class="podium-base" style="height:80px;background:rgba(144,164,174,0.15);border-color:rgba(144,164,174,0.4)">🥈</div>
+            </div>
+            <!-- 1st place (center) -->
+            <div class="podium-col">
+              <div style="font-size:18px;margin-bottom:2px">👑</div>
+              <div class="podium-avatar" style="width:66px;height:66px;font-size:22px;background:var(--primary)">Y</div>
+              <div class="podium-name" style="color:var(--gold)">You</div>
+              <div class="podium-dist" style="color:var(--gold)">58.7 km</div>
+              <div class="podium-runs">24 runs</div>
+              <div class="podium-base" style="height:110px;background:rgba(255,179,0,0.15);border-color:rgba(255,179,0,0.4)">🥇</div>
+            </div>
+            <!-- 3rd place (right) -->
+            <div class="podium-col">
+              <div class="podium-avatar" style="width:44px;height:44px;font-size:16px;background:#48BB78">A</div>
+              <div class="podium-name">Ali</div>
+              <div class="podium-dist" style="color:var(--bronze)">38.1 km</div>
+              <div class="podium-runs">15 runs</div>
+              <div class="podium-base" style="height:60px;background:rgba(191,137,112,0.15);border-color:rgba(191,137,112,0.4)">🥉</div>
+            </div>
+          </div>
+          <!-- Rank 4+ list -->
+          <div class="rank-list" style="height:calc(100% - 280px)">
+            <div class="rank-row">
+              <div class="rank-num">#4</div>
+              <div class="rank-avatar" style="background:#718096">M</div>
+              <div class="rank-info">
+                <div class="rank-name">Mazumder</div>
+                <div class="rank-email">m@example.com</div>
+              </div>
+              <div class="rank-stats">
+                <div class="rank-dist">31.4 km</div>
+                <div class="rank-runs">12 runs</div>
+              </div>
+            </div>
+            <div class="rank-row">
+              <div class="rank-num">#5</div>
+              <div class="rank-avatar" style="background:#E05520">J</div>
+              <div class="rank-info">
+                <div class="rank-name">Joy Ahad</div>
+                <div class="rank-email">j@example.com</div>
+              </div>
+              <div class="rank-stats">
+                <div class="rank-dist">24.9 km</div>
+                <div class="rank-runs">9 runs</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bottom-nav">
+          <div class="nav-item"><div class="nav-icon">🗺️</div>Events</div>
+          <div class="nav-item"><div class="nav-icon">👥</div>Friends</div>
+          <div class="nav-item active"><div class="nav-icon">👤</div>My Page</div>
+        </div>
+      </div>
+    </div>
+    <div class="phone-label">Leaderboard</div>
+  </div>
+
+  <!-- COMMENTS SHEET -->
+  <div>
+    <div class="phone">
+      <div class="screen">
+        <div class="status-bar">
+          <span class="status-time" style="color:#fff">9:41</span>
+          <div class="status-icons" style="color:#fff">📶 🔋</div>
+        </div>
+        <div class="appbar" style="opacity:0.3">
+          <div style="width:40px"></div>
+          <div class="appbar-title">Events</div>
+          <div class="appbar-icon">🔄</div>
+        </div>
+        <div class="content" style="display:flex;flex-direction:column">
+          <div style="flex:1;background:rgba(0,0,0,0.3)"></div>
+          <!-- Comment sheet -->
+          <div style="background:#fff;border-radius:20px 20px 0 0;display:flex;flex-direction:column;height:72%">
+            <div class="sheet-handle"></div>
+            <div class="sheet-header">
+              <div class="sheet-title">Tokyo Marathon 2025</div>
+              <div class="sheet-sub">💬 Comments</div>
+            </div>
+            <div class="comment-list" style="flex:1;overflow-y:auto">
+              <div class="comment-item">
+                <div class="c-avatar">J</div>
+                <div class="c-body">
+                  <div style="display:flex;align-items:center;justify-content:space-between">
+                    <span class="c-name">Joy Ahad</span>
+                    <span class="c-time">2h ago</span>
+                  </div>
+                  <div class="c-text">Can't wait for this event! Anyone else joining from Osaka?</div>
+                  <div class="c-actions">
+                    <div class="c-action liked">❤️ 4</div>
+                    <div class="c-action">↩ Reply</div>
+                    <div class="c-action" style="color:var(--primary)">▾ 2 replies</div>
+                  </div>
+                </div>
+              </div>
+              <!-- Reply -->
+              <div class="comment-item" style="padding-left:46px">
+                <div class="c-avatar" style="width:28px;height:28px;font-size:11px;border-radius:14px;background:#00B4D8">R</div>
+                <div class="c-body">
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <span class="c-name" style="font-size:12px">Reza</span>
+                    <span class="c-time">1h ago</span>
+                  </div>
+                  <div class="c-text" style="font-size:13px">Yes! See you at the start line 🙌</div>
+                  <div class="c-actions">
+                    <div class="c-action">❤️ 1</div>
+                  </div>
+                </div>
+              </div>
+              <div class="comment-item">
+                <div class="c-avatar" style="background:#48BB78">A</div>
+                <div class="c-body">
+                  <div style="display:flex;align-items:center;justify-content:space-between">
+                    <span class="c-name">Ali</span>
+                    <span class="c-time">45m ago</span>
+                  </div>
+                  <div class="c-text">The route looks amazing this year 🏃‍♂️</div>
+                  <div class="c-actions">
+                    <div class="c-action">🤍 0</div>
+                    <div class="c-action">↩ Reply</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="comment-input-bar">
+              <input class="comment-input" placeholder="Add a comment…" style="font-family:inherit"/>
+              <div class="send-btn">➤</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="phone-label">Comments Sheet</div>
+  </div>
+
+  <!-- MY PAGE / PROFILE -->
+  <div>
+    <div class="phone">
+      <div class="screen">
+        <div class="status-bar">
+          <span class="status-time" style="color:#fff">9:41</span>
+          <div class="status-icons" style="color:#fff">📶 🔋</div>
+        </div>
+        <div class="appbar">
+          <div style="width:40px"></div>
+          <div class="appbar-title">My Page</div>
+          <div style="width:40px"></div>
+        </div>
+        <div class="content" style="overflow-y:auto">
+          <div class="profile-header">
+            <div class="profile-avatar-big">Y</div>
+            <div class="profile-name">Yamamoto Kenji</div>
+            <div class="profile-email">kenji@example.com</div>
+          </div>
+          <div class="stats-row">
+            <div class="stat-box">
+              <div class="stat-box-val">58.7</div>
+              <div class="stat-box-lbl">Total km</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-box-val">24</div>
+              <div class="stat-box-lbl">Runs</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-box-val">48h</div>
+              <div class="stat-box-lbl">Time</div>
+            </div>
+          </div>
+          <div style="height:8px;background:#F5F6FA"></div>
+          <div class="menu-item">
+            <span class="menu-icon">🏆</span>
+            <span class="menu-text">Leaderboard</span>
+            <span class="menu-arrow">›</span>
+          </div>
+          <div class="menu-item">
+            <span class="menu-icon">👥</span>
+            <span class="menu-text">Friends</span>
+            <span class="menu-arrow">›</span>
+          </div>
+          <div class="menu-item">
+            <span class="menu-icon">📷</span>
+            <span class="menu-text">Run Photos</span>
+            <span class="menu-arrow">›</span>
+          </div>
+          <div class="menu-item">
+            <span class="menu-icon">⚙️</span>
+            <span class="menu-text">Settings</span>
+            <span class="menu-arrow">›</span>
+          </div>
+          <div class="menu-item" style="margin-top:8px">
+            <span class="menu-icon">🚪</span>
+            <span class="menu-text" style="color:var(--red)">Sign Out</span>
+          </div>
+        </div>
+        <div class="bottom-nav">
+          <div class="nav-item"><div class="nav-icon">🗺️</div>Events</div>
+          <div class="nav-item"><div class="nav-icon">👥</div>Friends</div>
+          <div class="nav-item active"><div class="nav-icon">👤</div>My Page</div>
+        </div>
+      </div>
+    </div>
+    <div class="phone-label">My Page</div>
+  </div>
+
+</div>
+
+<!-- ══════════════ ROW 5: FRIENDS ══════════════ -->
+<div class="section-label">Friends</div>
+<div class="phone-row">
+
+  <div>
+    <div class="phone">
+      <div class="screen">
+        <div class="status-bar">
+          <span class="status-time" style="color:#fff">9:41</span>
+          <div class="status-icons" style="color:#fff">📶 🔋</div>
+        </div>
+        <div class="appbar">
+          <div style="width:40px"></div>
+          <div class="appbar-title">Friends</div>
+          <div style="width:40px"></div>
+        </div>
+        <div class="content" style="overflow-y:auto">
+          <!-- Search -->
+          <div style="padding:12px 16px">
+            <div style="background:#fff;border-radius:12px;border:1.5px solid var(--border);padding:10px 14px;display:flex;align-items:center;gap:8px">
+              <span style="color:var(--text2)">🔍</span>
+              <span style="font-size:14px;color:var(--text2)">Search by name…</span>
+            </div>
+          </div>
+          <!-- Pending section -->
+          <div style="padding:4px 16px 8px;font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.8px">Pending (2)</div>
+          <div class="friend-row">
+            <div class="f-avatar" style="background:#E05520">N</div>
+            <div class="f-info">
+              <div class="f-name">Nafis Ahmed</div>
+              <div class="f-runs">Wants to be friends</div>
+            </div>
+            <button class="f-btn">Accept</button>
+          </div>
+          <!-- Friends section -->
+          <div style="padding:12px 16px 8px;font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.8px">My Friends (3)</div>
+          <div class="friend-row">
+            <div class="f-avatar">R</div>
+            <div class="f-info">
+              <div class="f-name">Reza</div>
+              <div class="f-runs">42.3 km · 18 runs</div>
+            </div>
+            <button class="f-btn remove">Remove</button>
+          </div>
+          <div class="friend-row">
+            <div class="f-avatar" style="background:#48BB78">A</div>
+            <div class="f-info">
+              <div class="f-name">Ali</div>
+              <div class="f-runs">38.1 km · 15 runs</div>
+            </div>
+            <button class="f-btn remove">Remove</button>
+          </div>
+          <div class="friend-row">
+            <div class="f-avatar" style="background:#718096">M</div>
+            <div class="f-info">
+              <div class="f-name">Mazumder</div>
+              <div class="f-runs">31.4 km · 12 runs</div>
+            </div>
+            <button class="f-btn remove">Remove</button>
+          </div>
+        </div>
+        <div class="bottom-nav">
+          <div class="nav-item"><div class="nav-icon">🗺️</div>Events</div>
+          <div class="nav-item active"><div class="nav-icon">👥</div>Friends</div>
+          <div class="nav-item"><div class="nav-icon">👤</div>My Page</div>
+        </div>
+      </div>
+    </div>
+    <div class="phone-label">Friends</div>
+  </div>
+
+</div>
+
+<!-- ══════════════ DESIGN SYSTEM ══════════════ -->
+<div class="design-section">
+  <h2>Design System</h2>
+  <div style="font-size:13px;color:#718096;margin-bottom:16px;font-weight:600;text-transform:uppercase;letter-spacing:1px">Colors</div>
+  <div class="swatch-row">
+    <div class="swatch" style="background:var(--primary);color:#fff"><div class="swatch-name">Primary</div><div class="swatch-val">#FF6B35</div></div>
+    <div class="swatch" style="background:var(--primary-dark);color:#fff"><div class="swatch-name">Primary Dark</div><div class="swatch-val">#E05520</div></div>
+    <div class="swatch" style="background:var(--secondary);color:#fff"><div class="swatch-name">Secondary</div><div class="swatch-val">#00B4D8</div></div>
+    <div class="swatch" style="background:var(--green);color:#fff"><div class="swatch-name">Tracking Green</div><div class="swatch-val">#48BB78</div></div>
+    <div class="swatch" style="background:var(--red);color:#fff"><div class="swatch-name">Warning Red</div><div class="swatch-val">#E53E3E</div></div>
+    <div class="swatch" style="background:var(--bg);color:var(--text1);border:1px solid #DDE1E7"><div class="swatch-name">Background</div><div class="swatch-val">#F5F6FA</div></div>
+    <div class="swatch" style="background:var(--surface);color:var(--text1);border:1px solid #DDE1E7"><div class="swatch-name">Surface</div><div class="swatch-val">#FFFFFF</div></div>
+    <div class="swatch" style="background:var(--text1);color:#fff"><div class="swatch-name">Text Primary</div><div class="swatch-val">#1A202C</div></div>
+    <div class="swatch" style="background:var(--text2);color:#fff"><div class="swatch-name">Text Secondary</div><div class="swatch-val">#718096</div></div>
+    <div class="swatch" style="background:var(--gold);color:#fff"><div class="swatch-name">Gold (🥇)</div><div class="swatch-val">#FFB300</div></div>
+    <div class="swatch" style="background:var(--silver);color:#fff"><div class="swatch-name">Silver (🥈)</div><div class="swatch-val">#90A4AE</div></div>
+    <div class="swatch" style="background:var(--bronze);color:#fff"><div class="swatch-name">Bronze (🥉)</div><div class="swatch-val">#BF8970</div></div>
+  </div>
+
+  <div style="font-size:13px;color:#718096;margin-bottom:16px;font-weight:600;text-transform:uppercase;letter-spacing:1px">Typography</div>
+  <div class="type-row">
+    <div class="type-sample"><span class="type-label">App Title · 26/800</span><span style="font-size:26px;font-weight:800;color:#fff;letter-spacing:-0.5px">RunMate</span></div>
+    <div class="type-sample"><span class="type-label">AppBar Title · 18/600</span><span style="font-size:18px;font-weight:600;color:#fff;letter-spacing:0.3px">Events</span></div>
+    <div class="type-sample"><span class="type-label">Card Title · 17/800</span><span style="font-size:17px;font-weight:800;color:#fff">Tokyo Marathon 2025</span></div>
+    <div class="type-sample"><span class="type-label">Body · 14/400</span><span style="font-size:14px;color:#fff">Regular body text for comments and content</span></div>
+    <div class="type-sample"><span class="type-label">Label · 13/600</span><span style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.7)">Run in Progress</span></div>
+    <div class="type-sample"><span class="type-label">Caption · 11/400</span><span style="font-size:11px;color:#718096">18 runs · 42.3 km total</span></div>
+  </div>
+
+  <div style="font-size:13px;color:#718096;margin:24px 0 16px;font-weight:600;text-transform:uppercase;letter-spacing:1px">Border Radius</div>
+  <div class="swatch-row">
+    <div style="background:rgba(255,255,255,0.08);padding:16px 20px;border-radius:8px;color:#fff;font-size:12px">8px<br><span style="opacity:0.5">Badge</span></div>
+    <div style="background:rgba(255,255,255,0.08);padding:16px 20px;border-radius:9px;color:#fff;font-size:12px">9px<br><span style="opacity:0.5">Toggle tab</span></div>
+    <div style="background:rgba(255,255,255,0.08);padding:16px 20px;border-radius:12px;color:#fff;font-size:12px">12px<br><span style="opacity:0.5">Input / Button</span></div>
+    <div style="background:rgba(255,255,255,0.08);padding:16px 20px;border-radius:14px;color:#fff;font-size:12px">14px<br><span style="opacity:0.5">Card</span></div>
+    <div style="background:rgba(255,255,255,0.08);padding:16px 20px;border-radius:16px;color:#fff;font-size:12px">16px<br><span style="opacity:0.5">Dialog / Sheet</span></div>
+    <div style="background:rgba(255,255,255,0.08);padding:16px 20px;border-radius:22px;color:#fff;font-size:12px">22px<br><span style="opacity:0.5">Comment input</span></div>
+    <div style="background:rgba(255,255,255,0.08);padding:16px 20px;border-radius:50px;color:#fff;font-size:12px">Full<br><span style="opacity:0.5">Avatars / Pills</span></div>
+  </div>
+
+  <div style="margin-top:40px;padding:20px;background:rgba(255,255,255,0.04);border-radius:12px;color:#718096;font-size:13px;line-height:1.8">
+    <strong style="color:#fff">How to import into Figma:</strong><br>
+    1. Open this file in Chrome<br>
+    2. Install <strong style="color:var(--primary)">html.to.design</strong> Figma plugin (free)<br>
+    3. Click "Import from URL" and paste the local file path, or use the plugin's browser extension to capture directly<br>
+    4. Each phone frame will become a Figma frame you can edit
+  </div>
+</div>
+
+</body>
+</html>

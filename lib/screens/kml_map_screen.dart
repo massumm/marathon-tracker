@@ -79,8 +79,7 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
             textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
         content: Text('location_off_body'.tr,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 14)),
+            textAlign: TextAlign.center, style: const TextStyle(fontSize: 14)),
         actionsAlignment: MainAxisAlignment.center,
         actions: [
           TextButton(
@@ -171,38 +170,6 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
     );
   }
 
-  Future<bool> _confirmExit() async {
-    if (!_ctrl.isTracking.value) return true;
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        icon: const Icon(Icons.directions_run, color: Colors.redAccent, size: 40),
-        title: Text('exit_run_title'.tr,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-        content: Text('exit_run_body'.tr,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 14)),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('cancel'.tr),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
-            child: Text('exit_run_confirm'.tr),
-          ),
-        ],
-      ),
-    );
-    if (result == true) await _ctrl.stopTracking();
-    return false; // navigation handled by stopTracking via Get.offAllNamed
-  }
-
   @override
   Widget build(BuildContext context) {
     return Obx(() {
@@ -212,74 +179,71 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
       final isSharing = _ctrl.isSharing.value;
 
       return PopScope(
-        canPop: false,
-        onPopInvokedWithResult: (didPop, _) {
-          if (!didPop) _confirmExit();
-        },
+        canPop: !_ctrl.isSaving.value,
         child: Scaffold(
-        appBar: AppBar(
-          title: null,
-          actions: [
-            // ── Share / Unshare ────────────────────────────────────────────
-            if (isTracking)
-              IconButton(
-                tooltip: isSharing ? 'unshare'.tr : 'share'.tr,
-                icon: Icon(
-                  isSharing ? Icons.wifi_tethering : Icons.wifi_tethering_off,
-                  color: isSharing ? Colors.white : Colors.white38,
-                ),
-                onPressed: () => _ctrl.toggleSharing(),
-              ),
-            // ── Leaderboard ────────────────────────────────────────────────
-            if (lb.isNotEmpty)
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  IconButton(
-                    icon: Icon(
-                      _leaderOpen
-                          ? Icons.leaderboard
-                          : Icons.leaderboard_outlined,
-                      color: _leaderOpen ? Colors.amberAccent : Colors.white,
-                    ),
-                    onPressed: () =>
-                        setState(() => _leaderOpen = !_leaderOpen),
+          appBar: AppBar(
+            title: null,
+            actions: [
+              // ── Share / Unshare ────────────────────────────────────────────
+              if (isTracking)
+                IconButton(
+                  tooltip: isSharing ? 'unshare'.tr : 'share'.tr,
+                  icon: Icon(
+                    isSharing ? Icons.wifi_tethering : Icons.wifi_tethering_off,
+                    color: isSharing ? Colors.white : Colors.white38,
                   ),
-                  if (myRank != null && !_leaderOpen)
-                    Positioned(
-                      top: 8,
-                      right: 6,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 4, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: Colors.amber,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          '#$myRank',
-                          style: const TextStyle(
-                              fontSize: 8,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.black),
+                  onPressed: () => _ctrl.toggleSharing(),
+                ),
+              // ── Leaderboard ────────────────────────────────────────────────
+              if (lb.isNotEmpty)
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    IconButton(
+                      icon: Icon(
+                        _leaderOpen
+                            ? Icons.leaderboard
+                            : Icons.leaderboard_outlined,
+                        color: _leaderOpen ? Colors.amberAccent : Colors.white,
+                      ),
+                      onPressed: () =>
+                          setState(() => _leaderOpen = !_leaderOpen),
+                    ),
+                    if (myRank != null && !_leaderOpen)
+                      Positioned(
+                        top: 8,
+                        right: 6,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 4, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: Colors.amber,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '#$myRank',
+                            style: const TextStyle(
+                                fontSize: 8,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.black),
+                          ),
                         ),
                       ),
-                    ),
-                ],
-              ),
-            // ── Terminate ──────────────────────────────────────────────────
-            if (isTracking)
-              IconButton(
-                tooltip: 'terminate'.tr,
-                icon: const Icon(Icons.stop_circle_outlined, color: Colors.white),
-                onPressed: () => _ctrl.stopTracking(),
-              ),
-            const SizedBox(width: 4),
-          ],
+                  ],
+                ),
+              // ── Terminate ──────────────────────────────────────────────────
+              // if (isTracking)
+              //   IconButton(
+              //     tooltip: 'terminate'.tr,
+              //     icon: const Icon(Icons.stop_circle_outlined, color: Colors.white),
+              //     onPressed: () => _ctrl.stopTracking(),
+              //   ),
+              const SizedBox(width: 4),
+            ],
+          ),
+          body: _buildBody(lb),
         ),
-        body: _buildBody(lb),
-      ),
-    );
+      );
     });
   }
 
@@ -357,13 +321,10 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
         right: 0,
         child: Center(
           child: GestureDetector(
-            onTap: isTracking
-                ? () => _ctrl.stopTracking()
-                : () => _onStartTap(),
+            onTap:
+                isTracking ? () => _ctrl.stopTracking() : () => _onStartTap(),
             child: Image.asset(
-              isTracking
-                  ? 'assets/images/stop.png'
-                  : 'assets/images/start.png',
+              isTracking ? 'assets/images/stop.png' : 'assets/images/start.png',
               height: 80,
               width: 80,
             ),
@@ -380,9 +341,7 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 280),
             curve: Curves.easeInOut,
-            height: _leaderOpen
-                ? (60 + lb.length * 56.0).clamp(120, 340)
-                : 0,
+            height: _leaderOpen ? (60 + lb.length * 56.0).clamp(120, 340) : 0,
             child: ClipRRect(
               child: _LiveLeaderboard(
                 entries: lb,
@@ -411,8 +370,7 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
                 const CircularProgressIndicator(color: Colors.white),
                 const SizedBox(height: 14),
                 Text('saving'.tr,
-                    style:
-                        const TextStyle(color: Colors.white, fontSize: 16)),
+                    style: const TextStyle(color: Colors.white, fontSize: 16)),
               ],
             ),
           ),
@@ -420,7 +378,6 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
     ]);
   }
 }
-
 
 // ── Stats panel ───────────────────────────────────────────────────────────────
 
@@ -500,8 +457,7 @@ class _LiveLeaderboard extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: Colors.black.withValues(alpha: 0.78),
-          borderRadius:
-              const BorderRadius.vertical(top: Radius.circular(16)),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -541,9 +497,8 @@ class _LiveLeaderboard extends StatelessWidget {
                 itemCount: entries.length,
                 itemBuilder: (_, i) => _LeaderRow(
                   entry: entries[i],
-                  onTap: entries[i].isSelf
-                      ? null
-                      : () => onTapRunner(entries[i]),
+                  onTap:
+                      entries[i].isSelf ? null : () => onTapRunner(entries[i]),
                 ),
               ),
             ),
@@ -568,9 +523,8 @@ class _LeaderRow extends StatelessWidget {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        color: isSelf
-            ? Colors.white.withValues(alpha: 0.10)
-            : Colors.transparent,
+        color:
+            isSelf ? Colors.white.withValues(alpha: 0.10) : Colors.transparent,
         child: Row(
           children: [
             SizedBox(
@@ -600,8 +554,7 @@ class _LeaderRow extends StatelessWidget {
                 isSelf ? '${'you_label'.tr} (${entry.name})' : entry.name,
                 style: TextStyle(
                   fontSize: 13,
-                  fontWeight:
-                      isSelf ? FontWeight.w700 : FontWeight.w500,
+                  fontWeight: isSelf ? FontWeight.w700 : FontWeight.w500,
                   color: isSelf ? Colors.amberAccent : Colors.white,
                 ),
                 overflow: TextOverflow.ellipsis,

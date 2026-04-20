@@ -210,7 +210,7 @@ class _LoginBodyState extends State<_LoginBody> {
                 _mode == _AuthMode.signIn ? (_) => _submit() : null,
             decoration: _inputDeco(
               label: 'Password',
-              hint: '••••••••',
+              hint: 'Min. 6 characters',
               icon: Icons.lock_outline,
               suffix: IconButton(
                 icon: Icon(
@@ -239,7 +239,7 @@ class _LoginBodyState extends State<_LoginBody> {
               onFieldSubmitted: (_) => _submit(),
               decoration: _inputDeco(
                 label: 'Confirm Password',
-                hint: '••••••••',
+                hint: 'Re-enter password',
                 icon: Icons.lock_outline,
                 suffix: IconButton(
                   icon: Icon(

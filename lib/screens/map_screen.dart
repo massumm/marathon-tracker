@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../app/routes/app_routes.dart';
+import '../controllers/kml_map_controller.dart';
 import '../controllers/map_controller.dart';
 import '../core/theme.dart';
 import '../models/comment_model.dart';
@@ -260,6 +261,43 @@ class _EventCardState extends State<_EventCard> {
   }
 
   void _openMap(RaceCategory cat) {
+    final runCtrl = Get.find<KmlMapController>();
+    if (runCtrl.isTracking.value) {
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          icon: const Icon(Icons.directions_run,
+              color: AppTheme.trackingGreen, size: 40),
+          title: Text('already_running_title'.tr,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                  fontSize: 16, fontWeight: FontWeight.w700)),
+          content: Text('already_running_body'.tr,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 14)),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('cancel'.tr),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Get.toNamed(AppRoutes.kmlMap);
+              },
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.trackingGreen,
+                  foregroundColor: Colors.white),
+              child: Text('return_to_run'.tr),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
     Get.toNamed(
       AppRoutes.kmlMap,
       arguments: {

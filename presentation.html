@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>RunMate – Project Presentation</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.6.0/dist/reset.css"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.6.0/dist/reveal.css"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.6.0/dist/theme/white.css"/>
+<style>
+  :root {
+    --orange: #FF6B35;
+    --dark:   #1A202C;
+    --grey:   #718096;
+    --light:  #F5F6FA;
+    --green:  #48BB78;
+    --blue:   #00B4D8;
+  }
+
+  .reveal { font-family: 'Segoe UI', system-ui, sans-serif; }
+  .reveal h1, .reveal h2, .reveal h3 { color: var(--dark); font-weight: 700; }
+  .reveal h2 { font-size: 1.6em; border-bottom: 3px solid var(--orange); padding-bottom: .3em; margin-bottom: .6em; display:inline-block; }
+
+  /* ── Title slide ── */
+  .title-slide { background: linear-gradient(135deg, var(--orange) 0%, #E05520 100%) !important; }
+  .title-slide h1, .title-slide p { color: #fff !important; }
+  .title-slide .tagline { font-size: 1.3em; opacity: .9; margin-top: .4em; }
+  .title-slide .badge { display:inline-block; background:rgba(255,255,255,.2); border:1px solid rgba(255,255,255,.4); border-radius:20px; padding:.3em .9em; font-size:.75em; color:#fff; margin:.25em; }
+  .logo { font-size: 4em; }
+
+  /* ── Cards ── */
+  .cards { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; margin-top: 1em; }
+  .card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 20px 22px;
+    flex: 1 1 180px;
+    max-width: 220px;
+    box-shadow: 0 2px 16px rgba(0,0,0,.08);
+    text-align: center;
+    border-top: 4px solid var(--orange);
+  }
+  .card .icon { font-size: 2em; margin-bottom: .3em; }
+  .card h3 { font-size: .95em; margin: .3em 0 .2em; color: var(--dark); }
+  .card p  { font-size: .75em; color: var(--grey); margin: 0; }
+
+  /* ── Stack pills ── */
+  .pill { display:inline-block; border-radius:20px; padding:.35em 1em; font-size:.8em; font-weight:600; margin:.3em; }
+  .pill-flutter  { background:#E8F0FE; color:#1565C0; }
+  .pill-firebase { background:#FFF3E0; color:#E65100; }
+  .pill-maps     { background:#E8F5E9; color:#2E7D32; }
+  .pill-getx     { background:#F3E5F5; color:#6A1B9A; }
+  .pill-dart     { background:#E0F7FA; color:#00838F; }
+
+  /* ── Feature rows ── */
+  .feat-row { display:flex; align-items:flex-start; gap:14px; margin:.5em 0; text-align:left; }
+  .feat-row .ico { font-size:1.6em; width:40px; flex-shrink:0; text-align:center; }
+  .feat-row .txt h3 { margin:0 0 .15em; font-size:.95em; color:var(--dark); }
+  .feat-row .txt p  { margin:0; font-size:.78em; color:var(--grey); }
+
+  /* ── DB table ── */
+  .db-table { width:100%; border-collapse:collapse; font-size:.78em; margin-top:.5em; }
+  .db-table th { background:var(--orange); color:#fff; padding:.5em .8em; text-align:left; }
+  .db-table td { padding:.45em .8em; border-bottom:1px solid #eee; }
+  .db-table tr:nth-child(even) td { background:#fafafa; }
+  .db-table .path { font-family:monospace; color:var(--orange); }
+
+  /* ── Timeline ── */
+  .timeline { list-style:none; padding:0; margin:.5em 0; text-align:left; }
+  .timeline li { display:flex; align-items:center; gap:14px; padding:.5em 0; border-bottom:1px solid #eee; font-size:.85em; }
+  .timeline li:last-child { border-bottom:none; }
+  .timeline .num { background:var(--orange); color:#fff; border-radius:50%; width:28px; height:28px; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:.85em; flex-shrink:0; }
+
+  /* ── Stats ── */
+  .stats { display:flex; gap:24px; justify-content:center; flex-wrap:wrap; margin:1em 0; }
+  .stat-box { background:var(--light); border-radius:14px; padding:16px 24px; text-align:center; min-width:120px; }
+  .stat-box .num  { font-size:2em; font-weight:800; color:var(--orange); line-height:1; }
+  .stat-box .lbl  { font-size:.75em; color:var(--grey); margin-top:.3em; }
+
+  /* ── Admin slide ── */
+  .screen-list { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-top:.8em; }
+  .screen-chip { background:var(--light); border-radius:10px; padding:.5em 1.1em; font-size:.8em; color:var(--dark); display:flex; align-items:center; gap:.4em; }
+
+  /* ── QR / end slide ── */
+  .end-slide { background: linear-gradient(135deg, #1A202C 0%, #2D3748 100%) !important; }
+  .end-slide h2, .end-slide p, .end-slide h1 { color:#fff !important; }
+  .end-slide h2 { border-bottom-color: var(--orange); }
+  .qr-placeholder { width:160px; height:160px; background:#fff; border-radius:12px; margin:1em auto; display:flex; align-items:center; justify-content:center; font-size:5em; }
+
+  /* ── Arch diagram ── */
+  .arch { display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap; margin:1em 0; font-size:.82em; }
+  .arch-box { background:#fff; border:2px solid var(--orange); border-radius:10px; padding:.6em 1.1em; font-weight:600; text-align:center; min-width:90px; }
+  .arch-box small { display:block; font-weight:400; color:var(--grey); font-size:.85em; }
+  .arch-arrow { font-size:1.4em; color:var(--orange); }
+</style>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- ═══════════════════════════════════════════════════════
+     SLIDE 1 · Title
+═══════════════════════════════════════════════════════ -->
+<section data-background-color="#FF6B35" class="title-slide">
+  <div class="logo">🏃</div>
+  <h1 style="font-size:2.6em; margin:.2em 0 .1em;">RunMate</h1>
+  <p class="tagline">Track · Compete · Achieve</p>
+  <p style="margin-top:1.2em;">
+    <span class="badge">Flutter</span>
+    <span class="badge">Firebase</span>
+    <span class="badge">Google Maps</span>
+    <span class="badge">Real-time</span>
+  </p>
+  <p style="font-size:.7em; opacity:.7; margin-top:1.4em;">A Smart Marathon Running Platform</p>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SLIDE 2 · What is RunMate?
+═══════════════════════════════════════════════════════ -->
+<section>
+  <h2>What is RunMate?</h2>
+  <div class="cards">
+    <div class="card">
+      <div class="icon">📍</div>
+      <h3>Live GPS Tracking</h3>
+      <p>Real-time route recording with road snapping</p>
+    </div>
+    <div class="card">
+      <div class="icon">🏆</div>
+      <h3>Live Leaderboard</h3>
+      <p>Compete with friends in real time during a race</p>
+    </div>
+    <div class="card">
+      <div class="icon">📅</div>
+      <h3>Event Management</h3>
+      <p>Browse upcoming marathons, categories &amp; routes</p>
+    </div>
+    <div class="card">
+      <div class="icon">📊</div>
+      <h3>Run Records</h3>
+      <p>History of every run with stats &amp; photos</p>
+    </div>
+  </div>
+  <p style="font-size:.75em; color:var(--grey); margin-top:1em;">
+    Available on <strong>Android · iOS · Web</strong>
+  </p>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SLIDE 3 · Tech Stack
+═══════════════════════════════════════════════════════ -->
+<section>
+  <h2>Tech Stack</h2>
+  <div style="display:flex; gap:32px; justify-content:center; margin-top:.8em; flex-wrap:wrap;">
+    <div style="text-align:center;">
+      <div style="font-size:2.4em; margin-bottom:.3em;">📱</div>
+      <strong>Frontend</strong>
+      <p style="margin:.5em 0 0;">
+        <span class="pill pill-flutter">Flutter 3</span><br/>
+        <span class="pill pill-dart">Dart</span><br/>
+        <span class="pill pill-getx">GetX</span>
+      </p>
+    </div>
+    <div style="text-align:center;">
+      <div style="font-size:2.4em; margin-bottom:.3em;">🔥</div>
+      <strong>Backend</strong>
+      <p style="margin:.5em 0 0;">
+        <span class="pill pill-firebase">Firebase Auth</span><br/>
+        <span class="pill pill-firebase">Realtime DB</span><br/>
+        <span class="pill pill-firebase">Cloud Storage</span>
+      </p>
+    </div>
+    <div style="text-align:center;">
+      <div style="font-size:2.4em; margin-bottom:.3em;">🗺️</div>
+      <strong>Maps &amp; Location</strong>
+      <p style="margin:.5em 0 0;">
+        <span class="pill pill-maps">Google Maps SDK</span><br/>
+        <span class="pill pill-maps">Roads API</span><br/>
+        <span class="pill pill-maps">Geocoding API</span>
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SLIDE 4 · Architecture
+═══════════════════════════════════════════════════════ -->
+<section>
+  <h2>Architecture</h2>
+  <div class="arch">
+    <div class="arch-box">Flutter UI<small>Screens + Widgets</small></div>
+    <div class="arch-arrow">→</div>
+    <div class="arch-box">GetX<small>Controllers + State</small></div>
+    <div class="arch-arrow">→</div>
+    <div class="arch-box">Services<small>Firebase / GPS / Maps</small></div>
+    <div class="arch-arrow">→</div>
+    <div class="arch-box">Firebase<small>Auth · RTDB · Storage</small></div>
+  </div>
+  <div style="margin-top:1em; font-size:.8em; text-align:left; max-width:700px; margin-inline:auto;">
+    <ul style="line-height:2;">
+      <li><strong>State:</strong> GetX observables + <code>Obx()</code> reactive builders</li>
+      <li><strong>Routing:</strong> GetX named routes — <code>Get.toNamed()</code></li>
+      <li><strong>Services:</strong> Singleton pattern — <code>Service.instance</code></li>
+      <li><strong>Localization:</strong> EN + JA via GetX translations</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SLIDE 5 · Key Features
+═══════════════════════════════════════════════════════ -->
+<section>
+  <h2>Key Features</h2>
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; max-width:750px; margin:auto; text-align:left;">
+    <div class="feat-row">
+      <div class="ico">🛰️</div>
+      <div class="txt"><h3>GPS Tracking</h3><p>20 m accuracy filter + foreground service</p></div>
+    </div>
+    <div class="feat-row">
+      <div class="ico">🛣️</div>
+      <div class="txt"><h3>Road Snapping</h3><p>Google Roads API every 10 GPS points</p></div>
+    </div>
+    <div class="feat-row">
+      <div class="ico">📡</div>
+      <div class="txt"><h3>Live Broadcasting</h3><p>Real-time position shared via Firebase RTDB</p></div>
+    </div>
+    <div class="feat-row">
+      <div class="ico">🥇</div>
+      <div class="txt"><h3>Live Leaderboard</h3><p>Friends sorted by distance covered</p></div>
+    </div>
+    <div class="feat-row">
+      <div class="ico">👥</div>
+      <div class="txt"><h3>Friends System</h3><p>Search by name, add/remove friends</p></div>
+    </div>
+    <div class="feat-row">
+      <div class="ico">📸</div>
+      <div class="txt"><h3>Run Photos</h3><p>Capture & save photos during a run</p></div>
+    </div>
+    <div class="feat-row">
+      <div class="ico">📂</div>
+      <div class="txt"><h3>Route Records</h3><p>Full history with map replay &amp; stats</p></div>
+    </div>
+    <div class="feat-row">
+      <div class="ico">🔒</div>
+      <div class="txt"><h3>Privacy Control</h3><p>Share / Unshare location during a run</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SLIDE 6 · Live Tracking Flow
+═══════════════════════════════════════════════════════ -->
+<section>
+  <h2>Live Tracking Flow</h2>
+  <ul class="timeline">
+    <li><div class="num">1</div><div>User taps <strong>Start</strong> — GPS &amp; location permission check, proximity to start point verified</div></li>
+    <li><div class="num">2</div><div>Device begins streaming GPS coordinates every few seconds</div></li>
+    <li><div class="num">3</div><div>Every 10 points → <strong>Google Roads API</strong> snaps to nearest road</div></li>
+    <li><div class="num">4</div><div>Position + cumulative distance broadcast to <code>live_runners/{uid}</code> in RTDB</div></li>
+    <li><div class="num">5</div><div>Friends' devices read RTDB → show runner markers + update leaderboard</div></li>
+    <li><div class="num">6</div><div>User taps <strong>Stop</strong> → route saved as JSON to Firebase Storage</div></li>
+  </ul>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SLIDE 7 · Leaderboard
+═══════════════════════════════════════════════════════ -->
+<section>
+  <h2>Live Leaderboard</h2>
+  <div class="cards" style="justify-content:center;">
+    <div class="card" style="border-top-color:#FFD700;">
+      <div class="icon">🥇</div>
+      <h3>1st Place</h3>
+      <p>Real-time rank based on GPS-tracked distance</p>
+    </div>
+    <div class="card" style="border-top-color:#C0C0C0;">
+      <div class="icon">🥈</div>
+      <h3>2nd Place</h3>
+      <p>Each device self-reports its own distance</p>
+    </div>
+    <div class="card" style="border-top-color:#CD7F32;">
+      <div class="icon">🥉</div>
+      <h3>3rd Place</h3>
+      <p>Tap a runner to fly the camera to their position</p>
+    </div>
+  </div>
+  <p style="font-size:.78em; color:var(--grey); margin-top:1em;">
+    📡 Updates every 4 GPS ticks &nbsp;·&nbsp; 🔕 Toggle <strong>Share / Unshare</strong> to hide from leaderboard
+  </p>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SLIDE 8 · Events & Admin Panel
+═══════════════════════════════════════════════════════ -->
+<section>
+  <h2>Admin Panel</h2>
+  <p style="font-size:.82em; color:var(--grey);">Separate Flutter Web app — <code>main_admin.dart</code></p>
+  <div class="screen-list">
+    <div class="screen-chip">📊 Dashboard</div>
+    <div class="screen-chip">📅 Event Management</div>
+    <div class="screen-chip">🗺️ Route Editor</div>
+    <div class="screen-chip">📁 KML Upload</div>
+    <div class="screen-chip">👤 User Management</div>
+  </div>
+  <div style="margin-top:1em; font-size:.8em; text-align:left; max-width:680px; margin-inline:auto;">
+    <ul style="line-height:2;">
+      <li>Create &amp; edit marathon events with banner images</li>
+      <li>Draw custom routes directly on Google Maps</li>
+      <li>Upload KML files per race category</li>
+      <li>Manage users and view stats</li>
+      <li>Deployed as standalone web app on cPanel</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SLIDE 9 · Firebase Structure
+═══════════════════════════════════════════════════════ -->
+<section>
+  <h2>Firebase Data Structure</h2>
+  <table class="db-table">
+    <thead><tr><th>Path</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td class="path">live_runners/{uid}</td><td>Real-time GPS position &amp; distance</td></tr>
+      <tr><td class="path">user_stats/{uid}</td><td>Total distance, runs, pace, display name</td></tr>
+      <tr><td class="path">friends/{uid}/{friendUid}</td><td>Friend relationships</td></tr>
+      <tr><td class="path">events/{eventId}</td><td>Event name, date, categories, banner</td></tr>
+      <tr><td class="path">event_comments/{eventId}</td><td>Comments, replies, likes</td></tr>
+      <tr><td class="path">routes/{uid}/my_route_{ts}.json</td><td>Saved run data (Storage)</td></tr>
+      <tr><td class="path">routes/{uid}/photos/{ts}/</td><td>Run photos (Storage)</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SLIDE 10 · Stats
+═══════════════════════════════════════════════════════ -->
+<section>
+  <h2>Project Highlights</h2>
+  <div class="stats">
+    <div class="stat-box"><div class="num">3</div><div class="lbl">Platforms<br/>Android · iOS · Web</div></div>
+    <div class="stat-box"><div class="num">2</div><div class="lbl">Languages<br/>English · Japanese</div></div>
+    <div class="stat-box"><div class="num">5</div><div class="lbl">Firebase<br/>Services Used</div></div>
+    <div class="stat-box"><div class="num">∞</div><div class="lbl">Real-time<br/>Leaderboard</div></div>
+  </div>
+  <div style="margin-top:1em; font-size:.82em; color:var(--grey);">
+    <span class="pill pill-flutter">flutter_launcher_icons</span>
+    <span class="pill pill-firebase">cached_network_image</span>
+    <span class="pill pill-maps">google_maps_flutter</span>
+    <span class="pill pill-getx">image_picker</span>
+    <span class="pill pill-dart">geolocator</span>
+    <span class="pill pill-firebase">wakelock_plus</span>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SLIDE 11 · Thank You
+═══════════════════════════════════════════════════════ -->
+<section data-background-color="#1A202C" class="end-slide">
+  <div style="font-size:3em; margin-bottom:.3em;">🏃‍♂️</div>
+  <h2 style="border-bottom-color:var(--orange);">Thank You</h2>
+  <p style="font-size:.9em; opacity:.8; margin-top:.8em;">Built with Flutter · Firebase · Google Maps</p>
+  <p style="margin-top:1.4em;">
+    <span style="background:var(--orange); color:#fff; border-radius:20px; padding:.4em 1.2em; font-size:.85em; font-weight:600;">
+      RunMate — Track · Compete · Achieve
+    </span>
+  </p>
+  <p style="font-size:.7em; opacity:.5; margin-top:1.6em;">Use ← → arrow keys to navigate slides</p>
+</section>
+
+</div><!-- /slides -->
+</div><!-- /reveal -->
+
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@4.6.0/dist/reveal.js"></script>
+<script>
+  Reveal.initialize({
+    hash: true,
+    slideNumber: true,
+    transition: 'slide',
+    transitionSpeed: 'fast',
+    controls: true,
+    progress: true,
+    center: true,
+    width: 1100,
+    height: 680,
+  });
+</script>
+</body>
+</html>

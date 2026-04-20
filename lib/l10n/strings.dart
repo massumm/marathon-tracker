@@ -82,6 +82,10 @@ class AppStrings extends Translations {
           'exit_run_title': 'Exit Run?',
           'exit_run_body': 'Your run is in progress. Exiting will stop and save your session.',
           'exit_run_confirm': 'Exit & Save',
+          'run_in_progress': 'Run in progress — tap to return',
+          'already_running_title': 'Already Running',
+          'already_running_body': 'You have an active run. Stop your current run before starting a new one.',
+          'return_to_run': 'Return to Run',
 
           // Leaderboard / Profile
           'search_hint': 'Search by email or username',
@@ -211,6 +215,10 @@ class AppStrings extends Translations {
           'exit_run_title': '退出しますか？',
           'exit_run_body': 'ランが進行中です。退出するとセッションが停止・保存されます。',
           'exit_run_confirm': '退出して保存',
+          'run_in_progress': 'ラン進行中 — タップして戻る',
+          'already_running_title': '実行中です',
+          'already_running_body': 'アクティブなランがあります。新しいランを開始する前に現在のランを停止してください。',
+          'return_to_run': 'ランに戻る',
 
           // Leaderboard / Profile
           'search_hint': 'メールまたはユーザー名で検索',

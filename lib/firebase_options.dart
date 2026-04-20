@@ -23,10 +23,7 @@ class DefaultFirebaseOptions {
       case TargetPlatform.android:
         return android;
       case TargetPlatform.iOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for ios - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return ios;
       case TargetPlatform.macOS:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for macos - '
@@ -57,6 +54,17 @@ class DefaultFirebaseOptions {
     authDomain: 'medishop-40923.firebaseapp.com',
     databaseURL: 'https://medishop-40923-default-rtdb.firebaseio.com',
     storageBucket: 'medishop-40923.firebasestorage.app',
+  );
+
+  static const FirebaseOptions ios = FirebaseOptions(
+    apiKey: 'AIzaSyBIy9zgNxqriEeM-DFTvm-SM1zi6b74FZw',
+    appId: '1:157462453434:ios:16b4826f28f07cf04c7683',
+    messagingSenderId: '157462453434',
+    projectId: 'medishop-40923',
+    databaseURL: 'https://medishop-40923-default-rtdb.firebaseio.com',
+    storageBucket: 'medishop-40923.firebasestorage.app',
+    iosClientId: '157462453434-eke8vafdhitj3ftdhp6ihhvgccgci84o.apps.googleusercontent.com',
+    iosBundleId: 'com.example.googleMap',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
