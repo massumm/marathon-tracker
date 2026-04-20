@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import '../app/routes/app_routes.dart';
 import '../core/theme.dart';
 import '../models/tracked_route.dart';
+import '../screens/run_selfie_screen.dart';
 import '../services/firebase_service.dart';
 
 class RouteDetailScreen extends StatefulWidget {
@@ -86,6 +87,14 @@ class _RouteDetailScreenState extends State<RouteDetailScreen>
     return Scaffold(
       appBar: AppBar(
         title: Text(title),
+        actions: [
+          if (_route != null)
+            IconButton(
+              icon: const Icon(Icons.share_outlined),
+              tooltip: 'share_run'.tr,
+              onPressed: () => Get.to(() => RunSelfieScreen(route: _route!)),
+            ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           labelColor: Colors.white,

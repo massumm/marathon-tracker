@@ -6,6 +6,7 @@ class UserStats {
   final double totalDistanceKm;
   final int totalRuns;
   final int totalSeconds;
+  final int age;
   int rank;
 
   UserStats({
@@ -16,6 +17,7 @@ class UserStats {
     required this.totalDistanceKm,
     required this.totalRuns,
     required this.totalSeconds,
+    this.age = 0,
     this.rank = 0,
   });
 
@@ -28,6 +30,7 @@ class UserStats {
       totalDistanceKm: (map['totalDistanceKm'] as num?)?.toDouble() ?? 0,
       totalRuns: (map['totalRuns'] as num?)?.toInt() ?? 0,
       totalSeconds: (map['totalSeconds'] as num?)?.toInt() ?? 0,
+      age: (map['age'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -49,4 +52,17 @@ class UserStats {
   String get avgPaceStr => avgPaceKmH > 0
       ? '${avgPaceKmH.toStringAsFixed(1)} km/h'
       : '-';
+
+  int get totalSteps => (totalDistanceKm * 1000 / 0.762).round();
+
+  String get stepsStr {
+    if (totalSteps >= 1000) {
+      return '${(totalSteps / 1000).toStringAsFixed(1)}k';
+    }
+    return '$totalSteps';
+  }
+
+  int get totalCalories => (totalDistanceKm * 65).round();
+
+  String get caloriesStr => '$totalCalories kcal';
 }

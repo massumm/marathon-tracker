@@ -18,6 +18,7 @@ class MyPageController extends GetxController {
   final myStats = Rxn<UserStats>();
   final photoUrlObs = ''.obs;
   final displayNameObs = ''.obs;
+  final ageObs = 0.obs;
 
   StreamSubscription? _statsSub;
 
@@ -39,6 +40,7 @@ class MyPageController extends GetxController {
     fetchRoutes();
     _statsSub = UserStatsService.instance.watchMyStats().listen((s) {
       myStats.value = s;
+      if (s != null && s.age > 0) ageObs.value = s.age;
     });
   }
 
@@ -107,6 +109,31 @@ class MyPageController extends GetxController {
     } finally {
       isLoading.value = false;
     }
+  }
+
+  Future<void> updateAge(int age) async {
+    await UserStatsService.instance.updateAge(age);
+    ageObs.value = age;
+  }
+
+  Future<void> sendPasswordReset() async {
+    final email = user?.email;
+    if (email == null) return;
+    await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+  }
+
+  Future<void> updateEmail(String newEmail) async {
+    final u = user;
+    if (u == null) return;
+    await u.verifyBeforeUpdateEmail(newEmail);
+    await UserStatsService.instance.registerOrUpdate();
+  }
+
+  Future<void> deleteAccount() async {
+    final u = user;
+    if (u == null) return;
+    await u.delete();
+    await Get.find<AuthController>().signOut();
   }
 
   Future<void> signOut() async {

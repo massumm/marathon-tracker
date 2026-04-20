@@ -418,9 +418,14 @@ class KmlMapController extends GetxController {
         snappedPoints.isNotEmpty ? snappedPoints.toList() : trackingPoints.toList();
 
     final now = DateTime.now();
-    final fileName = 'my_route_$_runStartMs.json';
     final elapsed = Duration(seconds: elapsedSeconds.value);
     final startTime = now.subtract(elapsed);
+    final slug = AppConfig.eventName.replaceAll(' ', '_');
+    final dateStr =
+        '${startTime.year}-${startTime.month.toString().padLeft(2, '0')}-${startTime.day.toString().padLeft(2, '0')}';
+    final timeStr2 =
+        '${startTime.hour.toString().padLeft(2, '0')}-${startTime.minute.toString().padLeft(2, '0')}';
+    final fileName = '${slug}_${dateStr}_$timeStr2.json';
     final totalDistance =
         LocationService.instance.totalDistanceKm(routePoints);
     final pace = elapsedSeconds.value > 0

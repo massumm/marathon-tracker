@@ -55,8 +55,8 @@ class MyRoutesScreen extends GetView<MyPageController> {
           itemBuilder: (_, i) {
             final ref = controller.routeRefs[i];
             return RouteListCard(
-              title: TrackedRoute.parseDateFromFileName(ref.name),
-              subtitle: ref.name,
+              title: TrackedRoute.parseEventFromFileName(ref.name),
+              subtitle: TrackedRoute.parseDateFromFileName(ref.name),
               leadingIcon: Icons.flag_rounded,
               onTap: () => Get.toNamed(
                 AppRoutes.routeDetail,

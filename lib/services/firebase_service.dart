@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart' as fs;
 import '../core/config.dart';
 import '../models/kml_route.dart';
+import '../models/tracked_route.dart';
 
 class FirebaseService {
   FirebaseService._();
@@ -37,7 +38,8 @@ class FirebaseService {
     final filtered = result.items
         .where((item) => item.name.endsWith('.json'))
         .toList()
-      ..sort((a, b) => b.name.compareTo(a.name));
+      ..sort((a, b) => TrackedRoute.parseDateTimeFromFileName(b.name)
+          .compareTo(TrackedRoute.parseDateTimeFromFileName(a.name)));
     return filtered;
   }
 

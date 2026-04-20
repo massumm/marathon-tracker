@@ -176,6 +176,24 @@ class _StatsGrid extends StatelessWidget {
             ),
           ],
         ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            _StatCard(
+              icon: Icons.directions_walk,
+              value: stats.stepsStr,
+              label: 'total_steps'.tr,
+              color: const Color(0xFF0288D1),
+            ),
+            const SizedBox(width: 12),
+            _StatCard(
+              icon: Icons.local_fire_department,
+              value: stats.caloriesStr,
+              label: 'total_calories'.tr,
+              color: const Color(0xFFE64A19),
+            ),
+          ],
+        ),
       ],
     );
   }

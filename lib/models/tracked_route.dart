@@ -44,11 +44,65 @@ class TrackedRoute {
     );
   }
 
-  /// Parses a human-readable date from filenames like `my_route_1712345678000.json`.
-  static String parseDateFromFileName(String fileName) {
+  /// Extracts a sortable DateTime from both old and new filename formats.
+  static DateTime parseDateTimeFromFileName(String fileName) {
+    final base = fileName.replaceAll('.json', '');
+    final parts = base.split('_');
+    // New format: EventName_YYYY-MM-DD_HH-mm
+    if (parts.length >= 2) {
+      final timePart = parts.last;
+      final datePart = parts[parts.length - 2];
+      if (RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(datePart) &&
+          RegExp(r'^\d{2}-\d{2}$').hasMatch(timePart)) {
+        final tp = timePart.split('-');
+        final dp = datePart.split('-');
+        return DateTime(int.parse(dp[0]), int.parse(dp[1]), int.parse(dp[2]),
+            int.parse(tp[0]), int.parse(tp[1]));
+      }
+    }
+    // Old format: my_route_<ms>
     try {
-      final ms = int.parse(
-          fileName.replaceAll('.json', '').split('_').last);
+      return DateTime.fromMillisecondsSinceEpoch(int.parse(parts.last));
+    } catch (_) {
+      return DateTime(0);
+    }
+  }
+
+  /// Returns event name from filename.
+  /// New format: `EventName_YYYY-MM-DD_HH-mm.json`
+  /// Old format: `my_route_<ms>.json` — falls back to raw name.
+  static String parseEventFromFileName(String fileName) {
+    final base = fileName.replaceAll('.json', '');
+    // New format: last two segments are date and time
+    final parts = base.split('_');
+    if (parts.length >= 3) {
+      final timePart = parts.last; // HH-mm
+      final datePart = parts[parts.length - 2]; // YYYY-MM-DD
+      if (RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(datePart) &&
+          RegExp(r'^\d{2}-\d{2}$').hasMatch(timePart)) {
+        return parts.sublist(0, parts.length - 2).join(' ');
+      }
+    }
+    return base;
+  }
+
+  /// Returns date/time string from filename.
+  static String parseDateFromFileName(String fileName) {
+    final base = fileName.replaceAll('.json', '');
+    final parts = base.split('_');
+    // New format: EventName_YYYY-MM-DD_HH-mm
+    if (parts.length >= 2) {
+      final timePart = parts.last;
+      final datePart = parts[parts.length - 2];
+      if (RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(datePart) &&
+          RegExp(r'^\d{2}-\d{2}$').hasMatch(timePart)) {
+        final time = timePart.replaceAll('-', ':');
+        return '$datePart  $time';
+      }
+    }
+    // Old format: my_route_<ms>
+    try {
+      final ms = int.parse(parts.last);
       final dt = DateTime.fromMillisecondsSinceEpoch(ms);
       final d = dt.day.toString().padLeft(2, '0');
       final mo = dt.month.toString().padLeft(2, '0');

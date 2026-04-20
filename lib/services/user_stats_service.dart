@@ -26,6 +26,12 @@ class UserStatsService {
     });
   }
 
+  Future<void> updateAge(int age) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    await _db.ref('user_stats/${user.uid}').update({'age': age});
+  }
+
   /// Atomically add distance + time after a run is saved.
   Future<void> addRunStats(double distanceKm, int seconds) async {
     final user = FirebaseAuth.instance.currentUser;

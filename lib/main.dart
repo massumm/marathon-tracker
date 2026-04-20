@@ -18,6 +18,7 @@ import 'screens/my_page_map_screen.dart';
 import 'screens/my_routes_screen.dart';
 import 'screens/route_detail_screen.dart';
 import 'screens/qr_scanner_screen.dart';
+import 'screens/settings_screen.dart';
 import 'screens/user_profile_screen.dart';
 
 void main() async {
@@ -88,6 +89,10 @@ class MapApp extends StatelessWidget {
         GetPage(
           name: AppRoutes.userProfile,
           page: () => const UserProfileScreen(),
+        ),
+        GetPage(
+          name: AppRoutes.settings,
+          page: () => const SettingsScreen(),
         ),
       ],
     );

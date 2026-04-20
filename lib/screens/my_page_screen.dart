@@ -17,26 +17,9 @@ class MyPageScreen extends GetView<MyPageController> {
         title: Text('my_page_title'.tr),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: controller.fetchRoutes,
-            tooltip: 'refresh'.tr,
-          ),
-          IconButton(
-            icon: const Icon(Icons.language),
-            tooltip: 'language'.tr,
-            onPressed: () {
-              final isJa = Get.locale?.languageCode == 'ja';
-              Get.updateLocale(
-                isJa
-                    ? const Locale('en', 'US')
-                    : const Locale('ja', 'JP'),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _confirmSignOut,
-            tooltip: 'sign_out'.tr,
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'settings'.tr,
+            onPressed: () => Get.toNamed(AppRoutes.settings),
           ),
         ],
       ),
@@ -116,23 +99,6 @@ class MyPageScreen extends GetView<MyPageController> {
     );
   }
 
-  void _confirmSignOut() {
-    Get.dialog(AlertDialog(
-      title: Text('sign_out'.tr),
-      content: Text('sign_out_confirm'.tr),
-      actions: [
-        TextButton(onPressed: Get.back, child: Text('cancel'.tr)),
-        TextButton(
-          onPressed: () {
-            Get.back();
-            controller.signOut();
-          },
-          style: TextButton.styleFrom(foregroundColor: Colors.red),
-          child: Text('sign_out'.tr),
-        ),
-      ],
-    ));
-  }
 }
 
 // ── Profile header ────────────────────────────────────────────────────────────

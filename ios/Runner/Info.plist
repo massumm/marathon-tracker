@@ -26,6 +26,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>RunMate uses the camera to take a selfie with your run stats to share on social media.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>RunMate saves your run selfie to the photo library for sharing.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>This app tracks your location in the background so your run continues even when the screen is off.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
