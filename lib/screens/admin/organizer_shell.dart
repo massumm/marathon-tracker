@@ -2,34 +2,22 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/theme.dart';
-import 'dashboard.dart';
-import 'events_screen.dart';
-import 'organizers_screen.dart';
-import 'users_screen.dart';
+import '../../models/admin_user_model.dart';
+import 'organizer_events_screen.dart';
 
-class AdminShell extends StatefulWidget {
-  const AdminShell({super.key});
+class OrganizerShell extends StatefulWidget {
+  final AdminUser organizer;
+  const OrganizerShell({super.key, required this.organizer});
 
   @override
-  State<AdminShell> createState() => _AdminShellState();
+  State<OrganizerShell> createState() => _OrganizerShellState();
 }
 
-class _AdminShellState extends State<AdminShell> {
+class _OrganizerShellState extends State<OrganizerShell> {
   int _selected = 0;
 
   static const _navItems = [
-    _NavItem(Icons.dashboard_outlined, Icons.dashboard, 'Dashboard'),
-    _NavItem(Icons.event_outlined, Icons.event, 'Events'),
-    _NavItem(Icons.manage_accounts_outlined, Icons.manage_accounts,
-        'Organizers'),
-    _NavItem(Icons.people_outline, Icons.people, 'Users'),
-  ];
-
-  final _pages = const [
-    AdminDashboard(),
-    AdminEventsScreen(),
-    OrganizersScreen(),
-    AdminUsersScreen(),
+    _NavItem(Icons.event_outlined, Icons.event, 'My Events'),
   ];
 
   @override
@@ -37,6 +25,10 @@ class _AdminShellState extends State<AdminShell> {
     final user = FirebaseAuth.instance.currentUser;
     final width = MediaQuery.of(context).size.width;
     final isCollapsed = width < 900;
+
+    final pages = [
+      OrganizerEventsScreen(organizerUid: widget.organizer.uid),
+    ];
 
     return Scaffold(
       backgroundColor: const Color(0xFFF0F2F5),
@@ -82,12 +74,12 @@ class _AdminShellState extends State<AdminShell> {
                       ),
                       if (!isCollapsed) ...[
                         const SizedBox(width: 12),
-                        const Expanded(
+                        Expanded(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
+                              const Text(
                                 'Marathon Map',
                                 style: TextStyle(
                                   color: Colors.white,
@@ -96,12 +88,13 @@ class _AdminShellState extends State<AdminShell> {
                                 ),
                               ),
                               Text(
-                                'Super Admin',
-                                style: TextStyle(
-                                  color: AppTheme.primary,
+                                widget.organizer.displayName,
+                                style: const TextStyle(
+                                  color: Colors.orange,
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                 ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ),
@@ -111,9 +104,7 @@ class _AdminShellState extends State<AdminShell> {
                   ),
                 ),
 
-                const Divider(
-                    height: 1, color: Colors.white10, thickness: 1),
-
+                const Divider(height: 1, color: Colors.white10, thickness: 1),
                 const SizedBox(height: 16),
 
                 // ── Nav items ──────────────────────────────────────────
@@ -255,14 +246,13 @@ class _AdminShellState extends State<AdminShell> {
                         ),
                       ),
                       const Spacer(),
-                      // User info
                       if (user != null) ...[
                         Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
-                              user.displayName ?? 'Admin',
+                              widget.organizer.displayName,
                               style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
@@ -270,7 +260,7 @@ class _AdminShellState extends State<AdminShell> {
                               ),
                             ),
                             Text(
-                              user.email ?? '',
+                              widget.organizer.email,
                               style: const TextStyle(
                                 fontSize: 11,
                                 color: AppTheme.textSecondary,
@@ -281,23 +271,19 @@ class _AdminShellState extends State<AdminShell> {
                         const SizedBox(width: 12),
                         CircleAvatar(
                           radius: 18,
-                          backgroundColor:
-                              AppTheme.primary.withValues(alpha: 0.15),
-                          backgroundImage: user.photoURL != null
-                              ? NetworkImage(user.photoURL!)
-                              : null,
-                          child: user.photoURL == null
-                              ? Text(
-                                  (user.displayName ?? user.email ?? 'A')
-                                      .substring(0, 1)
-                                      .toUpperCase(),
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    color: AppTheme.primary,
-                                    fontSize: 15,
-                                  ),
-                                )
-                              : null,
+                          backgroundColor: Colors.orange.withValues(alpha: 0.15),
+                          child: Text(
+                            (widget.organizer.displayName.isNotEmpty
+                                    ? widget.organizer.displayName
+                                    : widget.organizer.email)
+                                .substring(0, 1)
+                                .toUpperCase(),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: Colors.orange,
+                              fontSize: 15,
+                            ),
+                          ),
                         ),
                       ],
                     ],
@@ -308,7 +294,7 @@ class _AdminShellState extends State<AdminShell> {
                 Expanded(
                   child: IndexedStack(
                     index: _selected,
-                    children: _pages,
+                    children: pages,
                   ),
                 ),
               ],

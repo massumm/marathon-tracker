@@ -39,6 +39,7 @@ class EventModel {
   final String bannerUrl;
   final int createdAt;
   final Map<String, RaceCategory> categories;
+  final String organizerUid;
 
   EventModel({
     required this.id,
@@ -48,6 +49,7 @@ class EventModel {
     required this.bannerUrl,
     required this.createdAt,
     required this.categories,
+    this.organizerUid = '',
   });
 
   factory EventModel.fromMap(String id, Map<dynamic, dynamic> map) {
@@ -67,6 +69,7 @@ class EventModel {
       bannerUrl: map['bannerUrl'] as String? ?? '',
       createdAt: (map['createdAt'] as num?)?.toInt() ?? 0,
       categories: cats,
+      organizerUid: map['organizerUid'] as String? ?? '',
     );
   }
 
@@ -76,6 +79,7 @@ class EventModel {
         'location': location,
         'bannerUrl': bannerUrl,
         'createdAt': createdAt,
+        'organizerUid': organizerUid,
         'categories': {
           for (final e in categories.entries) e.key: e.value.toMap()
         },

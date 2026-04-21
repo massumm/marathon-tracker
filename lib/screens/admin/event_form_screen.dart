@@ -9,7 +9,8 @@ import 'route_editor_screen.dart';
 
 class EventFormScreen extends StatefulWidget {
   final EventModel? existing;
-  const EventFormScreen({super.key, this.existing});
+  final String organizerUid;
+  const EventFormScreen({super.key, this.existing, this.organizerUid = ''});
 
   @override
   State<EventFormScreen> createState() => _EventFormScreenState();
@@ -175,6 +176,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
         'bannerUrl': bannerUrl,
         'createdAt':
             widget.existing?.createdAt ?? DateTime.now().millisecondsSinceEpoch,
+        'organizerUid': widget.existing?.organizerUid ?? widget.organizerUid,
         'categories': catMaps,
       };
 
