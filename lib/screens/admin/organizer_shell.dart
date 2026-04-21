@@ -5,7 +5,6 @@ import '../../core/theme.dart';
 import '../../models/admin_user_model.dart';
 import 'organizer_dashboard.dart';
 import 'organizer_events_screen.dart';
-import 'users_screen.dart';
 
 class OrganizerShell extends StatefulWidget {
   final AdminUser organizer;
@@ -21,7 +20,6 @@ class _OrganizerShellState extends State<OrganizerShell> {
   static const _navItems = [
     _NavItem(Icons.dashboard_outlined, Icons.dashboard, 'Dashboard'),
     _NavItem(Icons.event_outlined, Icons.event, 'Events'),
-    _NavItem(Icons.people_outline, Icons.people, 'Users'),
   ];
 
   @override
@@ -32,7 +30,6 @@ class _OrganizerShellState extends State<OrganizerShell> {
     final pages = [
       OrganizerDashboard(organizer: widget.organizer),
       OrganizerEventsScreen(organizerUid: widget.organizer.uid),
-      const AdminUsersScreen(),
     ];
 
     return Scaffold(
