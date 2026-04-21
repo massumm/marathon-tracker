@@ -45,8 +45,9 @@
       }
     },
     "admins": {
+      ".read": "auth != null && root.child('admins').child(auth.uid).child('role').val() === 'super_admin'",
       "$uid": {
-        ".read": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).child('role').val() === 'super_admin')",
+        ".read": "auth != null && auth.uid === $uid",
         ".write": "auth != null && root.child('admins').child(auth.uid).child('role').val() === 'super_admin'"
       }
     },
