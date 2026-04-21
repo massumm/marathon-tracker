@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme.dart';
 import '../../models/admin_user_model.dart';
+import 'organizer_dashboard.dart';
 import 'organizer_events_screen.dart';
+import 'users_screen.dart';
 
 class OrganizerShell extends StatefulWidget {
   final AdminUser organizer;
@@ -17,17 +19,20 @@ class _OrganizerShellState extends State<OrganizerShell> {
   int _selected = 0;
 
   static const _navItems = [
-    _NavItem(Icons.event_outlined, Icons.event, 'My Events'),
+    _NavItem(Icons.dashboard_outlined, Icons.dashboard, 'Dashboard'),
+    _NavItem(Icons.event_outlined, Icons.event, 'Events'),
+    _NavItem(Icons.people_outline, Icons.people, 'Users'),
   ];
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
     final width = MediaQuery.of(context).size.width;
     final isCollapsed = width < 900;
 
     final pages = [
+      OrganizerDashboard(organizer: widget.organizer),
       OrganizerEventsScreen(organizerUid: widget.organizer.uid),
+      const AdminUsersScreen(),
     ];
 
     return Scaffold(
@@ -50,7 +55,6 @@ class _OrganizerShellState extends State<OrganizerShell> {
             ),
             child: Column(
               children: [
-                // ── Logo area ──────────────────────────────────────────
                 Container(
                   height: 64,
                   alignment: Alignment.center,
@@ -107,7 +111,6 @@ class _OrganizerShellState extends State<OrganizerShell> {
                 const Divider(height: 1, color: Colors.white10, thickness: 1),
                 const SizedBox(height: 16),
 
-                // ── Nav items ──────────────────────────────────────────
                 ..._navItems.asMap().entries.map((entry) {
                   final i = entry.key;
                   final item = entry.value;
@@ -169,7 +172,6 @@ class _OrganizerShellState extends State<OrganizerShell> {
 
                 const Spacer(),
 
-                // ── Sign-out ───────────────────────────────────────────
                 Padding(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -221,7 +223,6 @@ class _OrganizerShellState extends State<OrganizerShell> {
           Expanded(
             child: Column(
               children: [
-                // ── Top bar ────────────────────────────────────────────
                 Container(
                   height: 64,
                   padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -246,51 +247,48 @@ class _OrganizerShellState extends State<OrganizerShell> {
                         ),
                       ),
                       const Spacer(),
-                      if (user != null) ...[
-                        Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              widget.organizer.displayName,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: AppTheme.textPrimary,
-                              ),
-                            ),
-                            Text(
-                              widget.organizer.email,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: AppTheme.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(width: 12),
-                        CircleAvatar(
-                          radius: 18,
-                          backgroundColor: Colors.orange.withValues(alpha: 0.15),
-                          child: Text(
-                            (widget.organizer.displayName.isNotEmpty
-                                    ? widget.organizer.displayName
-                                    : widget.organizer.email)
-                                .substring(0, 1)
-                                .toUpperCase(),
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            widget.organizer.displayName,
                             style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              color: Colors.orange,
-                              fontSize: 15,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.textPrimary,
                             ),
                           ),
+                          Text(
+                            widget.organizer.email,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(width: 12),
+                      CircleAvatar(
+                        radius: 18,
+                        backgroundColor: Colors.orange.withValues(alpha: 0.15),
+                        child: Text(
+                          (widget.organizer.displayName.isNotEmpty
+                                  ? widget.organizer.displayName
+                                  : widget.organizer.email)
+                              .substring(0, 1)
+                              .toUpperCase(),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: Colors.orange,
+                            fontSize: 15,
+                          ),
                         ),
-                      ],
+                      ),
                     ],
                   ),
                 ),
 
-                // ── Page content ───────────────────────────────────────
                 Expanded(
                   child: IndexedStack(
                     index: _selected,

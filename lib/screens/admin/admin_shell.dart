@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme.dart';
 import 'dashboard.dart';
-import 'events_screen.dart';
 import 'organizers_screen.dart';
 import 'users_screen.dart';
 
@@ -19,7 +18,6 @@ class _AdminShellState extends State<AdminShell> {
 
   static const _navItems = [
     _NavItem(Icons.dashboard_outlined, Icons.dashboard, 'Dashboard'),
-    _NavItem(Icons.event_outlined, Icons.event, 'Events'),
     _NavItem(Icons.manage_accounts_outlined, Icons.manage_accounts,
         'Organizers'),
     _NavItem(Icons.people_outline, Icons.people, 'Users'),
@@ -27,7 +25,6 @@ class _AdminShellState extends State<AdminShell> {
 
   final _pages = const [
     AdminDashboard(),
-    AdminEventsScreen(),
     OrganizersScreen(),
     AdminUsersScreen(),
   ];
