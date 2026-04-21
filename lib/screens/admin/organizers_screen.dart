@@ -10,7 +10,8 @@ import '../../services/admin_service.dart';
 import 'event_form_screen.dart';
 
 class OrganizersScreen extends StatelessWidget {
-  const OrganizersScreen({super.key});
+  final void Function(AdminUser organizer)? onOrganizerTap;
+  const OrganizersScreen({super.key, this.onOrganizerTap});
 
   @override
   Widget build(BuildContext context) {
@@ -45,8 +46,10 @@ class OrganizersScreen extends StatelessWidget {
             return ListView.builder(
               padding: const EdgeInsets.fromLTRB(28, 28, 28, 100),
               itemCount: organizers.length,
-              itemBuilder: (_, i) =>
-                  _OrganizerExpandableCard(organizer: organizers[i]),
+              itemBuilder: (_, i) => _OrganizerCard(
+                organizer: organizers[i],
+                onTap: onOrganizerTap,
+              ),
             );
           },
         ),
@@ -71,87 +74,54 @@ class OrganizersScreen extends StatelessWidget {
   }
 }
 
-// ── Expandable organizer card showing their events ──────────────────────────
+// ── Organizer card — tap to open their events page ──────────────────────────
 
-class _OrganizerExpandableCard extends StatefulWidget {
+class _OrganizerCard extends StatelessWidget {
   final AdminUser organizer;
-  const _OrganizerExpandableCard({required this.organizer});
-
-  @override
-  State<_OrganizerExpandableCard> createState() =>
-      _OrganizerExpandableCardState();
-}
-
-class _OrganizerExpandableCardState extends State<_OrganizerExpandableCard>
-    with SingleTickerProviderStateMixin {
-  bool _expanded = false;
-  late final AnimationController _controller;
-  late final Animation<double> _expandAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 200));
-    _expandAnimation =
-        CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _toggle() {
-    setState(() => _expanded = !_expanded);
-    if (_expanded) {
-      _controller.forward();
-    } else {
-      _controller.reverse();
-    }
-  }
+  final void Function(AdminUser)? onTap;
+  const _OrganizerCard({required this.organizer, this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final org = widget.organizer;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+    return StreamBuilder<List<EventModel>>(
+      stream: AdminService.instance.watchEvents(organizerUid: organizer.uid),
+      builder: (_, snap) {
+        final eventCount = snap.data?.length ?? 0;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // ── Header row ──────────────────────────────────────────────
-          InkWell(
-            onTap: _toggle,
-            borderRadius: _expanded
-                ? const BorderRadius.vertical(top: Radius.circular(16))
-                : BorderRadius.circular(16),
+          child: InkWell(
+            onTap: () => onTap?.call(organizer),
+            borderRadius: BorderRadius.circular(16),
             child: Padding(
               padding:
                   const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               child: Row(
                 children: [
                   CircleAvatar(
-                    radius: 22,
+                    radius: 24,
                     backgroundColor: AppTheme.primary.withValues(alpha: 0.12),
                     child: Text(
-                      (org.displayName.isNotEmpty ? org.displayName : org.email)
+                      (organizer.displayName.isNotEmpty
+                              ? organizer.displayName
+                              : organizer.email)
                           .substring(0, 1)
                           .toUpperCase(),
                       style: const TextStyle(
                         fontWeight: FontWeight.w700,
                         color: AppTheme.primary,
-                        fontSize: 16,
+                        fontSize: 17,
                       ),
                     ),
                   ),
@@ -161,7 +131,7 @@ class _OrganizerExpandableCardState extends State<_OrganizerExpandableCard>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          org.displayName,
+                          organizer.displayName,
                           style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
@@ -169,9 +139,24 @@ class _OrganizerExpandableCardState extends State<_OrganizerExpandableCard>
                           ),
                         ),
                         const SizedBox(height: 2),
-                        Text(org.email,
+                        Text(organizer.email,
                             style: const TextStyle(
-                                fontSize: 13, color: AppTheme.textSecondary)),
+                                fontSize: 13,
+                                color: AppTheme.textSecondary)),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            const Icon(Icons.event_outlined,
+                                size: 13, color: AppTheme.textSecondary),
+                            const SizedBox(width: 4),
+                            Text(
+                              '$eventCount event${eventCount == 1 ? '' : 's'}',
+                              style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppTheme.textSecondary),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -205,29 +190,14 @@ class _OrganizerExpandableCardState extends State<_OrganizerExpandableCard>
                     ),
                   ),
                   const SizedBox(width: 4),
-                  AnimatedRotation(
-                    turns: _expanded ? 0.5 : 0,
-                    duration: const Duration(milliseconds: 200),
-                    child: const Icon(Icons.keyboard_arrow_down,
-                        color: AppTheme.textSecondary),
-                  ),
+                  const Icon(Icons.chevron_right,
+                      color: AppTheme.textSecondary),
                 ],
               ),
             ),
           ),
-
-          // ── Expanded events list ─────────────────────────────────────
-          SizeTransition(
-            sizeFactor: _expandAnimation,
-            child: Column(
-              children: [
-                const Divider(height: 1, indent: 20, endIndent: 20),
-                _OrganizerEventsList(organizer: org),
-              ],
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -237,7 +207,7 @@ class _OrganizerExpandableCardState extends State<_OrganizerExpandableCard>
       builder: (_) => AlertDialog(
         title: const Text('Revoke Access'),
         content: Text(
-            'Remove organizer access for "${widget.organizer.displayName}"?\nThey will no longer be able to log in to this panel.'),
+            'Remove organizer access for "${organizer.displayName}"?\nThey will no longer be able to log in to this panel.'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
@@ -245,7 +215,7 @@ class _OrganizerExpandableCardState extends State<_OrganizerExpandableCard>
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              AdminService.instance.deleteOrganizer(widget.organizer.uid);
+              AdminService.instance.deleteOrganizer(organizer.uid);
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Revoke'),
@@ -256,190 +226,296 @@ class _OrganizerExpandableCardState extends State<_OrganizerExpandableCard>
   }
 }
 
-// ── Events list for one organizer ───────────────────────────────────────────
+// ── Full-page events view for one organizer (Super Admin) ───────────────────
 
-class _OrganizerEventsList extends StatelessWidget {
+class OrganizerEventsPage extends StatelessWidget {
   final AdminUser organizer;
-  const _OrganizerEventsList({required this.organizer});
+  const OrganizerEventsPage({super.key, required this.organizer});
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<List<EventModel>>(
-      stream:
-          AdminService.instance.watchEvents(organizerUid: organizer.uid),
-      builder: (_, snap) {
-        if (snap.connectionState == ConnectionState.waiting) {
-          return const Padding(
-            padding: EdgeInsets.all(20),
-            child: Center(child: CircularProgressIndicator()),
-          );
-        }
-        final events = snap.data ?? [];
-
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '${events.length} Event${events.length == 1 ? '' : 's'}',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.textSecondary,
+    return Stack(
+      children: [
+        StreamBuilder<List<EventModel>>(
+          stream:
+              AdminService.instance.watchEvents(organizerUid: organizer.uid),
+          builder: (_, snap) {
+            if (snap.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snap.hasError) {
+              return Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.error_outline,
+                        size: 48, color: Colors.red.shade300),
+                    const SizedBox(height: 12),
+                    const Text('Failed to load events',
+                        style: TextStyle(color: AppTheme.textSecondary)),
+                  ],
+                ),
+              );
+            }
+            final events = snap.data ?? [];
+            if (events.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.event_outlined,
+                        size: 64, color: Colors.grey.shade300),
+                    const SizedBox(height: 16),
+                    const Text('No events yet',
+                        style: TextStyle(
+                            fontSize: 16, color: AppTheme.textSecondary)),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${organizer.displayName} has not created any events',
+                      style: const TextStyle(
+                          fontSize: 13, color: AppTheme.textSecondary),
                     ),
-                  ),
-                  TextButton.icon(
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => EventFormScreen(
-                          organizerUid: organizer.uid,
-                        ),
-                      ),
-                    ),
-                    icon: const Icon(Icons.add, size: 16),
-                    label: const Text('Add Event',
-                        style: TextStyle(fontSize: 13)),
-                  ),
-                ],
+                  ],
+                ),
+              );
+            }
+            return ListView.builder(
+              padding: const EdgeInsets.fromLTRB(28, 28, 28, 100),
+              itemCount: events.length,
+              itemBuilder: (_, i) => _EventCard(
+                event: events[i],
+                organizerUid: organizer.uid,
               ),
-              if (events.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: Row(
-                    children: [
-                      Icon(Icons.event_busy_outlined,
-                          size: 18, color: Colors.grey.shade400),
-                      const SizedBox(width: 8),
-                      Text('No events yet',
-                          style: TextStyle(
-                              fontSize: 13, color: Colors.grey.shade400)),
-                    ],
-                  ),
-                )
-              else
-                ...events.map((e) => _EventRow(event: e, organizer: organizer)),
-            ],
+            );
+          },
+        ),
+        Positioned(
+          right: 28,
+          bottom: 28,
+          child: FloatingActionButton.extended(
+            icon: const Icon(Icons.add),
+            label: const Text('New Event'),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => EventFormScreen(organizerUid: organizer.uid),
+              ),
+            ),
           ),
-        );
-      },
+        ),
+      ],
     );
   }
 }
 
-class _EventRow extends StatelessWidget {
+// ── Full event card (identical to organizer view) ───────────────────────────
+
+class _EventCard extends StatelessWidget {
   final EventModel event;
-  final AdminUser organizer;
-  const _EventRow({required this.event, required this.organizer});
+  final String organizerUid;
+  const _EventCard({required this.event, required this.organizerUid});
 
   @override
   Widget build(BuildContext context) {
+    final uploadedCats =
+        event.categories.values.where((c) => c.kmlPath.isNotEmpty).length;
+    final totalCats = event.categories.length;
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8F9FA),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: AppTheme.primary.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(Icons.directions_run,
-                color: AppTheme.primary, size: 18),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
-          const SizedBox(width: 12),
-          Expanded(
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Banner
+          if (event.bannerUrl.isNotEmpty)
+            ClipRRect(
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(16)),
+              child: Image.network(
+                event.bannerUrl,
+                height: 160,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _placeholderBanner(),
+              ),
+            )
+          else
+            _placeholderBanner(),
+
+          Padding(
+            padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  event.name,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.textPrimary,
-                  ),
+                // Name + actions
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        event.name,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                    ),
+                    _ActionIcon(
+                      icon: Icons.edit_outlined,
+                      color: AppTheme.textSecondary,
+                      tooltip: 'Edit',
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => EventFormScreen(
+                            existing: event,
+                            organizerUid: organizerUid,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    _ActionIcon(
+                      icon: Icons.delete_outline,
+                      color: Colors.redAccent,
+                      tooltip: 'Delete',
+                      onTap: () => _confirmDelete(context),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 10),
+
+                // Date + location
                 Row(
                   children: [
                     const Icon(Icons.calendar_today_outlined,
-                        size: 11, color: AppTheme.textSecondary),
-                    const SizedBox(width: 4),
+                        size: 14, color: AppTheme.textSecondary),
+                    const SizedBox(width: 6),
                     Text(event.date,
                         style: const TextStyle(
-                            fontSize: 11, color: AppTheme.textSecondary)),
-                    const SizedBox(width: 10),
+                            fontSize: 13, color: AppTheme.textSecondary)),
+                    const SizedBox(width: 20),
                     const Icon(Icons.location_on_outlined,
-                        size: 11, color: AppTheme.textSecondary),
-                    const SizedBox(width: 4),
+                        size: 14, color: AppTheme.textSecondary),
+                    const SizedBox(width: 6),
                     Flexible(
                       child: Text(event.location,
                           style: const TextStyle(
-                              fontSize: 11, color: AppTheme.textSecondary),
+                              fontSize: 13,
+                              color: AppTheme.textSecondary),
                           overflow: TextOverflow.ellipsis),
                     ),
                   ],
                 ),
+                const SizedBox(height: 16),
+
+                // Category chips
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: event.categories.values.map((cat) {
+                    final hasKml = cat.kmlPath.isNotEmpty;
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: hasKml
+                            ? AppTheme.trackingGreen.withValues(alpha: 0.1)
+                            : Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: hasKml
+                              ? AppTheme.trackingGreen.withValues(alpha: 0.4)
+                              : Colors.grey.shade300,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            hasKml
+                                ? Icons.check_circle_outline
+                                : Icons.radio_button_unchecked,
+                            size: 13,
+                            color: hasKml
+                                ? AppTheme.trackingGreen
+                                : AppTheme.textSecondary,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            cat.label,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: hasKml
+                                  ? AppTheme.trackingGreen
+                                  : AppTheme.textSecondary,
+                            ),
+                          ),
+                          if (cat.cutoff.isNotEmpty) ...[
+                            const SizedBox(width: 6),
+                            Text(
+                              '(${cat.cutoff})',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: hasKml
+                                    ? AppTheme.trackingGreen
+                                        .withValues(alpha: 0.7)
+                                    : Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 10),
+
+                Text(
+                  '$uploadedCats / $totalCats KML files uploaded',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: uploadedCats == totalCats && totalCats > 0
+                        ? AppTheme.trackingGreen
+                        : AppTheme.textSecondary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          // Category count badge
-          Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: AppTheme.trackingGreen.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              '${event.categories.length} cat.',
-              style: const TextStyle(
-                  fontSize: 10,
-                  color: AppTheme.trackingGreen,
-                  fontWeight: FontWeight.w600),
-            ),
-          ),
-          const SizedBox(width: 8),
-          InkWell(
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => EventFormScreen(
-                  existing: event,
-                  organizerUid: organizer.uid,
-                ),
-              ),
-            ),
-            borderRadius: BorderRadius.circular(6),
-            child: const Padding(
-              padding: EdgeInsets.all(5),
-              child: Icon(Icons.edit_outlined,
-                  size: 16, color: AppTheme.textSecondary),
-            ),
-          ),
-          InkWell(
-            onTap: () => _confirmDelete(context),
-            borderRadius: BorderRadius.circular(6),
-            child: const Padding(
-              padding: EdgeInsets.all(5),
-              child: Icon(Icons.delete_outline,
-                  size: 16, color: Colors.redAccent),
-            ),
-          ),
         ],
+      ),
+    );
+  }
+
+  Widget _placeholderBanner() {
+    return Container(
+      height: 80,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppTheme.primary,
+            AppTheme.primary.withValues(alpha: 0.7),
+          ],
+        ),
+        borderRadius:
+            const BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      child: const Center(
+        child: Icon(Icons.directions_run, color: Colors.white, size: 36),
       ),
     );
   }
@@ -463,6 +539,35 @@ class _EventRow extends StatelessWidget {
             child: const Text('Delete'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ActionIcon extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  const _ActionIcon({
+    required this.icon,
+    required this.color,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(6),
+        child: Padding(
+          padding: const EdgeInsets.all(6),
+          child: Icon(icon, size: 20, color: color),
+        ),
       ),
     );
   }

@@ -2,9 +2,24 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/theme.dart';
+import '../../models/admin_user_model.dart';
 import 'dashboard.dart';
 import 'organizers_screen.dart';
 import 'users_screen.dart';
+
+// Allows OrganizersScreen to push into the shell's inner navigator.
+class AdminShellNavigator {
+  static GlobalKey<NavigatorState>? _key;
+  static void _register(GlobalKey<NavigatorState> key) => _key = key;
+
+  static void push(Widget page) {
+    _key?.currentState?.push(
+      MaterialPageRoute(builder: (_) => page),
+    );
+  }
+
+  static void pop() => _key?.currentState?.maybePop();
+}
 
 class AdminShell extends StatefulWidget {
   const AdminShell({super.key});
@@ -15,6 +30,11 @@ class AdminShell extends StatefulWidget {
 
 class _AdminShellState extends State<AdminShell> {
   int _selected = 0;
+  // Tracks whether the inner navigator has pages above the root so the
+  // top-bar can show a back button and the correct title.
+  String? _subPageTitle;
+
+  final _innerNavKey = GlobalKey<NavigatorState>();
 
   static const _navItems = [
     _NavItem(Icons.dashboard_outlined, Icons.dashboard, 'Dashboard'),
@@ -23,17 +43,31 @@ class _AdminShellState extends State<AdminShell> {
     _NavItem(Icons.people_outline, Icons.people, 'Users'),
   ];
 
-  final _pages = const [
-    AdminDashboard(),
-    OrganizersScreen(),
-    AdminUsersScreen(),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    AdminShellNavigator._register(_innerNavKey);
+  }
+
+  void _selectTab(int i) {
+    // Pop back to root of inner navigator before switching tab.
+    while (_innerNavKey.currentState?.canPop() ?? false) {
+      _innerNavKey.currentState!.pop();
+    }
+    setState(() {
+      _selected = i;
+      _subPageTitle = null;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
     final width = MediaQuery.of(context).size.width;
     final isCollapsed = width < 900;
+
+    final topTitle = _subPageTitle ?? _navItems[_selected].label;
+    final canGoBack = _subPageTitle != null;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF0F2F5),
@@ -55,7 +89,7 @@ class _AdminShellState extends State<AdminShell> {
             ),
             child: Column(
               children: [
-                // ── Logo area ──────────────────────────────────────────
+                // Logo
                 Container(
                   height: 64,
                   alignment: Alignment.center,
@@ -108,12 +142,10 @@ class _AdminShellState extends State<AdminShell> {
                   ),
                 ),
 
-                const Divider(
-                    height: 1, color: Colors.white10, thickness: 1),
-
+                const Divider(height: 1, color: Colors.white10, thickness: 1),
                 const SizedBox(height: 16),
 
-                // ── Nav items ──────────────────────────────────────────
+                // Nav items
                 ..._navItems.asMap().entries.map((entry) {
                   final i = entry.key;
                   final item = entry.value;
@@ -129,7 +161,7 @@ class _AdminShellState extends State<AdminShell> {
                       borderRadius: BorderRadius.circular(10),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(10),
-                        onTap: () => setState(() => _selected = i),
+                        onTap: () => _selectTab(i),
                         hoverColor: Colors.white10,
                         child: Container(
                           height: 46,
@@ -175,10 +207,10 @@ class _AdminShellState extends State<AdminShell> {
 
                 const Spacer(),
 
-                // ── Sign-out ───────────────────────────────────────────
+                // Sign-out
                 Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 4),
                   child: Material(
                     color: Colors.transparent,
                     borderRadius: BorderRadius.circular(10),
@@ -227,7 +259,7 @@ class _AdminShellState extends State<AdminShell> {
           Expanded(
             child: Column(
               children: [
-                // ── Top bar ────────────────────────────────────────────
+                // Top bar
                 Container(
                   height: 64,
                   padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -243,8 +275,20 @@ class _AdminShellState extends State<AdminShell> {
                   ),
                   child: Row(
                     children: [
+                      if (canGoBack) ...[
+                        IconButton(
+                          icon: const Icon(Icons.arrow_back,
+                              color: AppTheme.textPrimary),
+                          tooltip: 'Back',
+                          onPressed: () {
+                            _innerNavKey.currentState?.pop();
+                            setState(() => _subPageTitle = null);
+                          },
+                        ),
+                        const SizedBox(width: 4),
+                      ],
                       Text(
-                        _navItems[_selected].label,
+                        topTitle,
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
@@ -252,14 +296,13 @@ class _AdminShellState extends State<AdminShell> {
                         ),
                       ),
                       const Spacer(),
-                      // User info
                       if (user != null) ...[
                         Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
-                              user.displayName ?? 'Admin',
+                              user.displayName ?? 'Super Admin',
                               style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
@@ -285,7 +328,7 @@ class _AdminShellState extends State<AdminShell> {
                               : null,
                           child: user.photoURL == null
                               ? Text(
-                                  (user.displayName ?? user.email ?? 'A')
+                                  (user.displayName ?? user.email ?? 'S')
                                       .substring(0, 1)
                                       .toUpperCase(),
                                   style: const TextStyle(
@@ -301,11 +344,32 @@ class _AdminShellState extends State<AdminShell> {
                   ),
                 ),
 
-                // ── Page content ───────────────────────────────────────
+                // Inner navigator — sidebar stays visible while pages push/pop
                 Expanded(
-                  child: IndexedStack(
-                    index: _selected,
-                    children: _pages,
+                  child: Navigator(
+                    key: _innerNavKey,
+                    onGenerateRoute: (_) => MaterialPageRoute(
+                      builder: (_) => IndexedStack(
+                        index: _selected,
+                        children: [
+                          const AdminDashboard(),
+                          OrganizersScreen(
+                            onOrganizerTap: (org) {
+                              setState(() =>
+                                  _subPageTitle = 'Organizer Events');
+                              _innerNavKey.currentState?.push(
+                                MaterialPageRoute(
+                                  builder: (_) => OrganizerEventsPage(
+                                    organizer: org,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                          const AdminUsersScreen(),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ],
