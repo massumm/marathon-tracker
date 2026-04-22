@@ -595,11 +595,14 @@ class _LiveLeaderboardButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isToday = event.isToday;
+
     return StreamBuilder(
-      stream: AdminService.instance.watchLiveRunnersForEvent(event.id),
+      stream: isToday
+          ? AdminService.instance.watchLiveRunners()
+          : const Stream.empty(),
       builder: (_, snap) {
-        final runners = snap.data ?? [];
-        final isLive = runners.isNotEmpty;
+        final runnerCount = snap.data?.length ?? 0;
 
         return SizedBox(
           width: double.infinity,
@@ -607,26 +610,26 @@ class _LiveLeaderboardButton extends StatelessWidget {
             duration: const Duration(milliseconds: 300),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(10),
-              gradient: isLive
+              gradient: isToday
                   ? const LinearGradient(
                       colors: [Color(0xFFE53935), Color(0xFFB71C1C)],
                     )
                   : null,
-              color: isLive ? null : Colors.grey.shade200,
+              color: isToday ? null : Colors.grey.shade200,
             ),
             child: Material(
               color: Colors.transparent,
               borderRadius: BorderRadius.circular(10),
               child: InkWell(
                 borderRadius: BorderRadius.circular(10),
-                onTap: isLive ? () => onTap?.call(event) : null,
+                onTap: isToday ? () => onTap?.call(event) : null,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                       vertical: 11, horizontal: 16),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      if (isLive) ...[
+                      if (isToday) ...[
                         Container(
                           width: 7,
                           height: 7,
@@ -641,15 +644,16 @@ class _LiveLeaderboardButton extends StatelessWidget {
                             size: 16, color: Colors.grey.shade500),
                       const SizedBox(width: 6),
                       Text(
-                        isLive
-                            ? 'LIVE — View Leaderboard  (${runners.length} running)'
-                            : 'Leaderboard (event not started)',
+                        isToday
+                            ? 'LIVE — View Leaderboard${runnerCount > 0 ? '  ($runnerCount running)' : ''}'
+                            : 'Leaderboard (not today\'s event)',
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
-                          color:
-                              isLive ? Colors.white : Colors.grey.shade500,
-                          letterSpacing: isLive ? 0.3 : 0,
+                          color: isToday
+                              ? Colors.white
+                              : Colors.grey.shade500,
+                          letterSpacing: isToday ? 0.3 : 0,
                         ),
                       ),
                     ],

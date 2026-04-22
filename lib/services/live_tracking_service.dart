@@ -32,7 +32,6 @@ class LiveTrackingService {
     ).toMap();
 
     await _myRef.set(data);
-    // Auto-remove when the client disconnects unexpectedly
     await _myRef.onDisconnect().remove();
   }
 

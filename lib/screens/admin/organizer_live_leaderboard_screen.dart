@@ -15,7 +15,7 @@ class OrganizerLiveLeaderboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<List<RunnerData>>(
-      stream: AdminService.instance.watchLiveRunnersForEvent(event.id),
+      stream: AdminService.instance.watchLiveRunners(),
       builder: (_, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());

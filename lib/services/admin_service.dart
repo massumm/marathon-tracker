@@ -71,12 +71,9 @@ class AdminService {
   }
 
   /// Streams runners for a specific event, sorted by distanceKm descending.
-  /// Runners with no eventId (legacy/pre-field) are included in every event.
   Stream<List<RunnerData>> watchLiveRunnersForEvent(String eventId) {
     return watchLiveRunners().map(
-      (runners) => runners
-          .where((r) => r.eventId.isEmpty || r.eventId == eventId)
-          .toList(),
+      (runners) => runners.where((r) => r.eventId == eventId).toList(),
     );
   }
 
