@@ -37,7 +37,9 @@ class FriendsScreen extends GetView<FriendsController> {
               final requests = controller.requests;
               final friends = controller.friends;
 
-              if (requests.isEmpty && friends.isEmpty) {
+              final sentRequests = controller.sentRequests;
+
+              if (requests.isEmpty && sentRequests.isEmpty && friends.isEmpty) {
                 return const _EmptyState();
               }
 
@@ -54,6 +56,19 @@ class FriendsScreen extends GetView<FriendsController> {
                         request: r,
                         onAccept: () => controller.acceptRequest(r),
                         onReject: () => controller.rejectRequest(r),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                  if (sentRequests.isNotEmpty) ...[
+                    _SectionHeader(
+                      title: 'sent_requests'.tr,
+                      count: sentRequests.length,
+                    ),
+                    ...sentRequests.map(
+                      (r) => _SentRequestTile(
+                        request: r,
+                        onCancel: () => controller.cancelSentRequest(r),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -444,6 +459,48 @@ class _ActionButton extends StatelessWidget {
                 color: Colors.white,
                 fontSize: 12,
                 fontWeight: FontWeight.w600)),
+      ),
+    );
+  }
+}
+
+// ── Sent request tile ─────────────────────────────────────────────────────────
+
+class _SentRequestTile extends StatelessWidget {
+  final FriendRequestModel request;
+  final VoidCallback onCancel;
+
+  const _SentRequestTile({required this.request, required this.onCancel});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      leading: UserAvatar(
+        label: request.label,
+        photoUrl: request.photoUrl,
+        size: 44,
+      ),
+      title: Text(request.label,
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+      subtitle: Text(request.email,
+          style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Chip(
+            label: Text('request_sent'.tr,
+                style: const TextStyle(fontSize: 11)),
+            backgroundColor: const Color(0xFFFFF8E1),
+            padding: EdgeInsets.zero,
+          ),
+          const SizedBox(width: 8),
+          _ActionButton(
+            label: 'cancel'.tr,
+            color: Colors.grey.shade400,
+            onTap: onCancel,
+          ),
+        ],
       ),
     );
   }

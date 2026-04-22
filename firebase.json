@@ -6,17 +6,24 @@
     "platforms": {
       "android": {
         "default": {
-          "projectId": "medishop-40923",
-          "appId": "1:157462453434:android:fb87af59b08a4ec74c7683",
+          "projectId": "runmate-252e5",
+          "appId": "1:24360852719:android:37a76adddc9c22f1f14f1a",
           "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "ios": {
+        "default": {
+          "projectId": "runmate-252e5",
+          "appId": "1:24360852719:ios:78097c986b5999ecf14f1a",
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
         }
       },
       "dart": {
         "lib/firebase_options.dart": {
-          "projectId": "medishop-40923",
+          "projectId": "runmate-252e5",
           "configurations": {
-            "android": "1:157462453434:android:fb87af59b08a4ec74c7683",
-            "web": "1:157462453434:web:57233170ff3a84ca4c7683"
+            "android": "1:24360852719:android:37a76adddc9c22f1f14f1a",
+            "ios": "1:24360852719:ios:78097c986b5999ecf14f1a"
           }
         }
       }

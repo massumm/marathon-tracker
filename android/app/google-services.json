@@ -1,59 +1,21 @@
 {
   "project_info": {
-    "project_number": "157462453434",
-    "project_id": "medishop-40923",
-    "storage_bucket": "medishop-40923.firebasestorage.app"
+    "project_number": "24360852719",
+    "project_id": "runmate-252e5",
+    "storage_bucket": "runmate-252e5.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:157462453434:android:d016a65903df2dad4c7683",
+        "mobilesdk_app_id": "1:24360852719:android:37a76adddc9c22f1f14f1a",
         "android_client_info": {
-          "package_name": "com.app.medishop"
+          "package_name": "com.xor.runmate"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCTrj-Z_zrOqdrAzfeibKGvHHDiV7cQuRc"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:157462453434:android:6a718aba510cf9464c7683",
-        "android_client_info": {
-          "package_name": "com.example.bloc_pattern"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyCTrj-Z_zrOqdrAzfeibKGvHHDiV7cQuRc"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:157462453434:android:fb87af59b08a4ec74c7683",
-        "android_client_info": {
-          "package_name": "com.example.google_map"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyCTrj-Z_zrOqdrAzfeibKGvHHDiV7cQuRc"
+          "current_key": "AIzaSyDsx2E0wwBHup586l6AzpvC5ZG0EcbLFAw"
         }
       ],
       "services": {

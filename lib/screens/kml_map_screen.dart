@@ -266,10 +266,13 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
         initialCameraPosition:
             CameraPosition(target: _ctrl.initialLocation, zoom: 17),
         myLocationEnabled: true,
-        myLocationButtonEnabled: true,
+        myLocationButtonEnabled: false,
         onMapCreated: (c) {
           _ctrl.mapController = c;
           c.animateCamera(CameraUpdate.newLatLng(_ctrl.initialLocation));
+        },
+        onCameraMove: (_) {
+          if (isTracking) _ctrl.onUserPan();
         },
         polylines: {
           ..._ctrl.kmlPolylines,
@@ -300,17 +303,30 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
           ),
         ),
 
-      // ── Camera button (visible during tracking) ───────────────────────────
+      // ── Camera + recenter buttons (visible during tracking) ──────────────
       if (isTracking)
         Positioned(
           bottom: lb.isNotEmpty && _leaderOpen ? 204 : 52,
           right: 16,
-          child: FloatingActionButton.small(
-            heroTag: 'camera',
-            backgroundColor: Colors.white,
-            foregroundColor: AppTheme.primary,
-            onPressed: () => _takePhoto(),
-            child: const Icon(Icons.camera_alt),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FloatingActionButton.small(
+                heroTag: 'recenter',
+                backgroundColor: Colors.white,
+                foregroundColor: AppTheme.primary,
+                onPressed: _ctrl.recenterCamera,
+                child: const Icon(Icons.my_location),
+              ),
+              const SizedBox(height: 8),
+              FloatingActionButton.small(
+                heroTag: 'camera',
+                backgroundColor: Colors.white,
+                foregroundColor: AppTheme.primary,
+                onPressed: () => _takePhoto(),
+                child: const Icon(Icons.camera_alt),
+              ),
+            ],
           ),
         ),
 

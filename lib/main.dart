@@ -1,9 +1,11 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import 'app/bindings/home_binding.dart';
+import 'services/notification_service.dart';
 import 'app/bindings/initial_binding.dart';
 import 'app/bindings/kml_map_binding.dart';
 import 'app/routes/app_routes.dart';
@@ -21,9 +23,17 @@ import 'screens/qr_scanner_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/user_profile_screen.dart';
 
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await _initFirebase();
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  // Don't await — getToken() is a network call that blocks the splash screen
+  NotificationService.instance.init();
   WakelockPlus.enable();
   runApp(const MapApp());
 }

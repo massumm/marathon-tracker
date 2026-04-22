@@ -74,12 +74,21 @@ class FriendsService {
       String targetUid, String targetEmail, String targetDisplayName) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null || _uid == null) return;
-    await _db.ref('friend_requests/$targetUid/$_uid').set({
-      'email': user.email ?? '',
-      'displayName': user.displayName ?? user.email ?? '',
-      'photoUrl': user.photoURL ?? '',
-      'sentAt': DateTime.now().millisecondsSinceEpoch,
-    });
+    if (targetUid == _uid) return;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    await Future.wait([
+      _db.ref('friend_requests/$targetUid/$_uid').set({
+        'email': user.email ?? '',
+        'displayName': user.displayName ?? user.email ?? '',
+        'photoUrl': user.photoURL ?? '',
+        'sentAt': now,
+      }),
+      _db.ref('friend_requests_sent/$_uid/$targetUid').set({
+        'email': targetEmail,
+        'displayName': targetDisplayName,
+        'sentAt': now,
+      }),
+    ]);
   }
 
   Future<void> acceptRequest(
@@ -89,27 +98,38 @@ class FriendsService {
     if (uid == null || user == null) return;
     final now = DateTime.now().millisecondsSinceEpoch;
 
-    // Write both sides of the friendship
-    await _db.ref('friends/$uid/$fromUid').set({
-      'email': fromEmail,
-      'displayName': fromDisplayName,
-      'photoUrl': '',
-      'since': now,
-    });
-    await _db.ref('friends/$fromUid/$uid').set({
-      'email': user.email ?? '',
-      'displayName': user.displayName ?? user.email ?? '',
-      'photoUrl': user.photoURL ?? '',
-      'since': now,
-    });
-
-    // Remove the request
-    await _db.ref('friend_requests/$uid/$fromUid').remove();
+    await Future.wait([
+      _db.ref('friends/$uid/$fromUid').set({
+        'email': fromEmail,
+        'displayName': fromDisplayName,
+        'photoUrl': '',
+        'since': now,
+      }),
+      _db.ref('friends/$fromUid/$uid').set({
+        'email': user.email ?? '',
+        'displayName': user.displayName ?? user.email ?? '',
+        'photoUrl': user.photoURL ?? '',
+        'since': now,
+      }),
+      _db.ref('friend_requests/$uid/$fromUid').remove(),
+      _db.ref('friend_requests_sent/$fromUid/$uid').remove(),
+    ]);
   }
 
   Future<void> rejectRequest(String fromUid) async {
     if (_uid == null) return;
-    await _db.ref('friend_requests/$_uid/$fromUid').remove();
+    await Future.wait([
+      _db.ref('friend_requests/$_uid/$fromUid').remove(),
+      _db.ref('friend_requests_sent/$fromUid/$_uid').remove(),
+    ]);
+  }
+
+  Future<void> cancelSentRequest(String targetUid) async {
+    if (_uid == null) return;
+    await Future.wait([
+      _db.ref('friend_requests/$targetUid/$_uid').remove(),
+      _db.ref('friend_requests_sent/$_uid/$targetUid').remove(),
+    ]);
   }
 
   Future<void> removeFriend(String friendUid) async {
@@ -136,7 +156,6 @@ class FriendsService {
   // ── Streams ───────────────────────────────────────────────────────────────
 
   Stream<List<FriendModel>> watchFriends() {
-    print("watchFriends: $_uid");
     if (_uid == null) return const Stream.empty();
 
     return _db.ref('friends/$_uid').onValue.map((event) {
@@ -153,6 +172,19 @@ class FriendsService {
   Stream<List<FriendRequestModel>> watchRequests() {
     if (_uid == null) return const Stream.empty();
     return _db.ref('friend_requests/$_uid').onValue.map((event) {
+      final data = event.snapshot.value;
+      if (data == null) return <FriendRequestModel>[];
+      final map = data as Map<dynamic, dynamic>;
+      return map.entries
+          .map((e) => FriendRequestModel.fromMap(
+              e.key as String, e.value as Map<dynamic, dynamic>))
+          .toList();
+    });
+  }
+
+  Stream<List<FriendRequestModel>> watchSentRequests() {
+    if (_uid == null) return const Stream.empty();
+    return _db.ref('friend_requests_sent/$_uid').onValue.map((event) {
       final data = event.snapshot.value;
       if (data == null) return <FriendRequestModel>[];
       final map = data as Map<dynamic, dynamic>;

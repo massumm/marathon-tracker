@@ -47,32 +47,31 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyC8-H020Uul_SNcekGeVnr0uESLg713rEA',
-    appId: '1:157462453434:web:57233170ff3a84ca4c7683',
-    messagingSenderId: '157462453434',
-    projectId: 'medishop-40923',
-    authDomain: 'medishop-40923.firebaseapp.com',
-    databaseURL: 'https://medishop-40923-default-rtdb.firebaseio.com',
-    storageBucket: 'medishop-40923.firebasestorage.app',
+    apiKey: 'AIzaSyDsx2E0wwBHup586l6AzpvC5ZG0EcbLFAw',
+    appId: '1:24360852719:android:37a76adddc9c22f1f14f1a',
+    messagingSenderId: '24360852719',
+    projectId: 'runmate-252e5',
+    authDomain: 'runmate-252e5.firebaseapp.com',
+    databaseURL: 'https://runmate-252e5-default-rtdb.firebaseio.com',
+    storageBucket: 'runmate-252e5.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyBIy9zgNxqriEeM-DFTvm-SM1zi6b74FZw',
-    appId: '1:157462453434:ios:16b4826f28f07cf04c7683',
-    messagingSenderId: '157462453434',
-    projectId: 'medishop-40923',
-    databaseURL: 'https://medishop-40923-default-rtdb.firebaseio.com',
-    storageBucket: 'medishop-40923.firebasestorage.app',
-    iosClientId: '157462453434-eke8vafdhitj3ftdhp6ihhvgccgci84o.apps.googleusercontent.com',
-    iosBundleId: 'com.example.googleMap',
+    apiKey: 'AIzaSyCB-r5EBE9yjZtFXn6sOAgkiZ-RCk5HIvM',
+    appId: '1:24360852719:ios:78097c986b5999ecf14f1a',
+    messagingSenderId: '24360852719',
+    projectId: 'runmate-252e5',
+    databaseURL: 'https://runmate-252e5-default-rtdb.firebaseio.com',
+    storageBucket: 'runmate-252e5.firebasestorage.app',
+    iosBundleId: 'com.xor.runmate',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyCTrj-Z_zrOqdrAzfeibKGvHHDiV7cQuRc',
-    appId: '1:157462453434:android:fb87af59b08a4ec74c7683',
-    messagingSenderId: '157462453434',
-    projectId: 'medishop-40923',
-    databaseURL: 'https://medishop-40923-default-rtdb.firebaseio.com',
-    storageBucket: 'medishop-40923.firebasestorage.app',
+    apiKey: 'AIzaSyDsx2E0wwBHup586l6AzpvC5ZG0EcbLFAw',
+    appId: '1:24360852719:android:37a76adddc9c22f1f14f1a',
+    messagingSenderId: '24360852719',
+    projectId: 'runmate-252e5',
+    databaseURL: 'https://runmate-252e5-default-rtdb.firebaseio.com',
+    storageBucket: 'runmate-252e5.firebasestorage.app',
   );
 }

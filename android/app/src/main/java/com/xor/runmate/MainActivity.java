@@ -1,4 +1,4 @@
-package com.example.google_map;
+package com.xor.runmate;
 
 import io.flutter.embedding.android.FlutterActivity;
 

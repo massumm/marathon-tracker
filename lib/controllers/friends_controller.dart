@@ -13,6 +13,7 @@ enum SearchState { idle, loading, found, notFound }
 class FriendsController extends GetxController {
   final friends = <FriendModel>[].obs;
   final requests = <FriendRequestModel>[].obs;
+  final sentRequests = <FriendRequestModel>[].obs;
 
   final searchState = SearchState.idle.obs;
   // Each entry: {uid, email, displayName, status}
@@ -24,6 +25,7 @@ class FriendsController extends GetxController {
 
   StreamSubscription? _friendsSub;
   StreamSubscription? _requestsSub;
+  StreamSubscription? _sentRequestsSub;
   StreamSubscription? _liveRunnersSub;
   final _liveUids = <String>{};
 
@@ -37,6 +39,9 @@ class FriendsController extends GetxController {
     _requestsSub = FriendsService.instance.watchRequests().listen((list) {
       requests.value = list;
     });
+    _sentRequestsSub = FriendsService.instance.watchSentRequests().listen((list) {
+      sentRequests.value = list;
+    });
     _watchLiveRunners();
   }
 
@@ -44,6 +49,7 @@ class FriendsController extends GetxController {
   void onClose() {
     _friendsSub?.cancel();
     _requestsSub?.cancel();
+    _sentRequestsSub?.cancel();
     _liveRunnersSub?.cancel();
     searchCtrl.dispose();
     super.onClose();
@@ -131,6 +137,10 @@ class FriendsController extends GetxController {
 
   Future<void> rejectRequest(FriendRequestModel req) async {
     await FriendsService.instance.rejectRequest(req.fromUid);
+  }
+
+  Future<void> cancelSentRequest(FriendRequestModel req) async {
+    await FriendsService.instance.cancelSentRequest(req.fromUid);
   }
 
   Future<void> removeFriend(FriendModel f) async {

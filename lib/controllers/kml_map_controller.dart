@@ -94,6 +94,7 @@ class KmlMapController extends GetxController {
   String kmlFilePath = '';
   String? kmlDirectUrl;
   String routeLabel = '';
+  bool _userPanned = false;
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -292,6 +293,17 @@ class KmlMapController extends GetxController {
   // Accumulates raw GPS points; snapped to road every 10 points
   final _rawBuffer = <LatLng>[];
   final snappedPoints = <LatLng>[].obs;
+  double _cachedDistanceKm = 0.0;
+
+  void onUserPan() => _userPanned = true;
+
+  void recenterCamera() {
+    _userPanned = false;
+    final pos = currentPosition.value;
+    if (pos != null) {
+      mapController?.animateCamera(CameraUpdate.newLatLng(pos));
+    }
+  }
 
   Future<void> toggleSharing() async {
     if (isSharing.value) {
@@ -312,6 +324,8 @@ class KmlMapController extends GetxController {
     trackingPoints.clear();
     snappedPoints.clear();
     _rawBuffer.clear();
+    _cachedDistanceKm = 0.0;
+    _userPanned = false;
     elapsedSeconds.value = 0;
     isSharing.value = true;
     _runStartMs = DateTime.now().millisecondsSinceEpoch;
@@ -330,7 +344,17 @@ class KmlMapController extends GetxController {
     _positionSub =
         LocationService.instance.getPositionStream().listen((position) async {
       final latLng = LatLng(position.latitude, position.longitude);
-      mapController?.animateCamera(CameraUpdate.newLatLng(latLng));
+      // Update incremental distance before adding point
+      if (trackingPoints.isNotEmpty) {
+        final prev = trackingPoints.last;
+        _cachedDistanceKm += Geolocator.distanceBetween(
+              prev.latitude, prev.longitude,
+              latLng.latitude, latLng.longitude,
+            ) / 1000;
+      }
+      if (!_userPanned) {
+        mapController?.animateCamera(CameraUpdate.newLatLng(latLng));
+      }
       currentPosition.value = latLng;
       trackingPoints.add(latLng);
       _rawBuffer.add(latLng);
@@ -467,13 +491,15 @@ class KmlMapController extends GetxController {
             ? <RunnerData>[]
             : runners.where((r) => friendSet.contains(r.uid)).toList();
         final updated = <String, Marker>{};
-        for (final r in filtered) {
+        // Fetch all icons in parallel instead of sequentially
+        final icons = await Future.wait(filtered.map(_getRunnerIcon));
+        for (var i = 0; i < filtered.length; i++) {
+          final r = filtered[i];
           final label = _runnerLabel(r);
-          final icon = await _getRunnerIcon(r);
           updated[r.uid] = Marker(
             markerId: MarkerId(r.uid),
             position: LatLng(r.lat, r.lng),
-            icon: icon,
+            icon: icons[i],
             infoWindow: InfoWindow(title: label, snippet: r.email),
             onTap: () => showRunnerInfo(r),
           );
@@ -534,8 +560,7 @@ class KmlMapController extends GetxController {
     return '$h:$m:$s';
   }
 
-  double get currentDistanceKm =>
-      LocationService.instance.totalDistanceKm(trackingPoints);
+  double get currentDistanceKm => _cachedDistanceKm;
 
   double get currentPaceKmH {
     if (elapsedSeconds.value == 0 || currentDistanceKm == 0) return 0;

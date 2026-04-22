@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import 'package:firebase_auth/firebase_auth.dart';
+
 import '../app/routes/app_routes.dart';
 import '../core/theme.dart';
 import '../services/friends_service.dart';
@@ -34,6 +36,14 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
 
     final uid = raw.replaceFirst('marathon-map://friend/', '');
     if (!mounted) return;
+
+    final myUid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == myUid) {
+      Get.back();
+      Get.snackbar('', 'self_friend_alert'.tr,
+          snackPosition: SnackPosition.BOTTOM);
+      return;
+    }
 
     // Look up user stats for name/email
     final stats = await UserStatsService.instance.getUserStats(uid);
