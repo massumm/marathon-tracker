@@ -48,23 +48,14 @@ class OrganizerLiveLeaderboardScreen extends StatelessWidget {
         return Column(
           children: [
             _LiveBanner(eventName: event.name, count: runners.length),
-            if (runners.length >= 3)
-              _Podium(top3: runners.take(3).toList()),
-            if (runners.length < 3)
-              _SmallPodium(runners: runners),
-            if (runners.length > 3)
-              Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                  itemCount: runners.length - 3,
-                  itemBuilder: (_, i) {
-                    final r = runners[i + 3];
-                    return _RunnerRow(runner: r, rank: i + 4);
-                  },
-                ),
-              )
-            else
-              const SizedBox.shrink(),
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                itemCount: runners.length,
+                itemBuilder: (_, i) =>
+                    _RunnerRow(runner: runners[i], rank: i + 1),
+              ),
+            ),
           ],
         );
       },
@@ -118,115 +109,6 @@ class _LiveBanner extends StatelessWidget {
                 color: AppTheme.textSecondary),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _Podium extends StatelessWidget {
-  final List<RunnerData> top3;
-  const _Podium({required this.top3});
-
-  @override
-  Widget build(BuildContext context) {
-    final order = [top3[1], top3[0], top3[2]];
-    final ranks = [2, 1, 3];
-    final heights = [80.0, 110.0, 60.0];
-    final avatarSizes = [52.0, 66.0, 46.0];
-
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: List.generate(3, (i) {
-          final r = order[i];
-          final rank = ranks[i];
-          final isFirst = rank == 1;
-          final label = r.displayName.isNotEmpty
-              ? r.displayName
-              : r.email.split('@').first;
-
-          return Expanded(
-            child: Column(
-              children: [
-                if (isFirst)
-                  const Text('👑', style: TextStyle(fontSize: 20)),
-                const SizedBox(height: 4),
-                UserAvatar(
-                    label: label,
-                    photoUrl: r.photoUrl,
-                    size: avatarSizes[i]),
-                const SizedBox(height: 6),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: isFirst ? _medalColor(1) : AppTheme.textPrimary,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  '${r.distanceKm.toStringAsFixed(2)} km',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: _medalColor(rank),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  height: heights[i],
-                  decoration: BoxDecoration(
-                    color: _medalColor(rank).withValues(alpha: 0.15),
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(8),
-                      topRight: Radius.circular(8),
-                    ),
-                    border: Border.all(
-                        color: _medalColor(rank).withValues(alpha: 0.4),
-                        width: 1.5),
-                  ),
-                  child: Center(
-                    child: Text(_medalEmoji(rank),
-                        style: const TextStyle(fontSize: 22)),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }),
-      ),
-    );
-  }
-
-  String _medalEmoji(int rank) =>
-      rank == 1 ? '🥇' : rank == 2 ? '🥈' : '🥉';
-
-  Color _medalColor(int rank) => rank == 1
-      ? const Color(0xFFFFB300)
-      : rank == 2
-          ? const Color(0xFF90A4AE)
-          : const Color(0xFFBF8970);
-}
-
-class _SmallPodium extends StatelessWidget {
-  final List<RunnerData> runners;
-  const _SmallPodium({required this.runners});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: runners.asMap().entries.map((entry) {
-          final rank = entry.key + 1;
-          return _RunnerRow(runner: entry.value, rank: rank);
-        }).toList(),
       ),
     );
   }
