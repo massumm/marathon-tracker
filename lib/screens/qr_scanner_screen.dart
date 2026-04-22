@@ -7,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../app/routes/app_routes.dart';
 import '../core/theme.dart';
 import '../services/friends_service.dart';
+import '../services/group_service.dart';
 import '../services/user_stats_service.dart';
 
 class QrScannerScreen extends StatefulWidget {
@@ -20,6 +21,13 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
   final MobileScannerController _cam = MobileScannerController();
   bool _processed = false;
 
+  // Pass arguments: {'mode': 'group'} to scan group QR codes.
+  // Default (no args / mode:'friend') scans friend QR codes.
+  bool get _isGroupMode {
+    final args = Get.arguments;
+    return args is Map && args['mode'] == 'group';
+  }
+
   @override
   void dispose() {
     _cam.dispose();
@@ -29,47 +37,61 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
   Future<void> _onDetect(BarcodeCapture capture) async {
     if (_processed) return;
     final raw = capture.barcodes.firstOrNull?.rawValue;
-    if (raw == null || !raw.startsWith('marathon-map://friend/')) return;
+    if (raw == null) return;
 
-    _processed = true;
-    await _cam.stop();
-
-    final uid = raw.replaceFirst('marathon-map://friend/', '');
-    if (!mounted) return;
-
-    final myUid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == myUid) {
+    if (_isGroupMode) {
+      if (!raw.startsWith('marathon-map://group/')) return;
+      _processed = true;
+      await _cam.stop();
+      final groupId = raw.replaceFirst('marathon-map://group/', '');
+      if (!mounted) return;
       Get.back();
-      Get.snackbar('', 'self_friend_alert'.tr,
-          snackPosition: SnackPosition.BOTTOM);
-      return;
-    }
-
-    // Look up user stats for name/email
-    final stats = await UserStatsService.instance.getUserStats(uid);
-    if (!mounted) return;
-
-    if (stats == null) {
-      Get.back();
-      Get.snackbar('QR', 'user_not_found'.tr,
-          snackPosition: SnackPosition.BOTTOM);
-      return;
-    }
-
-    // Check relationship
-    final isFriend = await FriendsService.instance.isFriend(uid);
-    final sent = await FriendsService.instance.requestSent(uid);
-
-    if (!mounted) return;
-    Get.back(); // close scanner
-
-    if (isFriend) {
-      Get.toNamed(AppRoutes.userProfile, arguments: uid);
-    } else if (sent) {
-      Get.snackbar(stats.label, 'request_sent'.tr,
-          snackPosition: SnackPosition.BOTTOM);
+      final result = await GroupService.instance.joinGroup(groupId);
+      final msg = switch (result) {
+        JoinResult.ok => 'group_joined'.tr,
+        JoinResult.alreadyMember => 'group_already_member'.tr,
+        JoinResult.full => 'group_full'.tr,
+        JoinResult.selfAdmin => 'group_self_admin'.tr,
+        JoinResult.notFound => 'group_not_found'.tr,
+      };
+      Get.snackbar('', msg, snackPosition: SnackPosition.BOTTOM);
     } else {
-      _showAddDialog(uid, stats.email, stats.label);
+      if (!raw.startsWith('marathon-map://friend/')) return;
+      _processed = true;
+      await _cam.stop();
+      final uid = raw.replaceFirst('marathon-map://friend/', '');
+      if (!mounted) return;
+
+      final myUid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == myUid) {
+        Get.back();
+        Get.snackbar('', 'self_friend_alert'.tr,
+            snackPosition: SnackPosition.BOTTOM);
+        return;
+      }
+
+      final stats = await UserStatsService.instance.getUserStats(uid);
+      if (!mounted) return;
+      if (stats == null) {
+        Get.back();
+        Get.snackbar('QR', 'user_not_found'.tr,
+            snackPosition: SnackPosition.BOTTOM);
+        return;
+      }
+
+      final isFriend = await FriendsService.instance.isFriend(uid);
+      final sent = await FriendsService.instance.requestSent(uid);
+      if (!mounted) return;
+      Get.back();
+
+      if (isFriend) {
+        Get.toNamed(AppRoutes.userProfile, arguments: uid);
+      } else if (sent) {
+        Get.snackbar(stats.label, 'request_sent'.tr,
+            snackPosition: SnackPosition.BOTTOM);
+      } else {
+        _showAddDialog(uid, stats.email, stats.label);
+      }
     }
   }
 

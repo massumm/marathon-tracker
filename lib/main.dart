@@ -22,6 +22,9 @@ import 'screens/route_detail_screen.dart';
 import 'screens/qr_scanner_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/user_profile_screen.dart';
+import 'screens/group_management_screen.dart';
+import 'screens/group_detail_screen.dart';
+import 'controllers/group_controller.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -103,6 +106,20 @@ class MapApp extends StatelessWidget {
         GetPage(
           name: AppRoutes.settings,
           page: () => const SettingsScreen(),
+        ),
+        GetPage(
+          name: AppRoutes.groupManagement,
+          page: () => const GroupManagementScreen(),
+          binding: BindingsBuilder(() {
+            Get.lazyPut(() => GroupController());
+          }),
+        ),
+        GetPage(
+          name: AppRoutes.groupDetail,
+          page: () => const GroupDetailScreen(),
+          binding: BindingsBuilder(() {
+            Get.lazyPut(() => GroupDetailController());
+          }),
         ),
       ],
     );

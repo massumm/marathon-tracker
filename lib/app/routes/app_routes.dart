@@ -10,4 +10,6 @@ abstract class AppRoutes {
   static const myRoutes = '/my-routes';
   static const qrScanner = '/qr-scanner';
   static const settings = '/settings';
+  static const groupManagement = '/group-management';
+  static const groupDetail = '/group-detail';
 }

@@ -16,6 +16,7 @@ import 'package:geolocator/geolocator.dart';
 
 import '../services/firebase_service.dart';
 import '../services/friends_service.dart';
+import '../services/group_service.dart';
 import '../services/kml_service.dart';
 import '../services/user_stats_service.dart';
 import '../services/live_tracking_service.dart';
@@ -119,8 +120,12 @@ class KmlMapController extends GetxController {
   }
 
   Future<void> _loadFriendsAndSubscribe() async {
-    final friendUids = await FriendsService.instance.getFriendUids();
-    _subscribeToRunners(friendUids);
+    final results = await Future.wait([
+      FriendsService.instance.getFriendUids(),
+      GroupService.instance.getMyGroupMemberUids(),
+    ]);
+    final allUids = <String>{...results[0], ...results[1]}.toList();
+    _subscribeToRunners(allUids);
   }
 
   @override

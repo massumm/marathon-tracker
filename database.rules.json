@@ -19,6 +19,12 @@
         ".write": "auth != null"
       }
     },
+    "friend_requests_sent": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null"
+      }
+    },
     "live_runners": {
       ".read": "auth != null",
       "$uid": {
@@ -34,6 +40,42 @@
     "events": {
       ".read": "auth != null",
       ".write": "auth != null"
+    },
+    "groups": {
+      ".read": "auth != null",
+      "$groupId": {
+        ".write": "auth != null"
+      }
+    },
+    "group_members": {
+      "$groupId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+    "event_groups": {
+      ".read": "auth != null",
+      "$eventId": {
+        ".write": "auth != null"
+      }
+    },
+    "user_owned_groups": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "user_groups": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null"
+      }
+    },
+    "group_comments": {
+      "$groupId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
     }
   }
 }

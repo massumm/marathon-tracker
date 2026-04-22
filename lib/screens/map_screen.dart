@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -9,10 +8,8 @@ import '../app/routes/app_routes.dart';
 import '../controllers/kml_map_controller.dart';
 import '../controllers/map_controller.dart';
 import '../core/theme.dart';
-import '../models/comment_model.dart';
 import '../models/event_model.dart';
-import '../services/comment_service.dart';
-import '../widgets/user_avatar.dart';
+import '../services/group_service.dart';
 
 class MapScreen extends GetView<MapController> {
   const MapScreen({super.key});
@@ -212,10 +209,9 @@ class _EventCardState extends State<_EventCard> {
               ),
             ),
 
-            // ── Comment bar ────────────────────────────────────────────
+            // ── Groups bar ─────────────────────────────────────────────
             const Divider(height: 1, thickness: 1),
-            _CommentBar(
-                eventId: widget.event.id, eventName: widget.event.name),
+            _GroupBar(eventId: widget.event.id),
           ],
         ),
       ),
@@ -454,33 +450,35 @@ class _BannerWithOverlay extends StatelessWidget {
       );
 }
 
-// ── Comment bar (bottom strip on each card) ───────────────────────────────────
+// ── Groups bar ────────────────────────────────────────────────────────────────
 
-class _CommentBar extends StatelessWidget {
+class _GroupBar extends StatelessWidget {
   final String eventId;
-  final String eventName;
-
-  const _CommentBar({required this.eventId, required this.eventName});
+  const _GroupBar({required this.eventId});
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<int>(
-      stream: CommentService.instance.watchCommentCount(eventId),
+      stream: GroupService.instance.watchMyGroupCountForEvent(eventId),
       builder: (context, snap) {
         final count = snap.data ?? 0;
         return InkWell(
-          borderRadius:
-              const BorderRadius.vertical(bottom: Radius.circular(14)),
-          onTap: () => _openCommentSheet(context),
+          borderRadius: const BorderRadius.vertical(bottom: Radius.circular(14)),
+          onTap: () => Get.toNamed(
+            AppRoutes.groupManagement,
+            arguments: {'eventId': eventId},
+          ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: Row(
               children: [
-                const Icon(Icons.chat_bubble_outline,
+                const Icon(Icons.group_outlined,
                     size: 16, color: AppTheme.textSecondary),
                 const SizedBox(width: 6),
                 Text(
-                  count == 0 ? 'add_comment_hint'.tr : 'comment_count'.tr.replaceAll('@count', '$count'),
+                  count == 0
+                      ? 'groups_hint'.tr
+                      : 'groups_count'.tr.replaceAll('@count', '$count'),
                   style: const TextStyle(
                       fontSize: 13, color: AppTheme.textSecondary),
                 ),
@@ -494,474 +492,9 @@ class _CommentBar extends StatelessWidget {
       },
     );
   }
-
-  void _openCommentSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => _CommentSheet(eventId: eventId, eventName: eventName),
-    );
-  }
 }
 
-// ── Comment sheet ─────────────────────────────────────────────────────────────
 
-class _CommentSheet extends StatefulWidget {
-  final String eventId;
-  final String eventName;
-
-  const _CommentSheet({required this.eventId, required this.eventName});
-
-  @override
-  State<_CommentSheet> createState() => _CommentSheetState();
-}
-
-class _CommentSheetState extends State<_CommentSheet> {
-  final _ctrl = TextEditingController();
-  bool _sending = false;
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _send() async {
-    final text = _ctrl.text.trim();
-    if (text.isEmpty) return;
-    setState(() => _sending = true);
-    await CommentService.instance.addComment(widget.eventId, text);
-    _ctrl.clear();
-    if (mounted) setState(() => _sending = false);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-    return Padding(
-      padding: EdgeInsets.only(bottom: bottomInset),
-      child: SizedBox(
-        height: MediaQuery.of(context).size.height * 0.65,
-        child: Column(
-          children: [
-            // Handle + title
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
-              child: Column(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 4,
-                    margin: const EdgeInsets.only(bottom: 14),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  Text(
-                    widget.eventName,
-                    style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.textPrimary),
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'comments'.tr,
-                    style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
-                  ),
-                ],
-              ),
-            ),
-            const Divider(height: 16),
-
-            // Comment list
-            Expanded(
-              child: StreamBuilder<List<CommentModel>>(
-                stream: CommentService.instance.watchComments(widget.eventId),
-                builder: (context, snap) {
-                  if (snap.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  final comments = snap.data ?? [];
-                  if (comments.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.chat_bubble_outline,
-                              size: 40, color: Color(0xFFB0BEC5)),
-                          const SizedBox(height: 8),
-                          Text('first_comment'.tr,
-                              style: const TextStyle(color: AppTheme.textSecondary)),
-                        ],
-                      ),
-                    );
-                  }
-                  return ListView.separated(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    itemCount: comments.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (_, i) => _CommentTile(
-                        comment: comments[i], eventId: widget.eventId),
-                  );
-                },
-              ),
-            ),
-
-            // Input bar
-            const Divider(height: 1),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _ctrl,
-                      minLines: 1,
-                      maxLines: 3,
-                      textCapitalization: TextCapitalization.sentences,
-                      decoration: InputDecoration(
-                        hintText: 'comment_input_hint'.tr,
-                        hintStyle: const TextStyle(
-                            color: AppTheme.textSecondary, fontSize: 14),
-                        filled: true,
-                        fillColor: Colors.grey.shade100,
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 10),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(22),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                      onSubmitted: (_) => _send(),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  _sending
-                      ? const SizedBox(
-                          width: 38,
-                          height: 38,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : IconButton(
-                          icon: const Icon(Icons.send_rounded),
-                          color: AppTheme.primary,
-                          onPressed: _send,
-                        ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Single comment tile ───────────────────────────────────────────────────────
-
-class _CommentTile extends StatefulWidget {
-  final CommentModel comment;
-  final String eventId;
-
-  const _CommentTile({required this.comment, required this.eventId});
-
-  @override
-  State<_CommentTile> createState() => _CommentTileState();
-}
-
-class _CommentTileState extends State<_CommentTile> {
-  bool _showReplies = false;
-  bool _showReplyInput = false;
-  final _replyCtrl = TextEditingController();
-  bool _sendingReply = false;
-
-  @override
-  void dispose() {
-    _replyCtrl.dispose();
-    super.dispose();
-  }
-
-  String? get _uid => FirebaseAuth.instance.currentUser?.uid;
-  bool get _isLiked => widget.comment.likes.containsKey(_uid);
-  int get _likeCount => widget.comment.likes.length;
-
-  Future<void> _toggleLike() async {
-    await CommentService.instance
-        .toggleLike(widget.eventId, widget.comment.commentId);
-  }
-
-  Future<void> _sendReply() async {
-    final text = _replyCtrl.text.trim();
-    if (text.isEmpty) return;
-    setState(() => _sendingReply = true);
-    await CommentService.instance
-        .addReply(widget.eventId, widget.comment.commentId, text);
-    _replyCtrl.clear();
-    if (mounted) {
-      setState(() {
-        _sendingReply = false;
-        _showReplyInput = false;
-        _showReplies = true;
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final uid = _uid;
-    final isOwner = uid != null && uid == widget.comment.uid;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // ── Main comment row ───────────────────────────────────────────
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            UserAvatar(
-              label: widget.comment.label,
-              photoUrl: widget.comment.photoUrl,
-              size: 36,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Name + time + delete
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          widget.comment.label,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.textPrimary,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      Text(
-                        widget.comment.timeAgo,
-                        style: const TextStyle(
-                            fontSize: 11, color: AppTheme.textSecondary),
-                      ),
-                      if (isOwner) ...[
-                        const SizedBox(width: 8),
-                        GestureDetector(
-                          onTap: () => CommentService.instance.deleteComment(
-                              widget.eventId, widget.comment.commentId),
-                          child: const Icon(Icons.delete_outline,
-                              size: 16, color: Colors.redAccent),
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    widget.comment.text,
-                    style: const TextStyle(
-                        fontSize: 14, color: AppTheme.textPrimary),
-                  ),
-                  const SizedBox(height: 6),
-                  // ── Action row ─────────────────────────────────────
-                  Row(
-                    children: [
-                      // Like
-                      GestureDetector(
-                        onTap: _toggleLike,
-                        child: Row(
-                          children: [
-                            Icon(
-                              _isLiked ? Icons.favorite : Icons.favorite_border,
-                              size: 15,
-                              color: _isLiked
-                                  ? Colors.redAccent
-                                  : AppTheme.textSecondary,
-                            ),
-                            if (_likeCount > 0) ...[
-                              const SizedBox(width: 3),
-                              Text(
-                                '$_likeCount',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: _isLiked
-                                      ? Colors.redAccent
-                                      : AppTheme.textSecondary,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      // Reply
-                      GestureDetector(
-                        onTap: () => setState(() {
-                          _showReplyInput = !_showReplyInput;
-                          if (_showReplyInput) _showReplies = true;
-                        }),
-                        child: const Row(
-                          children: [
-                            Icon(Icons.reply,
-                                size: 15, color: AppTheme.textSecondary),
-                            SizedBox(width: 3),
-                            Text('Reply',
-                                style: TextStyle(
-                                    fontSize: 12,
-                                    color: AppTheme.textSecondary)),
-                          ],
-                        ),
-                      ),
-                      // Toggle replies visibility
-                      if (widget.comment.replies.isNotEmpty) ...[
-                        const SizedBox(width: 16),
-                        GestureDetector(
-                          onTap: () =>
-                              setState(() => _showReplies = !_showReplies),
-                          child: Text(
-                            _showReplies
-                                ? 'Hide replies'
-                                : '${widget.comment.replies.length} repl${widget.comment.replies.length == 1 ? 'y' : 'ies'}',
-                            style: const TextStyle(
-                                fontSize: 12, color: AppTheme.primary),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-
-        // ── Replies ────────────────────────────────────────────────────
-        if (_showReplies && widget.comment.replies.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(left: 46, top: 8),
-            child: Column(
-              children: widget.comment.replies.map((reply) {
-                final isReplyOwner = uid != null && uid == reply.uid;
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      UserAvatar(
-                          label: reply.label,
-                          photoUrl: reply.photoUrl,
-                          size: 28),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    reply.label,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppTheme.textPrimary,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                Text(reply.timeAgo,
-                                    style: const TextStyle(
-                                        fontSize: 10,
-                                        color: AppTheme.textSecondary)),
-                                if (isReplyOwner) ...[
-                                  const SizedBox(width: 6),
-                                  GestureDetector(
-                                    onTap: () => CommentService.instance
-                                        .deleteReply(
-                                            widget.eventId,
-                                            widget.comment.commentId,
-                                            reply.replyId),
-                                    child: const Icon(Icons.delete_outline,
-                                        size: 14, color: Colors.redAccent),
-                                  ),
-                                ],
-                              ],
-                            ),
-                            const SizedBox(height: 2),
-                            Text(reply.text,
-                                style: const TextStyle(
-                                    fontSize: 13, color: AppTheme.textPrimary)),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-
-        // ── Inline reply input ─────────────────────────────────────────
-        if (_showReplyInput)
-          Padding(
-            padding: const EdgeInsets.only(left: 46, top: 6),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _replyCtrl,
-                    autofocus: true,
-                    minLines: 1,
-                    maxLines: 3,
-                    decoration: InputDecoration(
-                      hintText: 'reply_input_hint'.tr,
-                      hintStyle: const TextStyle(
-                          color: AppTheme.textSecondary, fontSize: 13),
-                      filled: true,
-                      fillColor: Colors.grey.shade100,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                    onSubmitted: (_) => _sendReply(),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                _sendingReply
-                    ? const SizedBox(
-                        width: 32,
-                        height: 32,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : IconButton(
-                        icon: const Icon(Icons.send_rounded),
-                        iconSize: 20,
-                        color: AppTheme.primary,
-                        padding: EdgeInsets.zero,
-                        onPressed: _sendReply,
-                      ),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
-}
 
 // ── Category picker bottom sheet ──────────────────────────────────────────────
 
