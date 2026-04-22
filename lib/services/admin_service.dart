@@ -57,15 +57,44 @@ class AdminService {
   // ── Live runners ─────────────────────────────────────────────────────────
 
   /// Streams all active runners sorted by distanceKm descending.
+  /// Display names are resolved from user_stats so they are always accurate.
   Stream<List<RunnerData>> watchLiveRunners() {
-    return _db.ref('live_runners').onValue.map((event) {
+    return _db.ref('live_runners').onValue.asyncMap((event) async {
       final data = event.snapshot.value;
       if (data == null) return <RunnerData>[];
       final map = data as Map<dynamic, dynamic>;
-      return map.entries
-          .map((e) => RunnerData.fromMap(
-              e.key as String, e.value as Map<dynamic, dynamic>))
-          .toList()
+
+      final statsSnap = await _db.ref('user_stats').get();
+      final statsMap = statsSnap.exists
+          ? statsSnap.value as Map<dynamic, dynamic>
+          : <dynamic, dynamic>{};
+
+      return map.entries.map((e) {
+        final uid = e.key as String;
+        final runner = RunnerData.fromMap(uid, e.value as Map<dynamic, dynamic>);
+        final stats = statsMap[uid];
+        final resolvedName = (stats is Map)
+            ? (stats['displayName'] as String? ?? '').trim()
+            : '';
+        final displayName = resolvedName.isNotEmpty
+            ? resolvedName
+            : runner.displayName.isNotEmpty && runner.displayName != 'Runner'
+                ? runner.displayName
+                : runner.email.isNotEmpty
+                    ? runner.email.split('@').first
+                    : uid;
+        return RunnerData(
+          uid: runner.uid,
+          email: runner.email,
+          displayName: displayName,
+          photoUrl: runner.photoUrl,
+          lat: runner.lat,
+          lng: runner.lng,
+          startedAt: runner.startedAt,
+          distanceKm: runner.distanceKm,
+          eventId: runner.eventId,
+        );
+      }).toList()
         ..sort((a, b) => b.distanceKm.compareTo(a.distanceKm));
     });
   }
