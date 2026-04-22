@@ -7,6 +7,7 @@ import 'package:firebase_storage/firebase_storage.dart' as fs;
 
 import '../models/admin_user_model.dart';
 import '../models/event_model.dart';
+import '../models/runner_data.dart';
 
 class AdminService {
   AdminService._();
@@ -51,6 +52,32 @@ class AdminService {
 
   Future<void> deleteOrganizer(String uid) async {
     await _db.ref('admins/$uid').remove();
+  }
+
+  // ── Live runners ─────────────────────────────────────────────────────────
+
+  /// Streams all active runners sorted by distanceKm descending.
+  Stream<List<RunnerData>> watchLiveRunners() {
+    return _db.ref('live_runners').onValue.map((event) {
+      final data = event.snapshot.value;
+      if (data == null) return <RunnerData>[];
+      final map = data as Map<dynamic, dynamic>;
+      return map.entries
+          .map((e) => RunnerData.fromMap(
+              e.key as String, e.value as Map<dynamic, dynamic>))
+          .toList()
+        ..sort((a, b) => b.distanceKm.compareTo(a.distanceKm));
+    });
+  }
+
+  /// Streams runners for a specific event, sorted by distanceKm descending.
+  /// Runners with no eventId (legacy/pre-field) are included in every event.
+  Stream<List<RunnerData>> watchLiveRunnersForEvent(String eventId) {
+    return watchLiveRunners().map(
+      (runners) => runners
+          .where((r) => r.eventId.isEmpty || r.eventId == eventId)
+          .toList(),
+    );
   }
 
   // ── Dashboard stats ───────────────────────────────────────────────────────

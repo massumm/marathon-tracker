@@ -304,6 +304,7 @@ class _EventCardState extends State<_EventCard> {
         'kmlUrl': cat.kmlUrl,
         'storagePath': cat.kmlPath,
         'label': '${widget.event.name} (${cat.label})',
+        'eventId': widget.event.id,
       },
     );
   }

@@ -94,6 +94,7 @@ class KmlMapController extends GetxController {
   String kmlFilePath = '';
   String? kmlDirectUrl;
   String routeLabel = '';
+  String currentEventId = '';
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -109,10 +110,12 @@ class KmlMapController extends GetxController {
       kmlDirectUrl = args['kmlUrl'] as String? ?? '';
       kmlFilePath = args['storagePath'] as String? ?? '';
       routeLabel = args['label'] as String? ?? '';
+      currentEventId = args['eventId'] as String? ?? '';
     } else if (args is String) {
       kmlFilePath = args;
       kmlDirectUrl = null;
       routeLabel = '';
+      currentEventId = '';
     }
     _loadKml();
   }
@@ -303,7 +306,8 @@ class KmlMapController extends GetxController {
       final pos = currentPosition.value;
       final lat = pos?.latitude ?? initialLocation.latitude;
       final lng = pos?.longitude ?? initialLocation.longitude;
-      await LiveTrackingService.instance.startBroadcasting(lat, lng);
+      await LiveTrackingService.instance
+          .startBroadcasting(lat, lng, eventId: currentEventId);
       isLive.value = true;
     }
   }
@@ -361,7 +365,8 @@ class KmlMapController extends GetxController {
     // Auto-broadcast when tracking starts
     final lat = pos?.latitude ?? initialLocation.latitude;
     final lng = pos?.longitude ?? initialLocation.longitude;
-    await LiveTrackingService.instance.startBroadcasting(lat, lng);
+    await LiveTrackingService.instance
+        .startBroadcasting(lat, lng, eventId: currentEventId);
     isLive.value = true;
 
     isTracking.value = true;

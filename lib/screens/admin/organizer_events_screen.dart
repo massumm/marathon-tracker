@@ -7,7 +7,12 @@ import 'event_form_screen.dart';
 
 class OrganizerEventsScreen extends StatelessWidget {
   final String organizerUid;
-  const OrganizerEventsScreen({super.key, required this.organizerUid});
+  final void Function(EventModel event)? onLeaderboardTap;
+  const OrganizerEventsScreen({
+    super.key,
+    required this.organizerUid,
+    this.onLeaderboardTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -60,6 +65,7 @@ class OrganizerEventsScreen extends StatelessWidget {
               itemBuilder: (_, i) => _EventCard(
                 event: events[i],
                 organizerUid: organizerUid,
+                onLeaderboardTap: onLeaderboardTap,
               ),
             );
           },
@@ -88,7 +94,12 @@ class OrganizerEventsScreen extends StatelessWidget {
 class _EventCard extends StatelessWidget {
   final EventModel event;
   final String organizerUid;
-  const _EventCard({required this.event, required this.organizerUid});
+  final void Function(EventModel event)? onLeaderboardTap;
+  const _EventCard({
+    required this.event,
+    required this.organizerUid,
+    this.onLeaderboardTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -244,6 +255,11 @@ class _EventCard extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
+                const SizedBox(height: 14),
+                _LiveLeaderboardButton(
+                  event: event,
+                  onTap: onLeaderboardTap,
+                ),
               ],
             ),
           ),
@@ -320,6 +336,83 @@ class _ActionIcon extends StatelessWidget {
           child: Icon(icon, size: 20, color: color),
         ),
       ),
+    );
+  }
+}
+
+class _LiveLeaderboardButton extends StatelessWidget {
+  final EventModel event;
+  final void Function(EventModel event)? onTap;
+  const _LiveLeaderboardButton({required this.event, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder(
+      stream: AdminService.instance.watchLiveRunnersForEvent(event.id),
+      builder: (_, snap) {
+        final runners = snap.data ?? [];
+        final isLive = runners.isNotEmpty;
+
+        return SizedBox(
+          width: double.infinity,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              gradient: isLive
+                  ? const LinearGradient(
+                      colors: [Color(0xFFE53935), Color(0xFFB71C1C)],
+                    )
+                  : null,
+              color: isLive ? null : Colors.grey.shade200,
+            ),
+            child: Material(
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(10),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(10),
+                onTap: isLive ? () => onTap?.call(event) : null,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      vertical: 11, horizontal: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (isLive) ...[
+                        Container(
+                          width: 7,
+                          height: 7,
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                      ] else
+                        Icon(Icons.leaderboard_outlined,
+                            size: 16, color: Colors.grey.shade500),
+                      const SizedBox(width: 6),
+                      Text(
+                        isLive
+                            ? 'LIVE — View Leaderboard  (${runners.length} running)'
+                            : 'Leaderboard (event not started)',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: isLive
+                              ? Colors.white
+                              : Colors.grey.shade500,
+                          letterSpacing: isLive ? 0.3 : 0,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
