@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_storage/firebase_storage.dart' as fs;
 
+import '../models/admin_user_model.dart';
 import '../models/event_model.dart';
 
 class AdminService {
@@ -14,32 +15,85 @@ class AdminService {
   final _db = FirebaseDatabase.instance;
   final _storage = fs.FirebaseStorage.instance;
 
+  // ── Role resolution ───────────────────────────────────────────────────────
+
+  Future<AdminUser?> fetchAdminUser(String uid) async {
+    final snap = await _db.ref('admins/$uid').get();
+    if (!snap.exists) return null;
+    return AdminUser.fromMap(uid, snap.value as Map<dynamic, dynamic>);
+  }
+
+  // ── Organizer management (Super Admin only) ───────────────────────────────
+
+  Stream<List<AdminUser>> watchOrganizers() {
+    return _db.ref('admins').onValue.map((e) {
+      final data = e.snapshot.value;
+      if (data == null) return <AdminUser>[];
+      final map = data as Map<dynamic, dynamic>;
+      return map.entries
+          .map((entry) => AdminUser.fromMap(
+              entry.key as String, entry.value as Map<dynamic, dynamic>))
+          .where((u) => u.role == AdminRole.organizer)
+          .toList()
+        ..sort((a, b) => a.displayName.compareTo(b.displayName));
+    });
+  }
+
+  Future<void> registerOrganizerRecord(
+      String uid, String email, String displayName) async {
+    await _db.ref('admins/$uid').set({
+      'role': 'organizer',
+      'email': email,
+      'displayName': displayName,
+      'createdAt': DateTime.now().millisecondsSinceEpoch,
+    });
+  }
+
+  Future<void> deleteOrganizer(String uid) async {
+    await _db.ref('admins/$uid').remove();
+  }
+
   // ── Dashboard stats ───────────────────────────────────────────────────────
 
-  Future<Map<String, int>> fetchStats() async {
+  Future<Map<String, int>> fetchStats({String? organizerUid}) async {
     final results = await Future.wait([
       _db.ref('user_stats').get(),
       _db.ref('events').get(),
     ]);
     final userCount =
         results[0].exists ? (results[0].value as Map).length : 0;
-    final eventCount =
-        results[1].exists ? (results[1].value as Map).length : 0;
+    int eventCount = 0;
+    if (results[1].exists) {
+      final eventsMap = results[1].value as Map;
+      if (organizerUid != null) {
+        eventCount = eventsMap.values
+            .whereType<Map>()
+            .where((e) => e['organizerUid'] == organizerUid)
+            .length;
+      } else {
+        eventCount = eventsMap.length;
+      }
+    }
     return {'users': userCount, 'events': eventCount};
   }
 
   // ── Events ────────────────────────────────────────────────────────────────
 
-  Stream<List<EventModel>> watchEvents() {
+  Stream<List<EventModel>> watchEvents({String? organizerUid}) {
     return _db.ref('events').orderByChild('createdAt').onValue.map((e) {
       final data = e.snapshot.value;
       if (data == null) return <EventModel>[];
       final map = data as Map<dynamic, dynamic>;
-      return map.entries
+      var events = map.entries
           .map((entry) => EventModel.fromMap(
               entry.key as String, entry.value as Map<dynamic, dynamic>))
           .toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      if (organizerUid != null) {
+        events =
+            events.where((ev) => ev.organizerUid == organizerUid).toList();
+      }
+      return events;
     });
   }
 
@@ -55,7 +109,6 @@ class AdminService {
 
   Future<void> deleteEvent(String id) async {
     await _db.ref('events/$id').remove();
-    // Best-effort clean up storage
     try {
       final storageRef = _storage.ref('events/$id');
       await _deleteFolder(storageRef);
@@ -74,7 +127,6 @@ class AdminService {
 
   // ── File uploads ──────────────────────────────────────────────────────────
 
-  /// Opens a file picker and returns (fileName, bytes). Returns null if cancelled.
   Future<({String name, Uint8List bytes})?> pickFile(String accept) async {
     final input = html.FileUploadInputElement()..accept = accept;
     input.click();
@@ -100,13 +152,12 @@ class AdminService {
       String eventId, String categoryId, String fileName, Uint8List bytes) async {
     final storagePath = 'events/$eventId/kml/$categoryId.kml';
     final ref = _storage.ref(storagePath);
-    await ref.putData(
-        bytes, fs.SettableMetadata(contentType: 'application/vnd.google-earth.kml+xml'));
-    final url = await ref.getDownloadURL();
-    return url;
+    await ref.putData(bytes,
+        fs.SettableMetadata(
+            contentType: 'application/vnd.google-earth.kml+xml'));
+    return ref.getDownloadURL();
   }
 
-  /// Downloads KML bytes directly from Firebase Storage (avoids CORS issues on web).
   Future<Uint8List?> downloadKml(String kmlPath) async {
     try {
       return await _storage.ref(kmlPath).getData();
