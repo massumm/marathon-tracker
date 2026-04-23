@@ -7,6 +7,7 @@ import 'package:firebase_storage/firebase_storage.dart' as fs;
 
 import '../models/admin_user_model.dart';
 import '../models/event_model.dart';
+import '../models/runner_data.dart';
 
 class AdminService {
   AdminService._();
@@ -51,6 +52,58 @@ class AdminService {
 
   Future<void> deleteOrganizer(String uid) async {
     await _db.ref('admins/$uid').remove();
+  }
+
+  // ── Live runners ─────────────────────────────────────────────────────────
+
+  /// Streams all active runners sorted by distanceKm descending.
+  /// Display names are resolved from user_stats so they are always accurate.
+  Stream<List<RunnerData>> watchLiveRunners() {
+    return _db.ref('live_runners').onValue.asyncMap((event) async {
+      final data = event.snapshot.value;
+      if (data == null) return <RunnerData>[];
+      final map = data as Map<dynamic, dynamic>;
+
+      final statsSnap = await _db.ref('user_stats').get();
+      final statsMap = statsSnap.exists
+          ? statsSnap.value as Map<dynamic, dynamic>
+          : <dynamic, dynamic>{};
+
+      return map.entries.map((e) {
+        final uid = e.key as String;
+        final runner = RunnerData.fromMap(uid, e.value as Map<dynamic, dynamic>);
+        final stats = statsMap[uid];
+        final resolvedName = (stats is Map)
+            ? (stats['displayName'] as String? ?? '').trim()
+            : '';
+        final displayName = resolvedName.isNotEmpty
+            ? resolvedName
+            : runner.displayName.isNotEmpty && runner.displayName != 'Runner'
+                ? runner.displayName
+                : runner.email.isNotEmpty
+                    ? runner.email.split('@').first
+                    : uid;
+        return RunnerData(
+          uid: runner.uid,
+          email: runner.email,
+          displayName: displayName,
+          photoUrl: runner.photoUrl,
+          lat: runner.lat,
+          lng: runner.lng,
+          startedAt: runner.startedAt,
+          distanceKm: runner.distanceKm,
+          eventId: runner.eventId,
+        );
+      }).toList()
+        ..sort((a, b) => b.distanceKm.compareTo(a.distanceKm));
+    });
+  }
+
+  /// Streams runners for a specific event, sorted by distanceKm descending.
+  Stream<List<RunnerData>> watchLiveRunnersForEvent(String eventId) {
+    return watchLiveRunners().map(
+      (runners) => runners.where((r) => r.eventId == eventId).toList(),
+    );
   }
 
   // ── Dashboard stats ───────────────────────────────────────────────────────

@@ -96,6 +96,7 @@ class KmlMapController extends GetxController {
   String? kmlDirectUrl;
   String routeLabel = '';
   bool _userPanned = false;
+  String currentEventId = '';
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -111,10 +112,12 @@ class KmlMapController extends GetxController {
       kmlDirectUrl = args['kmlUrl'] as String? ?? '';
       kmlFilePath = args['storagePath'] as String? ?? '';
       routeLabel = args['label'] as String? ?? '';
+      currentEventId = args['eventId'] as String? ?? '';
     } else if (args is String) {
       kmlFilePath = args;
       kmlDirectUrl = null;
       routeLabel = '';
+      currentEventId = '';
     }
     _loadKml();
   }
@@ -236,9 +239,8 @@ class KmlMapController extends GetxController {
     for (final r in activeRunners) {
       entries.add(LeaderboardEntry(
         uid: r.uid,
-        name: r.displayName.isNotEmpty
-            ? r.displayName
-            : r.email.split('@').first,
+        name:
+            r.displayName.isNotEmpty ? r.displayName : r.email.split('@').first,
         photoUrl: r.photoUrl,
         distanceKm: r.distanceKm,
         isSelf: false,
@@ -320,7 +322,8 @@ class KmlMapController extends GetxController {
       final pos = currentPosition.value;
       final lat = pos?.latitude ?? initialLocation.latitude;
       final lng = pos?.longitude ?? initialLocation.longitude;
-      await LiveTrackingService.instance.startBroadcasting(lat, lng);
+      await LiveTrackingService.instance
+          .startBroadcasting(lat, lng, eventId: currentEventId);
       isLive.value = true;
     }
   }
@@ -353,9 +356,12 @@ class KmlMapController extends GetxController {
       if (trackingPoints.isNotEmpty) {
         final prev = trackingPoints.last;
         _cachedDistanceKm += Geolocator.distanceBetween(
-              prev.latitude, prev.longitude,
-              latLng.latitude, latLng.longitude,
-            ) / 1000;
+              prev.latitude,
+              prev.longitude,
+              latLng.latitude,
+              latLng.longitude,
+            ) /
+            1000;
       }
       if (!_userPanned) {
         mapController?.animateCamera(CameraUpdate.newLatLng(latLng));
@@ -390,7 +396,8 @@ class KmlMapController extends GetxController {
     // Auto-broadcast when tracking starts
     final lat = pos?.latitude ?? initialLocation.latitude;
     final lng = pos?.longitude ?? initialLocation.longitude;
-    await LiveTrackingService.instance.startBroadcasting(lat, lng);
+    await LiveTrackingService.instance
+        .startBroadcasting(lat, lng, eventId: currentEventId);
     isLive.value = true;
 
     isTracking.value = true;
@@ -401,10 +408,8 @@ class KmlMapController extends GetxController {
   Future<List<LatLng>> _snapToRoads(List<LatLng> points) async {
     if (points.isEmpty) return [];
     try {
-      final path =
-          points.map((p) => '${p.latitude},${p.longitude}').join('|');
-      final uri = Uri.parse(
-          'https://roads.googleapis.com/v1/snapToRoads'
+      final path = points.map((p) => '${p.latitude},${p.longitude}').join('|');
+      final uri = Uri.parse('https://roads.googleapis.com/v1/snapToRoads'
           '?path=$path&interpolate=true&key=${AppConfig.googleMapsApiKey}');
       final resp = await http.get(uri);
       if (resp.statusCode != 200) return [];
@@ -443,8 +448,9 @@ class KmlMapController extends GetxController {
     }
 
     // Use snapped points for saved route; fall back to raw if snapping produced nothing
-    final routePoints =
-        snappedPoints.isNotEmpty ? snappedPoints.toList() : trackingPoints.toList();
+    final routePoints = snappedPoints.isNotEmpty
+        ? snappedPoints.toList()
+        : trackingPoints.toList();
 
     final now = DateTime.now();
     final elapsed = Duration(seconds: elapsedSeconds.value);
@@ -455,8 +461,7 @@ class KmlMapController extends GetxController {
     final timeStr2 =
         '${startTime.hour.toString().padLeft(2, '0')}-${startTime.minute.toString().padLeft(2, '0')}';
     final fileName = '${slug}_${dateStr}_$timeStr2.json';
-    final totalDistance =
-        LocationService.instance.totalDistanceKm(routePoints);
+    final totalDistance = LocationService.instance.totalDistanceKm(routePoints);
     final pace = elapsedSeconds.value > 0
         ? totalDistance / (elapsedSeconds.value / 3600)
         : 0.0;

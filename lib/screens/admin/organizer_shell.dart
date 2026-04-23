@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme.dart';
 import '../../models/admin_user_model.dart';
+import '../../models/event_model.dart';
 import 'organizer_dashboard.dart';
 import 'organizer_events_screen.dart';
+import 'organizer_live_leaderboard_screen.dart';
 
 class OrganizerShell extends StatefulWidget {
   final AdminUser organizer;
@@ -16,21 +18,41 @@ class OrganizerShell extends StatefulWidget {
 
 class _OrganizerShellState extends State<OrganizerShell> {
   int _selected = 0;
+  String? _subPageTitle;
+
+  final _innerNavKey = GlobalKey<NavigatorState>();
 
   static const _navItems = [
     _NavItem(Icons.dashboard_outlined, Icons.dashboard, 'Dashboard'),
     _NavItem(Icons.event_outlined, Icons.event, 'Events'),
   ];
 
+  void _selectTab(int i) {
+    while (_innerNavKey.currentState?.canPop() ?? false) {
+      _innerNavKey.currentState!.pop();
+    }
+    setState(() {
+      _selected = i;
+      _subPageTitle = null;
+    });
+  }
+
+  void _pushLeaderboard(EventModel event) {
+    setState(() => _subPageTitle = 'Live Leaderboard');
+    _innerNavKey.currentState?.push(
+      MaterialPageRoute(
+        builder: (_) => OrganizerLiveLeaderboardScreen(event: event),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
     final isCollapsed = width < 900;
 
-    final pages = [
-      OrganizerDashboard(organizer: widget.organizer),
-      OrganizerEventsScreen(organizerUid: widget.organizer.uid),
-    ];
+    final topTitle = _subPageTitle ?? _navItems[_selected].label;
+    final canGoBack = _subPageTitle != null;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF0F2F5),
@@ -111,7 +133,7 @@ class _OrganizerShellState extends State<OrganizerShell> {
                 ..._navItems.asMap().entries.map((entry) {
                   final i = entry.key;
                   final item = entry.value;
-                  final isActive = _selected == i;
+                  final isActive = _selected == i && _subPageTitle == null;
 
                   return Padding(
                     padding: const EdgeInsets.symmetric(
@@ -123,7 +145,7 @@ class _OrganizerShellState extends State<OrganizerShell> {
                       borderRadius: BorderRadius.circular(10),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(10),
-                        onTap: () => setState(() => _selected = i),
+                        onTap: () => _selectTab(i),
                         hoverColor: Colors.white10,
                         child: Container(
                           height: 46,
@@ -220,6 +242,7 @@ class _OrganizerShellState extends State<OrganizerShell> {
           Expanded(
             child: Column(
               children: [
+                // Top bar
                 Container(
                   height: 64,
                   padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -235,8 +258,20 @@ class _OrganizerShellState extends State<OrganizerShell> {
                   ),
                   child: Row(
                     children: [
+                      if (canGoBack) ...[
+                        IconButton(
+                          icon: const Icon(Icons.arrow_back,
+                              color: AppTheme.textPrimary),
+                          tooltip: 'Back',
+                          onPressed: () {
+                            _innerNavKey.currentState?.pop();
+                            setState(() => _subPageTitle = null);
+                          },
+                        ),
+                        const SizedBox(width: 4),
+                      ],
                       Text(
-                        _navItems[_selected].label,
+                        topTitle,
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
@@ -286,10 +321,22 @@ class _OrganizerShellState extends State<OrganizerShell> {
                   ),
                 ),
 
+                // Inner navigator
                 Expanded(
-                  child: IndexedStack(
-                    index: _selected,
-                    children: pages,
+                  child: Navigator(
+                    key: _innerNavKey,
+                    onGenerateRoute: (_) => MaterialPageRoute(
+                      builder: (_) => IndexedStack(
+                        index: _selected,
+                        children: [
+                          OrganizerDashboard(organizer: widget.organizer),
+                          OrganizerEventsScreen(
+                            organizerUid: widget.organizer.uid,
+                            onLeaderboardTap: _pushLeaderboard,
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ],

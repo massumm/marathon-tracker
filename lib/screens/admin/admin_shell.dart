@@ -2,8 +2,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/theme.dart';
-import '../../models/admin_user_model.dart';
+import '../../models/event_model.dart';
 import 'dashboard.dart';
+import 'organizer_live_leaderboard_screen.dart';
 import 'organizers_screen.dart';
 import 'users_screen.dart';
 
@@ -30,9 +31,9 @@ class AdminShell extends StatefulWidget {
 
 class _AdminShellState extends State<AdminShell> {
   int _selected = 0;
-  // Tracks whether the inner navigator has pages above the root so the
-  // top-bar can show a back button and the correct title.
-  String? _subPageTitle;
+  // Stack of sub-page titles pushed on top of the root IndexedStack.
+  // Each push into the inner navigator adds a title here; each pop removes one.
+  final _titleStack = <String>[];
 
   final _innerNavKey = GlobalKey<NavigatorState>();
 
@@ -50,13 +51,26 @@ class _AdminShellState extends State<AdminShell> {
   }
 
   void _selectTab(int i) {
-    // Pop back to root of inner navigator before switching tab.
     while (_innerNavKey.currentState?.canPop() ?? false) {
       _innerNavKey.currentState!.pop();
     }
     setState(() {
       _selected = i;
-      _subPageTitle = null;
+      _titleStack.clear();
+    });
+  }
+
+  void _pushPage(Widget page, String title) {
+    setState(() => _titleStack.add(title));
+    _innerNavKey.currentState?.push(
+      MaterialPageRoute(builder: (_) => page),
+    );
+  }
+
+  void _popPage() {
+    _innerNavKey.currentState?.pop();
+    setState(() {
+      if (_titleStack.isNotEmpty) _titleStack.removeLast();
     });
   }
 
@@ -66,8 +80,10 @@ class _AdminShellState extends State<AdminShell> {
     final width = MediaQuery.of(context).size.width;
     final isCollapsed = width < 900;
 
-    final topTitle = _subPageTitle ?? _navItems[_selected].label;
-    final canGoBack = _subPageTitle != null;
+    final topTitle = _titleStack.isNotEmpty
+        ? _titleStack.last
+        : _navItems[_selected].label;
+    final canGoBack = _titleStack.isNotEmpty;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF0F2F5),
@@ -280,10 +296,7 @@ class _AdminShellState extends State<AdminShell> {
                           icon: const Icon(Icons.arrow_back,
                               color: AppTheme.textPrimary),
                           tooltip: 'Back',
-                          onPressed: () {
-                            _innerNavKey.currentState?.pop();
-                            setState(() => _subPageTitle = null);
-                          },
+                          onPressed: _popPage,
                         ),
                         const SizedBox(width: 4),
                       ],
@@ -355,14 +368,18 @@ class _AdminShellState extends State<AdminShell> {
                           const AdminDashboard(),
                           OrganizersScreen(
                             onOrganizerTap: (org) {
-                              setState(() =>
-                                  _subPageTitle = 'Organizer Events');
-                              _innerNavKey.currentState?.push(
-                                MaterialPageRoute(
-                                  builder: (_) => OrganizerEventsPage(
-                                    organizer: org,
-                                  ),
+                              _pushPage(
+                                OrganizerEventsPage(
+                                  organizer: org,
+                                  onLeaderboardTap: (EventModel event) {
+                                    _pushPage(
+                                      OrganizerLiveLeaderboardScreen(
+                                          event: event),
+                                      'Live Leaderboard',
+                                    );
+                                  },
                                 ),
+                                'Organizer Events',
                               );
                             },
                           ),

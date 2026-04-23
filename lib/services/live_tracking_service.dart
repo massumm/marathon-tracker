@@ -15,7 +15,8 @@ class LiveTrackingService {
   DatabaseReference get _myRef => _db.ref('$_root/$_uid');
 
   /// Start broadcasting — writes initial data and sets onDisconnect cleanup.
-  Future<void> startBroadcasting(double lat, double lng) async {
+  Future<void> startBroadcasting(double lat, double lng,
+      {String eventId = ''}) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
@@ -27,10 +28,10 @@ class LiveTrackingService {
       lat: lat,
       lng: lng,
       startedAt: DateTime.now().millisecondsSinceEpoch,
+      eventId: eventId,
     ).toMap();
 
     await _myRef.set(data);
-    // Auto-remove when the client disconnects unexpectedly
     await _myRef.onDisconnect().remove();
   }
 

@@ -52,6 +52,25 @@ class EventModel {
     this.organizerUid = '',
   });
 
+  /// True when the event date (yyyy-MM-dd) matches today's local date.
+  bool get isToday {
+    try {
+      final parts = date.split('-');
+      if (parts.length != 3) return false;
+      final eventDate = DateTime(
+        int.parse(parts[0]),
+        int.parse(parts[1]),
+        int.parse(parts[2]),
+      );
+      final now = DateTime.now();
+      return eventDate.year == now.year &&
+          eventDate.month == now.month &&
+          eventDate.day == now.day;
+    } catch (_) {
+      return false;
+    }
+  }
+
   factory EventModel.fromMap(String id, Map<dynamic, dynamic> map) {
     final cats = <String, RaceCategory>{};
     final rawCats = map['categories'];
