@@ -1,24 +1,5 @@
 {
   "rules": {
-    "users": {
-      ".read": "auth != null",
-      "$uid": {
-        ".write": "auth != null && auth.uid === $uid"
-      },
-      ".indexOn": ["email", "displayNameLower"]
-    },
-    "friends": {
-      "$uid": {
-        ".read": "auth != null && auth.uid === $uid",
-        ".write": "auth != null"
-      }
-    },
-    "friend_requests": {
-      "$uid": {
-        ".read": "auth != null && auth.uid === $uid",
-        ".write": "auth != null"
-      }
-    },
     "friend_requests_sent": {
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
@@ -31,10 +12,49 @@
         ".write": "auth != null && auth.uid === $uid"
       }
     },
+    "users": {
+      ".indexOn": ["email", "displayNameLower"],
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "friend_requests": {
+      "$toUid": {
+        ".read": "auth != null && auth.uid === $toUid",
+        "$fromUid": {
+          ".read": "auth != null && (auth.uid === $toUid || auth.uid === $fromUid)",
+          ".write": "auth != null && (auth.uid === $fromUid || auth.uid === $toUid)"
+        }
+      }
+    },
+    "friends": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        "$friendUid": {
+          ".write": "auth != null && (auth.uid === $uid || auth.uid === $friendUid)"
+        }
+      }
+    },
     "user_stats": {
       ".read": "auth != null",
       "$uid": {
         ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "event_comments": {
+      "$eventId": {
+        ".read": "auth != null",
+        "$commentId": {
+          ".write": "auth != null"
+        }
+      }
+    },
+    "admins": {
+      ".read": "auth != null && root.child('admins').child(auth.uid).child('role').val() === 'super_admin'",
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && root.child('admins').child(auth.uid).child('role').val() === 'super_admin'"
       }
     },
     "events": {
