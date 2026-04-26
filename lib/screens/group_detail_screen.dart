@@ -20,8 +20,14 @@ class GroupDetailScreen extends StatelessWidget {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: Text(ctrl.group.name),
+          title: Obx(() => Text(ctrl.groupName.value)),
           actions: [
+            if (ctrl.isAdmin)
+              IconButton(
+                icon: const Icon(Icons.edit_outlined),
+                tooltip: 'edit_group_name'.tr,
+                onPressed: () => _showRenameDialog(ctrl),
+              ),
             IconButton(
               icon: const Icon(Icons.qr_code),
               tooltip: 'group_qr'.tr,
@@ -66,6 +72,32 @@ class GroupDetailScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  void _showRenameDialog(GroupDetailController ctrl) {
+    final nameCtrl = TextEditingController(text: ctrl.groupName.value);
+    Get.dialog(AlertDialog(
+      title: Text('edit_group_name'.tr),
+      content: TextField(
+        controller: nameCtrl,
+        autofocus: true,
+        maxLength: 30,
+        decoration: InputDecoration(
+          hintText: 'group_name_hint'.tr,
+          border: const OutlineInputBorder(),
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: Get.back, child: Text('cancel'.tr)),
+        ElevatedButton(
+          onPressed: () {
+            Get.back();
+            ctrl.renameGroup(nameCtrl.text);
+          },
+          child: Text('save'.tr),
+        ),
+      ],
+    ));
   }
 
   void _confirmDelete(GroupDetailController ctrl) {

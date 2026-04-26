@@ -107,7 +107,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
         builder: (_) => RouteEditorScreen(
           eventId: _tmpEventId,
           categoryId: catId,
-          //existingKmlPath: _categories[index].existingKmlPath,
+          existingKmlPath: _categories[index].existingKmlPath,
         ),
         fullscreenDialog: true,
       ),

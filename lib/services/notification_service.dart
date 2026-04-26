@@ -50,9 +50,11 @@ class NotificationService {
           importance: Importance.high,
         ));
 
-    // Save FCM token to RTDB
-    final token = await _fcm.getToken();
-    if (token != null) await _saveToken(token);
+    // Save FCM token to RTDB (APNS token may not be ready yet on iOS — ignore)
+    try {
+      final token = await _fcm.getToken();
+      if (token != null) await _saveToken(token);
+    } catch (_) {}
     _fcm.onTokenRefresh.listen(_saveToken);
 
     // Foreground messages → show local notification

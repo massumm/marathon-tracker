@@ -185,11 +185,13 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
   @override
   void initState() {
     super.initState();
-    if (widget.existingKmlPath.isNotEmpty) {
-      _moveToCurrentLocation();
-    } else {
-      _moveToCurrentLocation();
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.existingKmlPath.isNotEmpty) {
+        _loadExistingKml();
+      } else {
+        _moveToCurrentLocation();
+      }
+    });
   }
 
   @override
@@ -205,7 +207,10 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
     try {
       final bytes =
           await AdminService.instance.downloadKml(widget.existingKmlPath);
-      if (bytes == null || !mounted) return;
+      if (bytes == null || !mounted) {
+        if (mounted) setState(() => _loading = false);
+        return;
+      }
 
       final doc = XmlDocument.parse(utf8.decode(bytes));
       final points = <LatLng>[];

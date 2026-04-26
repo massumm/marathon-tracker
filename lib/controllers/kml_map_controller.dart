@@ -248,10 +248,11 @@ class KmlMapController extends GetxController {
       ));
     }
 
-    // Sort descending — most distance = 1st
+    // Sort descending — most distance = 1st; cap at 10 entries
     entries.sort((a, b) => b.distanceKm.compareTo(a.distanceKm));
+    final capped = entries.length > 10 ? entries.sublist(0, 10) : entries;
     leaderboard.value = [
-      for (var i = 0; i < entries.length; i++) entries[i].withRank(i + 1)
+      for (var i = 0; i < capped.length; i++) capped[i].withRank(i + 1)
     ];
   }
 

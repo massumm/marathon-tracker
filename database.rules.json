@@ -59,7 +59,9 @@
     },
     "events": {
       ".read": "auth != null",
-      ".write": "auth != null"
+      "$eventId": {
+        ".write": "auth != null && (root.child('admins').child(auth.uid).child('role').val() === 'super_admin' || root.child('admins').child(auth.uid).child('role').val() === 'organizer')"
+      }
     },
     "groups": {
       ".read": "auth != null",

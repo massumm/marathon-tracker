@@ -140,6 +140,10 @@ class GroupService {
     ]);
   }
 
+  Future<void> renameGroup(String groupId, String newName) async {
+    await _db.ref('groups/$groupId/name').set(newName.trim());
+  }
+
   // ── Queries ───────────────────────────────────────────────────────────────
 
   Future<int> ownedGroupsCount() async {

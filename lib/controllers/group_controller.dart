@@ -94,6 +94,7 @@ class GroupController extends GetxController {
 
 class GroupDetailController extends GetxController {
   final members = <GroupMemberModel>[].obs;
+  final groupName = ''.obs;
 
   late GroupModel group;
   StreamSubscription? _membersSub;
@@ -104,6 +105,7 @@ class GroupDetailController extends GetxController {
     final args = Get.arguments;
     if (args is GroupModel) {
       group = args;
+      groupName.value = args.name;
     }
     _membersSub =
         GroupService.instance.watchGroupMembers(group.id).listen((list) {
@@ -130,6 +132,12 @@ class GroupDetailController extends GetxController {
     await GroupService.instance.deleteGroup(group.id, group.eventId);
     Get.back();
     Get.back();
+  }
+
+  Future<void> renameGroup(String newName) async {
+    if (newName.trim().isEmpty) return;
+    await GroupService.instance.renameGroup(group.id, newName.trim());
+    groupName.value = newName.trim();
   }
 
   String get myUid => FirebaseAuth.instance.currentUser?.uid ?? '';
