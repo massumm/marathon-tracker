@@ -14,7 +14,7 @@ class AppTheme {
   static ThemeData get theme => ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: primary,
+          seedColor: const Color(0xFFFF6B35),
           primary: primary,
           onPrimary: Colors.white,
           secondary: secondary,

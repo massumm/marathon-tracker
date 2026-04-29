@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RunMate — Download</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #fff3ee 0%, #f5f6fa 60%);
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; margin: 0;
+    }
+    .card {
+      background: #fff; border-radius: 24px; padding: 44px 40px;
+      box-shadow: 0 12px 48px rgba(255,107,53,.13); text-align: center;
+      max-width: 380px; width: 90%;
+    }
+    .icon {
+      width: 96px; height: 96px; border-radius: 22px;
+      box-shadow: 0 6px 24px rgba(255,107,53,.25);
+      margin-bottom: 18px;
+    }
+    h1 { font-size: 26px; font-weight: 800; color: #1a202c; margin: 0 0 6px; }
+    .sub { font-size: 13px; color: #718096; margin: 0 0 8px; }
+    .badge {
+      display: inline-block; background: #fff3ee; color: #FF6B35;
+      font-size: 11px; font-weight: 700; padding: 4px 12px;
+      border-radius: 20px; margin-bottom: 28px; letter-spacing: .3px;
+    }
+    a.btn {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      background: #FF6B35; color: #fff; text-decoration: none;
+      padding: 16px 36px; border-radius: 14px;
+      font-size: 16px; font-weight: 700; letter-spacing: .3px;
+      transition: background .15s, transform .1s;
+    }
+    a.btn:hover { background: #E05520; transform: translateY(-1px); }
+    a.btn:active { transform: translateY(0); }
+    .dl-icon { width: 22px; height: 22px; }
+    small { display: block; margin-top: 14px; font-size: 11px; color: #b0b7c3; }
+    .divider { border: none; border-top: 1px solid #f0f0f0; margin: 28px 0; }
+    .meta { display: flex; justify-content: center; gap: 24px; }
+    .meta span { font-size: 12px; color: #718096; }
+    .meta strong { display: block; font-size: 14px; font-weight: 700; color: #1a202c; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <img class="icon" src="/icon.png" alt="RunMate icon"/>
+    <h1>RunMate</h1>
+    <p class="sub">Marathon tracking, groups &amp; leaderboards</p>
+    <span class="badge">Android APK</span>
+
+    <a class="btn" href="/marathon-map.apk" download>
+      <svg class="dl-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/>
+        <line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      Download APK
+    </a>
+    <small>Enable "Install from unknown sources" in Android settings if prompted.</small>
+
+    <hr class="divider"/>
+    <div class="meta">
+      <span><strong>v1.0.0</strong>Platform</span>
+      <span><strong>Android</strong>OS</span>
+      <span><strong>~77 MB</strong>Size</span>
+    </div>
+  </div>
+</body>
+</html>

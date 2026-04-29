@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -57,6 +58,13 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
       _showPermissionDeniedDialog(
           forever: permission == LocationPermission.deniedForever);
       return;
+    }
+
+    // On iOS, warn if permission is only "While Using" — background tracking won't work.
+    if (Platform.isIOS && permission != LocationPermission.always) {
+      if (!mounted) return;
+      final proceed = await _showIosAlwaysLocationDialog();
+      if (!proceed) return;
     }
 
     final distKm = await _ctrl.distanceToStartKm();
@@ -135,6 +143,45 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
         ],
       ),
     );
+  }
+
+  Future<bool> _showIosAlwaysLocationDialog() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        icon: const Icon(Icons.location_on, color: AppTheme.primary, size: 40),
+        title: Text('ios_bg_title'.tr,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+        content: Text('ios_bg_body'.tr,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 13, height: 1.5)),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('cancel'.tr),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context, false);
+              Geolocator.openAppSettings();
+            },
+            style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                foregroundColor: Colors.white),
+            child: Text('open_settings'.tr),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('continue_anyway'.tr,
+                style: const TextStyle(color: AppTheme.textSecondary)),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
   }
 
   void _showTooFarDialog(double distKm) {
@@ -332,18 +379,15 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
 
       // ── Start / Stop button ───────────────────────────────────────────────
       Positioned(
-        bottom: lb.isNotEmpty && _leaderOpen ? 200 : 48,
+        bottom: lb.isNotEmpty && _leaderOpen ? 200 : 36,
         left: 0,
         right: 0,
         child: Center(
-          child: GestureDetector(
-            onTap:
-                isTracking ? () => _ctrl.stopTracking() : () => _onStartTap(),
-            child: Image.asset(
-              isTracking ? 'assets/images/stop.png' : 'assets/images/start.png',
-              height: 80,
-              width: 80,
-            ),
+          child: _TrackingButton(
+            isTracking: isTracking,
+            onTap: isTracking
+                ? () => _ctrl.stopTracking()
+                : () => _onStartTap(),
           ),
         ),
       ),
@@ -392,6 +436,101 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
           ),
         ),
     ]);
+  }
+}
+
+// ── Start / Stop tracking button ─────────────────────────────────────────────
+
+class _TrackingButton extends StatefulWidget {
+  final bool isTracking;
+  final VoidCallback onTap;
+  const _TrackingButton({required this.isTracking, required this.onTap});
+
+  @override
+  State<_TrackingButton> createState() => _TrackingButtonState();
+}
+
+class _TrackingButtonState extends State<_TrackingButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final isStart = !widget.isTracking;
+    final gradientA =
+        isStart ? const Color(0xFF48BB78) : const Color(0xFFE53E3E);
+    final gradientB =
+        isStart ? const Color(0xFF276749) : const Color(0xFF9B1C1C);
+    final icon =
+        isStart ? Icons.play_arrow_rounded : Icons.stop_rounded;
+    final label = isStart ? 'start_run'.tr : 'stop_run'.tr;
+
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) {
+        setState(() => _pressed = false);
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.93 : 1.0,
+        duration: const Duration(milliseconds: 100),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 82,
+              height: 82,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [gradientA, gradientB],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                border: Border.all(color: Colors.white, width: 3.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: gradientA.withValues(alpha: 0.55),
+                    blurRadius: 28,
+                    spreadRadius: 3,
+                  ),
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.30),
+                    blurRadius: 10,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: Icon(icon, color: Colors.white, size: 40),
+            ),
+            const SizedBox(height: 9),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.42),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    label,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.8,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

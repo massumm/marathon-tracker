@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import 'app/bindings/home_binding.dart';
+import 'services/deep_link_service.dart';
 import 'services/notification_service.dart';
 import 'app/bindings/initial_binding.dart';
 import 'app/bindings/kml_map_binding.dart';
@@ -37,6 +38,7 @@ void main() async {
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   // Don't await — getToken() is a network call that blocks the splash screen
   NotificationService.instance.init();
+  DeepLinkService.instance.init();
   WakelockPlus.enable();
   runApp(const MapApp());
 }

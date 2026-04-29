@@ -2,10 +2,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../app/routes/app_routes.dart';
 import '../controllers/group_controller.dart';
 import '../core/theme.dart';
 import '../models/comment_model.dart';
+import '../models/group_model.dart';
 import '../screens/group_management_screen.dart';
 import '../services/comment_service.dart';
 import '../widgets/user_avatar.dart';
@@ -33,20 +33,6 @@ class GroupDetailScreen extends StatelessWidget {
               tooltip: 'group_qr'.tr,
               onPressed: () => GroupQrSheet.show(ctrl.group),
             ),
-            IconButton(
-              icon: const Icon(Icons.qr_code_scanner),
-              tooltip: 'scan_to_join'.tr,
-              onPressed: () => Get.toNamed(
-                AppRoutes.qrScanner,
-                arguments: {'mode': 'group'},
-              ),
-            ),
-            if (ctrl.isAdmin)
-              IconButton(
-                icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                tooltip: 'delete_group'.tr,
-                onPressed: () => _confirmDelete(ctrl),
-              ),
             if (!ctrl.isAdmin)
               IconButton(
                 icon: const Icon(Icons.exit_to_app),
@@ -100,25 +86,6 @@ class GroupDetailScreen extends StatelessWidget {
     ));
   }
 
-  void _confirmDelete(GroupDetailController ctrl) {
-    Get.dialog(AlertDialog(
-      title: Text('delete_group'.tr),
-      content: Text(
-          'delete_group_confirm'.tr.replaceAll('@name', ctrl.group.name)),
-      actions: [
-        TextButton(onPressed: Get.back, child: Text('cancel'.tr)),
-        TextButton(
-          onPressed: () {
-            Get.back();
-            ctrl.deleteGroup();
-          },
-          child: Text('delete'.tr,
-              style: const TextStyle(color: Colors.redAccent)),
-        ),
-      ],
-    ));
-  }
-
   void _confirmLeave(GroupDetailController ctrl) {
     Get.dialog(AlertDialog(
       title: Text('leave_group'.tr),
@@ -148,58 +115,83 @@ class _MembersListView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Obx(() {
       final members = ctrl.members;
+      final requests = ctrl.isAdmin ? ctrl.joinRequests : <dynamic>[];
       if (members.isEmpty) {
         return const Center(child: CircularProgressIndicator());
       }
-      return ListView.separated(
+      return ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        itemCount: members.length,
-        separatorBuilder: (_, __) => const Divider(height: 1),
-        itemBuilder: (_, i) {
-          final m = members[i];
-          final isSelf = m.uid == ctrl.myUid;
-          return ListTile(
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
-            leading: UserAvatar(
-                label: m.label, photoUrl: m.photoUrl, size: 44),
-            title: Row(
+        children: [
+          if (ctrl.isAdmin && requests.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6, top: 4),
+              child: Text(
+                'pending_requests'.tr,
+                style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.primary),
+              ),
+            ),
+            ...ctrl.joinRequests.map((r) => _RequestTile(
+                  member: r,
+                  onAccept: () => ctrl.acceptRequest(r.uid),
+                  onDecline: () => ctrl.declineRequest(r.uid),
+                )),
+            const Divider(height: 20),
+          ],
+          ...List.generate(members.length, (i) {
+            final m = members[i];
+            final isSelf = m.uid == ctrl.myUid;
+            return Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(m.label,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w600, fontSize: 14)),
-                if (m.isAdmin) ...[
-                  const SizedBox(width: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 6, vertical: 1),
-                    decoration: BoxDecoration(
-                      color: Colors.amber.shade100,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text('admin'.tr,
-                        style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.amber.shade800)),
+                if (i > 0) const Divider(height: 1),
+                ListTile(
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
+                  leading: UserAvatar(
+                      label: m.label, photoUrl: m.photoUrl, size: 44),
+                  title: Row(
+                    children: [
+                      Text(m.label,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w600, fontSize: 14)),
+                      if (m.isAdmin) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.shade100,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text('admin'.tr,
+                              style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.amber.shade800)),
+                        ),
+                      ],
+                    ],
                   ),
-                ],
+                  subtitle: Text(
+                    m.email,
+                    style: const TextStyle(
+                        fontSize: 11, color: AppTheme.textSecondary),
+                  ),
+                  trailing: ctrl.isAdmin && !isSelf && !m.isAdmin
+                      ? IconButton(
+                          icon: const Icon(Icons.remove_circle_outline,
+                              color: Colors.redAccent, size: 20),
+                          onPressed: () => _confirmRemove(m.uid, m.label),
+                        )
+                      : null,
+                ),
               ],
-            ),
-            subtitle: Text(
-              m.email,
-              style: const TextStyle(
-                  fontSize: 11, color: AppTheme.textSecondary),
-            ),
-            trailing: ctrl.isAdmin && !isSelf && !m.isAdmin
-                ? IconButton(
-                    icon: const Icon(Icons.remove_circle_outline,
-                        color: Colors.redAccent, size: 20),
-                    onPressed: () => _confirmRemove(m.uid, m.label),
-                  )
-                : null,
-          );
-        },
+            );
+          }),
+        ],
       );
     });
   }
@@ -221,6 +213,51 @@ class _MembersListView extends StatelessWidget {
         ),
       ],
     ));
+  }
+}
+
+// ── Join request tile ─────────────────────────────────────────────────────────
+
+class _RequestTile extends StatelessWidget {
+  final GroupMemberModel member;
+  final VoidCallback onAccept;
+  final VoidCallback onDecline;
+
+  const _RequestTile({
+    required this.member,
+    required this.onAccept,
+    required this.onDecline,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 2),
+      leading: UserAvatar(
+          label: member.label, photoUrl: member.photoUrl, size: 44),
+      title: Text(member.label,
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+      subtitle: Text(member.email,
+          style:
+              const TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.check_circle_outline,
+                color: Colors.green, size: 24),
+            tooltip: 'accept'.tr,
+            onPressed: onAccept,
+          ),
+          IconButton(
+            icon: const Icon(Icons.cancel_outlined,
+                color: Colors.redAccent, size: 24),
+            tooltip: 'reject'.tr,
+            onPressed: onDecline,
+          ),
+        ],
+      ),
+    );
   }
 }
 

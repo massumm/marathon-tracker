@@ -82,7 +82,8 @@ class KmlMapController extends GetxController {
   // ── Live runners ──────────────────────────────────────────────────────────
   final isLive = false.obs;
   final isSharing = true.obs;
-  final activeRunners = <RunnerData>[].obs;
+  final activeRunners = <RunnerData>[].obs;   // friends/group — map markers
+  final allEventRunners = <RunnerData>[].obs; // same eventId — leaderboard
 
   // ── Leaderboard ───────────────────────────────────────────────────────────
   final leaderboard = <LeaderboardEntry>[].obs;
@@ -235,8 +236,8 @@ class KmlMapController extends GetxController {
       ));
     }
 
-    // Add friend runners — use the distanceKm they broadcast
-    for (final r in activeRunners) {
+    // All runners in this event — use the distanceKm they broadcast
+    for (final r in allEventRunners) {
       entries.add(LeaderboardEntry(
         uid: r.uid,
         name:
@@ -496,8 +497,17 @@ class KmlMapController extends GetxController {
 
   void _subscribeToRunners(List<String> friendUids) {
     final friendSet = friendUids.toSet();
+    _runnersSub?.cancel();
     _runnersSub = LiveTrackingService.instance.watchRunners().listen(
       (runners) async {
+        // Leaderboard: everyone running the same event (or fall back to friend filter)
+        allEventRunners.value = currentEventId.isEmpty
+            ? (friendSet.isEmpty
+                ? <RunnerData>[]
+                : runners.where((r) => friendSet.contains(r.uid)).toList())
+            : runners.where((r) => r.eventId == currentEventId).toList();
+
+        // Map markers: friends + group members only
         final filtered = friendSet.isEmpty
             ? <RunnerData>[]
             : runners.where((r) => friendSet.contains(r.uid)).toList();

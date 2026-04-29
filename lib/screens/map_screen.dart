@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../app/routes/app_routes.dart';
+import '../controllers/home_controller.dart';
 import '../controllers/kml_map_controller.dart';
 import '../controllers/map_controller.dart';
 import '../core/theme.dart';
@@ -21,9 +22,9 @@ class MapScreen extends GetView<MapController> {
         title: Text('events_title'.tr),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'refresh'.tr,
-            onPressed: controller.fetchEvents,
+            icon: const Icon(Icons.person_outline),
+            tooltip: 'nav_my_page'.tr,
+            onPressed: () => Get.find<HomeController>().changeTab(1),
           ),
         ],
       ),
@@ -463,30 +464,121 @@ class _GroupBar extends StatelessWidget {
       stream: GroupService.instance.watchMyGroupCountForEvent(eventId),
       builder: (context, snap) {
         final count = snap.data ?? 0;
-        return InkWell(
-          borderRadius: const BorderRadius.vertical(bottom: Radius.circular(14)),
-          onTap: () => Get.toNamed(
-            AppRoutes.groupManagement,
-            arguments: {'eventId': eventId},
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: Row(
-              children: [
-                const Icon(Icons.group_outlined,
-                    size: 16, color: AppTheme.textSecondary),
-                const SizedBox(width: 6),
-                Text(
-                  count == 0
-                      ? 'groups_hint'.tr
-                      : 'groups_count'.tr.replaceAll('@count', '$count'),
-                  style: const TextStyle(
-                      fontSize: 13, color: AppTheme.textSecondary),
+        final hasGroups = count > 0;
+
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: const BorderRadius.vertical(
+                bottom: Radius.circular(12)),
+            onTap: () => Get.toNamed(
+              AppRoutes.groupManagement,
+              arguments: {'eventId': eventId},
+            ),
+            child: Ink(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: hasGroups
+                      ? [const Color(0xFFFF6B35), const Color(0xFFE03E10)]
+                      : [const Color(0xFF7C4DFF), const Color(0xFF512DA8)],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
                 ),
-                const Spacer(),
-                const Icon(Icons.chevron_right,
-                    size: 16, color: AppTheme.textSecondary),
-              ],
+                borderRadius: const BorderRadius.vertical(
+                    bottom: Radius.circular(12)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 11),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.groups_rounded,
+                          color: Colors.white, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'groups'.tr,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                          Text(
+                            hasGroups
+                                ? 'groups_count'
+                                    .tr
+                                    .replaceAll('@count', '$count')
+                                : 'groups_cta'.tr,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.white.withValues(alpha: 0.82),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (hasGroups)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.22),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.people_alt_rounded,
+                                size: 13, color: Colors.white),
+                            const SizedBox(width: 4),
+                            Text(
+                              '$count',
+                              style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          'join'.tr,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF7C4DFF),
+                          ),
+                        ),
+                      ),
+                    const SizedBox(width: 6),
+                    const Icon(Icons.chevron_right,
+                        color: Colors.white70, size: 18),
+                  ],
+                ),
+              ),
             ),
           ),
         );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../app/routes/app_routes.dart';
 import '../controllers/group_controller.dart';
@@ -79,6 +80,9 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
           // ── Groups list ────────────────────────────────────────────────
           Expanded(
             child: Obx(() {
+              if (!_ctrl.groupsLoaded.value) {
+                return const Center(child: CircularProgressIndicator());
+              }
               final groups = _ctrl.groups;
               if (groups.isEmpty) {
                 return _EmptyGroupState(onCreate: _showCreateDialog);
@@ -300,6 +304,7 @@ class GroupQrSheet extends StatelessWidget {
     Get.bottomSheet(
       GroupQrSheet(group: group),
       backgroundColor: Colors.white,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
     );
@@ -308,11 +313,13 @@ class GroupQrSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final qrData = 'marathon-map://group/${group.id}';
-    return Padding(
-      padding: const EdgeInsets.all(28),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(
+            28, 28, 28, MediaQuery.of(context).viewInsets.bottom + 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
           Container(
             width: 40,
             height: 4,
@@ -344,9 +351,32 @@ class GroupQrSheet extends StatelessWidget {
             style: const TextStyle(
                 fontSize: 12, color: AppTheme.textSecondary),
           ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              icon: const Icon(Icons.link_rounded, size: 18),
+              label: Text('share_join_link'.tr),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () {
+                final link =
+                    'https://runmate-252e5.web.app/join.html?id=${group.id}&name=${Uri.encodeComponent(group.name)}';
+                Share.share(
+                  '${'share_join_link_text'.tr.replaceAll('@name', group.name)}\n$link',
+                );
+              },
+            ),
+          ),
           const SizedBox(height: 8),
         ],
       ),
-    );
+    ),
+  );
   }
 }

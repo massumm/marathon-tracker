@@ -31,6 +31,8 @@ class UserAvatar extends StatelessWidget {
 
     return CachedNetworkImage(
       imageUrl: photoUrl,
+      width: size,
+      height: size,
       imageBuilder: (_, imageProvider) => CircleAvatar(
         radius: radius,
         backgroundImage: imageProvider,

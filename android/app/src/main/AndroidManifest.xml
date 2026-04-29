@@ -46,6 +46,13 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Deep link: marathon-map://group/{groupId} -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="marathon-map" android:host="group"/>
+            </intent-filter>
         </activity>
         <!-- Foreground service for background location tracking -->
         <service

@@ -1,4 +1,21 @@
 {
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": ["node_modules", ".git"]
+    }
+  ],
+  "hosting": {
+    "public": "hosting",
+    "ignore": ["firebase.json", "**/.*"],
+    "headers": [
+      {
+        "source": "**/*.apk",
+        "headers": [{ "key": "Content-Type", "value": "application/vnd.android.package-archive" }]
+      }
+    ]
+  },
   "database": {
     "rules": "database.rules.json"
   },

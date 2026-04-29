@@ -11,6 +11,7 @@ import '../services/group_service.dart';
 class GroupController extends GetxController {
   final groups = <GroupModel>[].obs;
   final isLoading = false.obs;
+  final groupsLoaded = false.obs;
 
   String eventId = '';
   StreamSubscription? _groupsSub;
@@ -27,6 +28,7 @@ class GroupController extends GetxController {
     _groupsSub =
         GroupService.instance.watchMyGroupsForEvent(eventId).listen((list) {
       groups.value = list;
+      groupsLoaded.value = true;
     });
   }
 
@@ -58,6 +60,10 @@ class GroupController extends GetxController {
     isLoading.value = false;
 
     switch (result) {
+      case JoinResult.requestSent:
+        Get.snackbar('', 'join_request_sent'.tr,
+            snackPosition: SnackPosition.BOTTOM);
+        break;
       case JoinResult.ok:
         Get.snackbar('', 'group_joined'.tr,
             snackPosition: SnackPosition.BOTTOM);
@@ -94,10 +100,12 @@ class GroupController extends GetxController {
 
 class GroupDetailController extends GetxController {
   final members = <GroupMemberModel>[].obs;
+  final joinRequests = <GroupMemberModel>[].obs;
   final groupName = ''.obs;
 
   late GroupModel group;
   StreamSubscription? _membersSub;
+  StreamSubscription? _requestsSub;
 
   @override
   void onInit() {
@@ -111,12 +119,27 @@ class GroupDetailController extends GetxController {
         GroupService.instance.watchGroupMembers(group.id).listen((list) {
       members.value = list;
     });
+    if (isAdmin) {
+      _requestsSub =
+          GroupService.instance.watchJoinRequests(group.id).listen((list) {
+        joinRequests.value = list;
+      }, onError: (_) {});
+    }
   }
 
   @override
   void onClose() {
     _membersSub?.cancel();
+    _requestsSub?.cancel();
     super.onClose();
+  }
+
+  Future<void> acceptRequest(String uid) async {
+    await GroupService.instance.acceptJoinRequest(group.id, uid);
+  }
+
+  Future<void> declineRequest(String uid) async {
+    await GroupService.instance.declineJoinRequest(group.id, uid);
   }
 
   Future<void> removeMember(String uid) async {

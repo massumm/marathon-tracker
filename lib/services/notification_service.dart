@@ -7,6 +7,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
 
 import '../app/routes/app_routes.dart';
+import 'group_service.dart';
 
 class NotificationService {
   NotificationService._();
@@ -107,12 +108,15 @@ class NotificationService {
 
   void _onRemoteTap(RemoteMessage message) => _navigate(message.data);
 
-  void _navigate(Map<String, dynamic> data) {
+  void _navigate(Map<String, dynamic> data) async {
     final type = data['type'] as String?;
     switch (type) {
-      case 'friend_request':
-      case 'friend_accepted':
-        Get.toNamed(AppRoutes.home, arguments: 1); // Friends tab
+      case 'group_join_request':
+        final groupId = data['groupId'] as String?;
+        if (groupId == null) return;
+        final group = await GroupService.instance.getGroup(groupId);
+        if (group == null) return;
+        Get.toNamed(AppRoutes.groupDetail, arguments: group);
         break;
       case 'leaderboard':
         Get.toNamed(AppRoutes.leaderboard);

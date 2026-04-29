@@ -6,13 +6,16 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../controllers/auth_controller.dart';
+import '../models/group_model.dart';
 import '../models/user_stats.dart';
 import '../services/firebase_service.dart';
 import '../services/friends_service.dart';
+import '../services/group_service.dart';
 import '../services/user_stats_service.dart';
 
 class MyPageController extends GetxController {
   final routeRefs = <fs.Reference>[].obs;
+  final myGroups = <GroupModel>[].obs;
   final isLoading = false.obs;
   final isUploading = false.obs;
   final myStats = Rxn<UserStats>();
@@ -21,6 +24,7 @@ class MyPageController extends GetxController {
   final ageObs = 0.obs;
 
   StreamSubscription? _statsSub;
+  StreamSubscription? _groupsSub;
 
   User? get user => FirebaseAuth.instance.currentUser;
 
@@ -42,11 +46,15 @@ class MyPageController extends GetxController {
       myStats.value = s;
       if (s != null && s.age > 0) ageObs.value = s.age;
     });
+    _groupsSub = GroupService.instance.watchAllMyGroups().listen((list) {
+      myGroups.value = list;
+    });
   }
 
   @override
   void onClose() {
     _statsSub?.cancel();
+    _groupsSub?.cancel();
     super.onClose();
   }
 

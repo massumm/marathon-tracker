@@ -3,7 +3,7 @@ import 'package:firebase_database/firebase_database.dart';
 
 import '../models/group_model.dart';
 
-enum JoinResult { ok, alreadyMember, full, notFound, selfAdmin }
+enum JoinResult { ok, alreadyMember, full, notFound, selfAdmin, requestSent }
 
 class GroupService {
   GroupService._();
@@ -95,6 +95,75 @@ class GroupService {
     ]);
 
     return JoinResult.ok;
+  }
+
+  // ── Join request (scan QR → request, admin accepts/declines) ─────────────
+
+  Future<JoinResult> requestJoin(String groupId) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return JoinResult.notFound;
+
+    final groupSnap = await _db.ref('groups/$groupId').get();
+    if (!groupSnap.exists) return JoinResult.notFound;
+
+    final groupData = groupSnap.value as Map<dynamic, dynamic>;
+    if (groupData['adminUid'] == user.uid) return JoinResult.selfAdmin;
+
+    final memberSnap =
+        await _db.ref('group_members/$groupId/${user.uid}').get();
+    if (memberSnap.exists) return JoinResult.alreadyMember;
+
+    final count = groupData['memberCount'] as int? ?? 0;
+    if (count >= maxMembersPerGroup) return JoinResult.full;
+
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final requestData = GroupMemberModel(
+      uid: user.uid,
+      displayName: user.displayName ?? '',
+      photoUrl: user.photoURL ?? '',
+      email: user.email ?? '',
+      joinedAt: now,
+    );
+
+    await _db
+        .ref('group_join_requests/$groupId/${user.uid}')
+        .set(requestData.toMap());
+
+    return JoinResult.requestSent;
+  }
+
+  Future<void> acceptJoinRequest(String groupId, String uid) async {
+    final requestSnap =
+        await _db.ref('group_join_requests/$groupId/$uid').get();
+    if (!requestSnap.exists) return;
+
+    final requestData = requestSnap.value as Map<dynamic, dynamic>;
+    final countSnap = await _db.ref('groups/$groupId/memberCount').get();
+    final count = countSnap.value as int? ?? 0;
+
+    await Future.wait([
+      _db.ref('group_members/$groupId/$uid').set(requestData),
+      _db.ref('groups/$groupId/memberCount').set(count + 1),
+      _db.ref('user_groups/$uid/$groupId').set(true),
+      _db.ref('group_join_requests/$groupId/$uid').remove(),
+    ]);
+  }
+
+  Future<void> declineJoinRequest(String groupId, String uid) async {
+    await _db.ref('group_join_requests/$groupId/$uid').remove();
+  }
+
+  Stream<List<GroupMemberModel>> watchJoinRequests(String groupId) {
+    return _db.ref('group_join_requests/$groupId').onValue.map((event) {
+      final data = event.snapshot.value;
+      if (data == null) return <GroupMemberModel>[];
+      final map = data as Map<dynamic, dynamic>;
+      return map.entries
+          .map((e) => GroupMemberModel.fromMap(
+              e.key as String, e.value as Map<dynamic, dynamic>))
+          .toList()
+        ..sort((a, b) => a.joinedAt.compareTo(b.joinedAt));
+    });
   }
 
   // ── Leave ─────────────────────────────────────────────────────────────────
@@ -231,5 +300,25 @@ class GroupService {
   /// Count of groups the current user is a member of for [eventId].
   Stream<int> watchMyGroupCountForEvent(String eventId) {
     return watchMyGroupsForEvent(eventId).map((list) => list.length);
+  }
+
+  /// All groups the current user has joined (across all events).
+  Stream<List<GroupModel>> watchAllMyGroups() {
+    final uid = _uid;
+    if (uid == null) return const Stream.empty();
+    return _db.ref('user_groups/$uid').onValue.asyncMap((event) async {
+      final data = event.snapshot.value;
+      if (data == null) return <GroupModel>[];
+      final groupIds =
+          (data as Map<dynamic, dynamic>).keys.cast<String>().toList();
+      final snaps = await Future.wait(
+          groupIds.map((id) => _db.ref('groups/$id').get()));
+      return snaps
+          .where((s) => s.exists)
+          .map((s) =>
+              GroupModel.fromMap(s.key!, s.value as Map<dynamic, dynamic>))
+          .toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    });
   }
 }

@@ -24,6 +24,8 @@ class AppStrings extends Translations {
           'comment_count': '@count comments',
           'groups_hint': 'View Groups',
           'groups_count': '@count Groups',
+          'groups_cta': 'Run together · view rankings',
+          'join': 'Join',
           'groups': 'Groups',
           'create_group': 'Create Group',
           'group_name_hint': 'Group name',
@@ -39,6 +41,10 @@ class AppStrings extends Translations {
           'scan_group_hint': 'Scan a group QR code to join',
           'group_limit_title': 'Group Limit',
           'group_limit_body': 'You can create a maximum of 3 groups.',
+          'join_request_sent': 'Join request sent! Waiting for admin approval.',
+          'pending_requests': 'Pending Requests',
+          'join_request_accepted': 'Request accepted.',
+          'join_request_declined': 'Request declined.',
           'group_joined': 'You joined the group!',
           'group_already_member': 'You are already a member.',
           'group_full': 'This group is full (max 20 members).',
@@ -56,6 +62,8 @@ class AppStrings extends Translations {
           'running_label': 'running',
           'group_qr': 'Group QR',
           'group_qr_subtitle': 'Share this QR to invite members',
+          'share_join_link': 'Share Join Link',
+          'share_join_link_text': 'Join me in "@name" on RunMate!',
           'unknown': 'Unknown',
           'first_comment': 'Be the first to comment!',
           'comment_input_hint': 'Write a comment...',
@@ -120,6 +128,8 @@ class AppStrings extends Translations {
           'no_runners_running': 'No one is running yet.',
           'live_leaderboard': 'Live Leaderboard',
           'event_finished': 'Event Finished',
+          'start_run': 'START',
+          'stop_run': 'STOP',
           'terminate': 'Terminate',
           'share': 'Share location',
           'unshare': 'Hide location',
@@ -163,6 +173,8 @@ class AppStrings extends Translations {
           'delete_account_confirm': 'Are you sure? This cannot be undone.',
           'version': 'Version',
           'app_version': '1.0.0',
+          'app_version_label': 'Version 1.0.0',
+          'developed_by': 'Developed by XOR Geek',
           'share_run': 'Share Run',
           'retake': 'Retake',
           'share_action': 'Share',
@@ -183,6 +195,11 @@ class AppStrings extends Translations {
           'location_permission_forever': 'Location permission is permanently denied. Please enable it in app settings.',
           'open_settings': 'Open Settings',
 
+          // iOS background location
+          'ios_bg_title': 'Allow Location "Always"',
+          'ios_bg_body': 'Your location is set to "While Using App". To keep tracking your run after you close the app or lock the screen, go to Settings → RunMate → Location → change to "Always".',
+          'continue_anyway': 'Continue Anyway',
+
           // Proximity check
           'too_far_title': 'Too Far from Start',
           'too_far_body': 'You are @dist km from the event start point. Please move closer before starting.',
@@ -194,6 +211,16 @@ class AppStrings extends Translations {
           'no_photos': 'No photos yet',
           'no_photos_subtitle': 'Tap the camera button while running to take photos',
           'event': 'Event',
+
+          // My Page sections
+          'add_friends_or_join_group': 'Add friends or join a group to see them here',
+          'no_groups_leaderboard': 'Join or create a group to see rankings here',
+          'no_run_data_yet': 'No run data yet',
+          'my_completed_runs': 'My Completed Runs',
+          'my_clubs': 'My Clubs',
+          'see_all': 'See All',
+          'no_runs_yet': 'No runs yet',
+          'no_clubs_yet': 'No clubs yet',
 
           // Common
           'runner': 'Runner',
@@ -224,6 +251,8 @@ class AppStrings extends Translations {
           'comment_count': '@count コメント',
           'groups_hint': 'グループを見る',
           'groups_count': '@count グループ',
+          'groups_cta': '一緒に走ろう・ランキングを見る',
+          'join': '参加',
           'groups': 'グループ',
           'create_group': 'グループを作成',
           'group_name_hint': 'グループ名',
@@ -239,6 +268,10 @@ class AppStrings extends Translations {
           'scan_group_hint': 'グループのQRコードをスキャン',
           'group_limit_title': 'グループ上限',
           'group_limit_body': '作成できるグループは最大3つです。',
+          'join_request_sent': '参加リクエストを送信しました。管理者の承認をお待ちください。',
+          'pending_requests': '参加リクエスト',
+          'join_request_accepted': 'リクエストを承認しました。',
+          'join_request_declined': 'リクエストを拒否しました。',
           'group_joined': 'グループに参加しました！',
           'group_already_member': 'すでにメンバーです。',
           'group_full': 'このグループは満員です（最大20人）。',
@@ -256,6 +289,8 @@ class AppStrings extends Translations {
           'running_label': '人が走行中',
           'group_qr': 'グループQR',
           'group_qr_subtitle': 'QRコードをシェアしてメンバーを招待',
+          'share_join_link': '参加リンクをシェア',
+          'share_join_link_text': 'RunMateの「@name」グループに参加しよう！',
           'unknown': '不明',
           'first_comment': '最初のコメントを投稿しよう',
           'comment_input_hint': 'コメントを入力...',
@@ -320,6 +355,8 @@ class AppStrings extends Translations {
           'no_runners_running': 'まだ走っている人はいません',
           'live_leaderboard': 'ライブ順位',
           'event_finished': 'イベント終了',
+          'start_run': 'スタート',
+          'stop_run': 'ストップ',
           'terminate': '終了',
           'share': '位置を共有',
           'unshare': '位置を非表示',
@@ -363,6 +400,8 @@ class AppStrings extends Translations {
           'delete_account_confirm': '本当に削除しますか？この操作は取り消せません。',
           'version': 'バージョン',
           'app_version': '1.0.0',
+          'app_version_label': 'バージョン 1.0.0',
+          'developed_by': '開発: XOR Geek',
           'share_run': 'ランをシェア',
           'retake': '撮り直す',
           'share_action': 'シェア',
@@ -383,6 +422,11 @@ class AppStrings extends Translations {
           'location_permission_forever': '位置情報の許可が永久に拒否されています。アプリ設定から有効にしてください。',
           'open_settings': '設定を開く',
 
+          // iOS background location
+          'ios_bg_title': '位置情報を「常に許可」に変更してください',
+          'ios_bg_body': '現在の位置情報は「使用中のみ許可」です。アプリを閉じたり画面をロックした後もランを継続するには、設定 → RunMate → 位置情報 → 「常に許可」に変更してください。',
+          'continue_anyway': 'このまま続ける',
+
           // Proximity check
           'too_far_title': 'スタート地点から離れすぎです',
           'too_far_body': 'イベントのスタート地点から @dist km 離れています。近づいてから開始してください。',
@@ -394,6 +438,16 @@ class AppStrings extends Translations {
           'no_photos': 'まだ写真がありません',
           'no_photos_subtitle': 'ランニング中にカメラボタンをタップして写真を撮りましょう',
           'event': 'イベント',
+
+          // My Page sections
+          'add_friends_or_join_group': '友達を追加するかグループに参加すると表示されます',
+          'no_groups_leaderboard': 'グループに参加または作成するとランキングが表示されます',
+          'no_run_data_yet': 'まだランデータがありません',
+          'my_completed_runs': '完了したラン',
+          'my_clubs': 'マイクラブ',
+          'see_all': 'すべて見る',
+          'no_runs_yet': 'まだランがありません',
+          'no_clubs_yet': 'まだクラブがありません',
 
           // Common
           'runner': 'ランナー',

@@ -98,6 +98,14 @@
         ".read": "auth != null",
         ".write": "auth != null"
       }
+    },
+    "group_join_requests": {
+      "$groupId": {
+        ".read": "auth != null",
+        "$uid": {
+          ".write": "auth != null && (auth.uid === $uid || root.child('groups').child($groupId).child('adminUid').val() === auth.uid)"
+        }
+      }
     }
   }
 }

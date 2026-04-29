@@ -46,8 +46,9 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
       final groupId = raw.replaceFirst('marathon-map://group/', '');
       if (!mounted) return;
       Get.back();
-      final result = await GroupService.instance.joinGroup(groupId);
+      final result = await GroupService.instance.requestJoin(groupId);
       final msg = switch (result) {
+        JoinResult.requestSent => 'join_request_sent'.tr,
         JoinResult.ok => 'group_joined'.tr,
         JoinResult.alreadyMember => 'group_already_member'.tr,
         JoinResult.full => 'group_full'.tr,
