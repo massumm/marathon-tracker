@@ -3,6 +3,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 class TrackedRoute {
   final String event;
   final String type;
+  final int runStartMs;
   final String startDate;
   final String startTime;
   final String time;
@@ -14,6 +15,7 @@ class TrackedRoute {
   const TrackedRoute({
     required this.event,
     required this.type,
+    this.runStartMs = 0,
     required this.startDate,
     required this.startTime,
     required this.time,
@@ -29,6 +31,7 @@ class TrackedRoute {
     return TrackedRoute(
       event: json['event'] as String? ?? '',
       type: json['type'] as String? ?? '',
+      runStartMs: json['run_start_ms'] as int? ?? 0,
       startDate: json['start_date'] as String? ?? '',
       startTime: json['start_time'] as String? ?? '',
       time: json['time'] as String? ?? '',

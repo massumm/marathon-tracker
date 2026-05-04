@@ -54,15 +54,20 @@ class FirebaseService {
   }
 
   /// Lists photo references for a saved route identified by its storage path.
+  /// [runStartMs] is preferred (from route JSON); falls back to filename parsing.
   Future<List<fs.Reference>> fetchRunPhotoRefs(
-      String routeStoragePath) async {
+      String routeStoragePath, {int runStartMs = 0}) async {
     try {
       final parts = routeStoragePath.split('/');
-      // path: routes/{uid}/my_route_{ts}.json  → parts[1]=uid, parts[2]=filename
-      final uid = parts[1];
-      final ts = parts.last.replaceAll('.json', '').split('_').last;
-      final photoPath =
-          '${AppConfig.routesStoragePath}/$uid/photos/$ts';
+      final uid = parts.length > 1 ? parts[1] : (_uid);
+      String ts;
+      if (runStartMs > 0) {
+        ts = '$runStartMs';
+      } else {
+        // Legacy: extract ms timestamp from old filename format my_route_{ms}.json
+        ts = parts.last.replaceAll('.json', '').split('_').last;
+      }
+      final photoPath = '${AppConfig.routesStoragePath}/$uid/photos/$ts';
       final result = await _storage.ref(photoPath).listAll();
       return result.items;
     } catch (_) {

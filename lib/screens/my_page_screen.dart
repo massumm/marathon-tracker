@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_storage/firebase_storage.dart' as fs;
 import 'package:flutter/material.dart';
@@ -9,7 +10,6 @@ import '../app/routes/app_routes.dart';
 import '../controllers/my_page_controller.dart';
 import '../core/theme.dart';
 import '../models/group_model.dart';
-import '../models/tracked_route.dart';
 import '../models/user_stats.dart';
 
 class MyPageScreen extends GetView<MyPageController> {
@@ -327,47 +327,15 @@ class _RouteHexTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final eventName = TrackedRoute.parseEventFromFileName(ref.name);
-    final date = TrackedRoute.parseDateTimeFromFileName(ref.name);
-    final dateLabel = date.year > 2000
-        ? '${date.month}/${date.day}'
-        : '';
     return GestureDetector(
       onTap: () => Get.toNamed(AppRoutes.routeDetail, arguments: ref.fullPath),
       child: ClipPath(
         clipper: _HexClipper(),
         child: Container(
           color: AppTheme.primary.withValues(alpha: 0.08),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(6, 12, 6, 8),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.directions_run,
-                    color: AppTheme.primary.withValues(alpha: 0.7), size: 24),
-                const SizedBox(height: 3),
-                Text(
-                  eventName,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 7,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.primary.withValues(alpha: 0.85),
-                  ),
-                ),
-                if (dateLabel.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    dateLabel,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                        fontSize: 6.5, color: AppTheme.textSecondary),
-                  ),
-                ],
-              ],
-            ),
+          child: Center(
+            child: Icon(Icons.directions_run,
+                color: AppTheme.primary.withValues(alpha: 0.7), size: 30),
           ),
         ),
       ),
@@ -589,18 +557,39 @@ class _ProfileHeader extends StatelessWidget {
                   CircleAvatar(
                     radius: 34,
                     backgroundColor: AppTheme.primary.withValues(alpha: 0.15),
-                    backgroundImage:
-                        photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
-                    child: photoUrl.isEmpty
-                        ? Text(
+                    child: photoUrl.isNotEmpty
+                        ? ClipOval(
+                            child: CachedNetworkImage(
+                              imageUrl: photoUrl,
+                              width: 68,
+                              height: 68,
+                              fit: BoxFit.cover,
+                              placeholder: (_, __) => Text(
+                                name.isNotEmpty ? name[0].toUpperCase() : '?',
+                                style: const TextStyle(
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppTheme.primary,
+                                ),
+                              ),
+                              errorWidget: (_, __, ___) => Text(
+                                name.isNotEmpty ? name[0].toUpperCase() : '?',
+                                style: const TextStyle(
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppTheme.primary,
+                                ),
+                              ),
+                            ),
+                          )
+                        : Text(
                             name.isNotEmpty ? name[0].toUpperCase() : '?',
                             style: const TextStyle(
                               fontSize: 26,
                               fontWeight: FontWeight.w700,
                               color: AppTheme.primary,
                             ),
-                          )
-                        : null,
+                          ),
                   ),
                   if (uploading)
                     const Positioned.fill(

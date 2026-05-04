@@ -88,8 +88,11 @@ class _RouteDetailScreenState extends State<RouteDetailScreen>
 
   Future<void> _loadPhotos() async {
     try {
-      final refs =
-          await FirebaseService.instance.fetchRunPhotoRefs(_storagePath);
+      // Use runStartMs from the loaded route JSON (reliable for new format).
+      // Fall back to storage-path extraction for old-format routes.
+      final runStartMs = _route?.runStartMs ?? 0;
+      final refs = await FirebaseService.instance
+          .fetchRunPhotoRefs(_storagePath, runStartMs: runStartMs);
       final urls = await Future.wait(
         refs.map((r) => r.getDownloadURL()),
       );

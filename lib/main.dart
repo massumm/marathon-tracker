@@ -55,7 +55,11 @@ Future<void> _initFirebase() async {
     if (!e.code.contains('duplicate-app')) rethrow;
   }
   // Must be called before any DatabaseReference is used.
-  FirebaseDatabase.instance.setPersistenceEnabled(true);
+  // Wrapped in try/catch because background isolates (FCM) may call this
+  // after the main engine has already initialized the DB instance.
+  try {
+    FirebaseDatabase.instance.setPersistenceEnabled(true);
+  } catch (_) {}
 }
 
 class MapApp extends StatelessWidget {

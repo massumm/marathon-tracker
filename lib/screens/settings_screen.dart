@@ -13,27 +13,6 @@ class SettingsScreen extends GetView<MyPageController> {
       appBar: AppBar(title: Text('settings'.tr)),
       body: ListView(
         children: [
-          _sectionHeader('profile_settings'.tr),
-          _tile(
-            icon: Icons.camera_alt_outlined,
-            title: 'profile_image'.tr,
-            onTap: () => controller.uploadProfileImage(),
-          ),
-          _tile(
-            icon: Icons.person_outline,
-            title: 'edit_name'.tr,
-            subtitle: controller.displayName,
-            onTap: () => _editName(context),
-          ),
-          Obx(() => _tile(
-                icon: Icons.cake_outlined,
-                title: 'age'.tr,
-                subtitle: controller.ageObs.value > 0
-                    ? '${controller.ageObs.value}'
-                    : '-',
-                onTap: () => _editAge(context),
-              )),
-          const Divider(height: 1),
           _sectionHeader('account_settings'.tr),
           _tile(
             icon: Icons.email_outlined,
@@ -127,56 +106,6 @@ class SettingsScreen extends GetView<MyPageController> {
             : null,
         onTap: onTap,
       );
-
-  void _editName(BuildContext context) {
-    final ctrl = TextEditingController(text: controller.displayName);
-    Get.dialog(AlertDialog(
-      title: Text('edit_name'.tr),
-      content: TextField(
-        controller: ctrl,
-        autofocus: true,
-        decoration: InputDecoration(hintText: 'your_name'.tr),
-      ),
-      actions: [
-        TextButton(onPressed: Get.back, child: Text('cancel'.tr)),
-        TextButton(
-          onPressed: () {
-            Get.back();
-            controller.updateDisplayName(ctrl.text);
-          },
-          child: Text('confirm'.tr),
-        ),
-      ],
-    ));
-  }
-
-  void _editAge(BuildContext context) {
-    final ctrl = TextEditingController(
-      text: controller.ageObs.value > 0 ? '${controller.ageObs.value}' : '',
-    );
-    Get.dialog(AlertDialog(
-      title: Text('edit_age'.tr),
-      content: TextField(
-        controller: ctrl,
-        autofocus: true,
-        keyboardType: TextInputType.number,
-        decoration: InputDecoration(hintText: 'enter_age'.tr),
-      ),
-      actions: [
-        TextButton(onPressed: Get.back, child: Text('cancel'.tr)),
-        TextButton(
-          onPressed: () {
-            final age = int.tryParse(ctrl.text.trim());
-            if (age != null && age > 0) {
-              Get.back();
-              controller.updateAge(age);
-            }
-          },
-          child: Text('confirm'.tr),
-        ),
-      ],
-    ));
-  }
 
   void _changeEmail(BuildContext context) {
     final ctrl = TextEditingController();

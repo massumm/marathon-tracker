@@ -553,6 +553,7 @@ class KmlMapController extends GetxController {
     final data = {
       'event': eventLabel,
       'type': AppConfig.eventType,
+      'run_start_ms': _runStartMs,
       'start_date':
           '${startTime.year}/${startTime.month.toString().padLeft(2, '0')}/${startTime.day.toString().padLeft(2, '0')}',
       'start_time':

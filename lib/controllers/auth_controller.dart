@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../app/routes/app_routes.dart';
@@ -33,11 +34,16 @@ class AuthController extends GetxController {
       final googleUser = await _googleSignIn.signIn();
       if (googleUser == null) return;
       final googleAuth = await googleUser.authentication;
+      debugPrint('Google idToken: ${googleAuth.idToken}');
+      debugPrint('Google accessToken: ${googleAuth.accessToken}');
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
       await _auth.signInWithCredential(credential);
+    } catch (e) {
+      debugPrint('Google Sign-In error: $e');
+      rethrow;
     } finally {
       isLoading.value = false;
     }
