@@ -88,6 +88,14 @@ class _EventFormScreenState extends State<EventFormScreen> {
   Future<void> _pickBanner() async {
     final result = await AdminService.instance.pickFile('image/jpeg,image/png');
     if (result == null) return;
+    if (result.bytes.length > 3 * 1024 * 1024) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Image too large. Please choose an image under 3 MB.')),
+      );
+      return;
+    }
     setState(() => _bannerPreview = result.bytes);
   }
 

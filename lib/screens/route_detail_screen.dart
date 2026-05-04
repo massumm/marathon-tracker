@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -11,6 +12,7 @@ import '../core/theme.dart';
 import '../models/tracked_route.dart';
 import '../screens/run_selfie_screen.dart';
 import '../services/firebase_service.dart';
+import '../services/offline_storage_service.dart';
 
 class RouteDetailScreen extends StatefulWidget {
   const RouteDetailScreen({super.key});
@@ -49,10 +51,32 @@ class _RouteDetailScreenState extends State<RouteDetailScreen>
 
   Future<void> _loadRoute() async {
     try {
-      final url =
-          await FirebaseService.instance.getDownloadUrl(_storagePath);
-      final response = await http.get(Uri.parse(url));
-      final json = jsonDecode(response.body) as Map<String, dynamic>;
+      final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+      final fileName = _storagePath.split('/').last;
+      String? body;
+
+      if (_storagePath.startsWith('local/')) {
+        // Locally saved run — read straight from device file
+        body = await OfflineStorageService.instance
+            .getLocalRouteJson(uid, fileName);
+      } else {
+        // Try local file first (pending upload), then content cache, then network
+        body = await OfflineStorageService.instance
+            .getLocalRouteJson(uid, fileName);
+        body ??= await OfflineStorageService.instance
+            .getCachedContent(_storagePath);
+        if (body == null) {
+          final url =
+              await FirebaseService.instance.getDownloadUrl(_storagePath);
+          final response = await http.get(Uri.parse(url));
+          body = response.body;
+          await OfflineStorageService.instance
+              .cacheContent(_storagePath, body);
+        }
+      }
+
+      if (body == null) return;
+      final json = jsonDecode(body) as Map<String, dynamic>;
       setState(() {
         _route = TrackedRoute.fromJson(json, _storagePath);
         _routeLoaded = true;

@@ -15,6 +15,7 @@ import '../models/runner_data.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../services/firebase_service.dart';
+import '../services/offline_storage_service.dart';
 import '../services/friends_service.dart';
 import '../services/group_service.dart';
 import '../services/kml_service.dart';
@@ -96,8 +97,16 @@ class KmlMapController extends GetxController {
   String kmlFilePath = '';
   String? kmlDirectUrl;
   String routeLabel = '';
-  bool _userPanned = false;
+  final isUserPanned = false.obs;
+  bool _programmaticCamera = false;
+  double _lastHeading = 0.0;
   String currentEventId = '';
+  CameraPosition? lastCameraPosition;
+  LatLng? finishPosition;
+  bool _finishAlertShown = false;
+  bool _hasLeftFinishZone = false;
+  static const double _finishRadiusM = 50.0;
+  static const double _finishArmRadiusM = 150.0;
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -269,6 +278,7 @@ class KmlMapController extends GetxController {
         if (parsed.polylines.isNotEmpty) {
           kmlPolylines = parsed.polylines;
           kmlMarkers = parsed.markers;
+          finishPosition = parsed.finishPosition;
           initialLocation = parsed.polylines.first.points.first;
           kmlLoaded.value = true;
           mapController?.animateCamera(CameraUpdate.newLatLng(initialLocation));
@@ -304,14 +314,60 @@ class KmlMapController extends GetxController {
   final snappedPoints = <LatLng>[].obs;
   double _cachedDistanceKm = 0.0;
 
-  void onUserPan() => _userPanned = true;
+  // Called from onCameraMove — only register as a user pan when WE are
+  // not the ones moving the camera programmatically.
+  void onUserPan() {
+    if (!_programmaticCamera) isUserPanned.value = true;
+  }
 
   void recenterCamera() {
-    _userPanned = false;
+    isUserPanned.value = false;
     final pos = currentPosition.value;
     if (pos != null) {
-      mapController?.animateCamera(CameraUpdate.newLatLng(pos));
+      _animateNavCamera(pos, _lastHeading);
     }
+  }
+
+  void _animateNavCamera(LatLng target, double bearing) {
+    final cam = CameraPosition(
+      target: target,
+      bearing: bearing,
+      tilt: 50.0,
+      zoom: 18.5,
+    );
+    lastCameraPosition = cam;
+    _programmaticCamera = true;
+    mapController
+        ?.animateCamera(CameraUpdate.newCameraPosition(cam))
+        .then((_) => _programmaticCamera = false)
+        .catchError((_) => _programmaticCamera = false);
+  }
+
+  void saveCamera(CameraPosition pos) {
+    lastCameraPosition = pos;
+  }
+
+  void _showFinishDialog() {
+    Get.dialog(
+      AlertDialog(
+        title: Text('finish_line_title'.tr),
+        content: Text('finish_line_body'.tr),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Get.back();
+              stopTracking();
+            },
+            child: Text('stop_run'.tr),
+          ),
+          TextButton(
+            onPressed: Get.back,
+            child: Text('continue_run'.tr),
+          ),
+        ],
+      ),
+      barrierDismissible: false,
+    );
   }
 
   Future<void> toggleSharing() async {
@@ -335,7 +391,9 @@ class KmlMapController extends GetxController {
     snappedPoints.clear();
     _rawBuffer.clear();
     _cachedDistanceKm = 0.0;
-    _userPanned = false;
+    isUserPanned.value = false;
+    _finishAlertShown = false;
+    _hasLeftFinishZone = false;
     elapsedSeconds.value = 0;
     isSharing.value = true;
     _runStartMs = DateTime.now().millisecondsSinceEpoch;
@@ -343,8 +401,8 @@ class KmlMapController extends GetxController {
 
     final pos = await LocationService.instance.getCurrentPosition();
     if (pos != null) {
-      mapController?.animateCamera(
-          CameraUpdate.newLatLngZoom(LatLng(pos.latitude, pos.longitude), 17));
+      _animateNavCamera(
+          LatLng(pos.latitude, pos.longitude), _lastHeading);
     }
 
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -365,13 +423,29 @@ class KmlMapController extends GetxController {
             ) /
             1000;
       }
-      if (!_userPanned) {
-        mapController?.animateCamera(CameraUpdate.newLatLng(latLng));
+      _lastHeading = position.heading;
+      if (!isUserPanned.value) {
+        _animateNavCamera(latLng, position.heading);
       }
       currentPosition.value = latLng;
       trackingPoints.add(latLng);
       _rawBuffer.add(latLng);
       _lbTickCount++;
+
+      // Finish line detection — arm only after runner leaves the finish zone
+      // (handles loop courses where start == finish)
+      if (!_finishAlertShown && finishPosition != null) {
+        final dist = Geolocator.distanceBetween(
+          latLng.latitude, latLng.longitude,
+          finishPosition!.latitude, finishPosition!.longitude,
+        );
+        if (!_hasLeftFinishZone) {
+          if (dist > _finishArmRadiusM) _hasLeftFinishZone = true;
+        } else if (dist <= _finishRadiusM) {
+          _finishAlertShown = true;
+          _showFinishDialog();
+        }
+      }
       if (_lbTickCount % 4 == 0) _rebuildLeaderboard();
 
       if (isLive.value) {
@@ -442,10 +516,14 @@ class KmlMapController extends GetxController {
     await LiveTrackingService.instance.stopBroadcasting();
     isLive.value = false;
 
-    // Flush remaining raw buffer
+    // Flush remaining raw buffer — fall back to raw points if snap fails offline
     if (_rawBuffer.isNotEmpty) {
-      final snapped = await _snapToRoads(List.from(_rawBuffer));
-      snappedPoints.addAll(snapped.isNotEmpty ? snapped : _rawBuffer);
+      try {
+        final snapped = await _snapToRoads(List.from(_rawBuffer));
+        snappedPoints.addAll(snapped.isNotEmpty ? snapped : _rawBuffer);
+      } catch (_) {
+        snappedPoints.addAll(_rawBuffer);
+      }
       _rawBuffer.clear();
     }
 
@@ -457,7 +535,11 @@ class KmlMapController extends GetxController {
     final now = DateTime.now();
     final elapsed = Duration(seconds: elapsedSeconds.value);
     final startTime = now.subtract(elapsed);
-    final slug = AppConfig.eventName.replaceAll(' ', '_');
+    final eventLabel = routeLabel.isNotEmpty ? routeLabel : AppConfig.eventName;
+    final slug = eventLabel
+        .replaceAll(RegExp(r'[^\w]'), '_')
+        .replaceAll(RegExp(r'_+'), '_')
+        .replaceAll(RegExp(r'^_|_$'), '');
     final dateStr =
         '${startTime.year}-${startTime.month.toString().padLeft(2, '0')}-${startTime.day.toString().padLeft(2, '0')}';
     final timeStr2 =
@@ -469,7 +551,7 @@ class KmlMapController extends GetxController {
         : 0.0;
 
     final data = {
-      'event': AppConfig.eventName,
+      'event': eventLabel,
       'type': AppConfig.eventType,
       'start_date':
           '${startTime.year}/${startTime.month.toString().padLeft(2, '0')}/${startTime.day.toString().padLeft(2, '0')}',
@@ -483,7 +565,26 @@ class KmlMapController extends GetxController {
           .toList(),
     };
 
-    await FirebaseService.instance.saveTrackedRoute(fileName, jsonEncode(data));
+    final jsonBody = jsonEncode(data);
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? 'unknown';
+
+    // 1. Always save locally first — data is never lost
+    await OfflineStorageService.instance.saveRouteLocally(uid, fileName, jsonBody);
+
+    // 2. Try uploading to Firebase Storage; queue for sync if offline
+    try {
+      await FirebaseService.instance.saveTrackedRoute(fileName, jsonBody);
+    } catch (_) {
+      await OfflineStorageService.instance.markPending(uid, fileName);
+      Get.snackbar('', 'run_saved_offline'.tr,
+          snackPosition: SnackPosition.BOTTOM,
+          duration: const Duration(seconds: 4),
+          backgroundColor: const Color(0xFF333333),
+          colorText: Colors.white,
+          margin: const EdgeInsets.all(12));
+    }
+
+    // 3. Stats are queued by RTDB persistence — safe offline
     await UserStatsService.instance
         .addRunStats(totalDistance, elapsedSeconds.value);
     isSaving.value = false;

@@ -4,9 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
+import 'package:firebase_database/firebase_database.dart';
+
 import 'app/bindings/home_binding.dart';
 import 'services/deep_link_service.dart';
 import 'services/notification_service.dart';
+import 'services/offline_storage_service.dart';
 import 'app/bindings/initial_binding.dart';
 import 'app/bindings/kml_map_binding.dart';
 import 'app/routes/app_routes.dart';
@@ -39,6 +42,7 @@ void main() async {
   // Don't await — getToken() is a network call that blocks the splash screen
   NotificationService.instance.init();
   DeepLinkService.instance.init();
+  OfflineStorageService.instance.init();
   WakelockPlus.enable();
   runApp(const MapApp());
 }
@@ -50,6 +54,8 @@ Future<void> _initFirebase() async {
   } on FirebaseException catch (e) {
     if (!e.code.contains('duplicate-app')) rethrow;
   }
+  // Must be called before any DatabaseReference is used.
+  FirebaseDatabase.instance.setPersistenceEnabled(true);
 }
 
 class MapApp extends StatelessWidget {

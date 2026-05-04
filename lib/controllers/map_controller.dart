@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_database/firebase_database.dart';
 import 'package:get/get.dart';
 import '../models/event_model.dart';
@@ -7,32 +9,43 @@ class MapController extends GetxController {
   final isLoading = false.obs;
   final errorMsg = ''.obs;
 
+  StreamSubscription? _eventsSub;
+
   @override
   void onInit() {
     super.onInit();
-    fetchEvents();
+    isLoading.value = true;
+    final ref = FirebaseDatabase.instance.ref('events');
+    // keepSynced ensures the cache is kept fresh whenever online.
+    ref.keepSynced(true);
+    _eventsSub = ref.orderByChild('createdAt').onValue.listen(
+      (event) {
+        if (event.snapshot.exists && event.snapshot.value != null) {
+          final map = event.snapshot.value as Map<dynamic, dynamic>;
+          events.value = map.entries
+              .map((e) => EventModel.fromMap(
+                  e.key as String, e.value as Map<dynamic, dynamic>))
+              .toList()
+            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        } else {
+          events.value = [];
+        }
+        isLoading.value = false;
+        errorMsg.value = '';
+      },
+      onError: (_) {
+        errorMsg.value = 'Error loading events';
+        isLoading.value = false;
+      },
+    );
   }
 
-  Future<void> fetchEvents() async {
-    isLoading.value = true;
-    errorMsg.value = '';
-    try {
-      final snap = await FirebaseDatabase.instance.ref('events').get();
-      if (snap.exists && snap.value != null) {
-        final map = snap.value as Map<dynamic, dynamic>;
-        final list = map.entries
-            .map((e) => EventModel.fromMap(
-                e.key as String, e.value as Map<dynamic, dynamic>))
-            .toList()
-          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-        events.value = list;
-      } else {
-        events.value = [];
-      }
-    } catch (e) {
-      errorMsg.value = 'Error loading events';
-    } finally {
-      isLoading.value = false;
-    }
+  // Kept for UI pull-to-refresh; stream already auto-syncs.
+  Future<void> fetchEvents() async {}
+
+  @override
+  void onClose() {
+    _eventsSub?.cancel();
+    super.onClose();
   }
 }

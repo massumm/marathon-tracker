@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -24,11 +25,10 @@ class MyRoutesScreen extends GetView<MyPageController> {
         ],
       ),
       body: Obx(() {
-        if (controller.isLoading.value) {
-          return const Center(child: CircularProgressIndicator());
-        }
+        final pending = controller.localPendingNames;
+        final refs = controller.routeRefs;
 
-        if (controller.routeRefs.isEmpty) {
+        if (!controller.isLoading.value && refs.isEmpty && pending.isEmpty) {
           return Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -49,21 +49,50 @@ class MyRoutesScreen extends GetView<MyPageController> {
           );
         }
 
-        return ListView.builder(
+        final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+        return ListView(
           padding: const EdgeInsets.symmetric(vertical: 8),
-          itemCount: controller.routeRefs.length,
-          itemBuilder: (_, i) {
-            final ref = controller.routeRefs[i];
-            return RouteListCard(
-              title: TrackedRoute.parseEventFromFileName(ref.name),
-              subtitle: TrackedRoute.parseDateFromFileName(ref.name),
-              leadingIcon: Icons.flag_rounded,
-              onTap: () => Get.toNamed(
-                AppRoutes.routeDetail,
-                arguments: ref.fullPath,
+          children: [
+            // Pending (local-only) routes at top with sync badge
+            ...pending.map((name) => RouteListCard(
+                  title: TrackedRoute.parseEventFromFileName(name),
+                  subtitle: TrackedRoute.parseDateFromFileName(name),
+                  leadingIcon: Icons.cloud_upload_outlined,
+                  leadingColor: Colors.orange,
+                  trailing: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text('pending_sync'.tr,
+                        style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.orange.shade700,
+                            fontWeight: FontWeight.w600)),
+                  ),
+                  onTap: () => Get.toNamed(
+                    AppRoutes.routeDetail,
+                    arguments: 'local/$uid/$name',
+                  ),
+                )),
+            // Cloud routes
+            ...refs.map((ref) => RouteListCard(
+                  title: TrackedRoute.parseEventFromFileName(ref.name),
+                  subtitle: TrackedRoute.parseDateFromFileName(ref.name),
+                  leadingIcon: Icons.flag_rounded,
+                  onTap: () => Get.toNamed(
+                    AppRoutes.routeDetail,
+                    arguments: ref.fullPath,
+                  ),
+                )),
+            if (controller.isLoading.value)
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Center(child: CircularProgressIndicator()),
               ),
-            );
-          },
+          ],
         );
       }),
     );

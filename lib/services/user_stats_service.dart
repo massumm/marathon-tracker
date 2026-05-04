@@ -64,6 +64,7 @@ class UserStatsService {
 
   /// Sorted leaderboard stream (highest distance first, runs as tiebreaker).
   Stream<List<UserStats>> watchLeaderboard() {
+    _db.ref('user_stats').keepSynced(true);
     return _db
         .ref('user_stats')
         .orderByChild('totalDistanceKm')

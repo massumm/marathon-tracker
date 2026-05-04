@@ -5,7 +5,11 @@ import 'package:xml/xml.dart' as xml;
 class ParsedKml {
   final Set<Polyline> polylines;
   final Set<Marker> markers;
-  const ParsedKml({required this.polylines, required this.markers});
+  final LatLng? finishPosition;
+  const ParsedKml(
+      {required this.polylines,
+      required this.markers,
+      this.finishPosition});
 }
 
 class KmlService {
@@ -117,7 +121,18 @@ class KmlService {
       }
     }
 
-    return ParsedKml(polylines: polylines, markers: markers);
+    // Identify finish marker by name keyword
+    LatLng? finishPosition;
+    for (final m in markers) {
+      final id = m.markerId.value.toLowerCase();
+      if (id.contains('finish') || id.contains('goal') || id.contains('end')) {
+        finishPosition = m.position;
+        break;
+      }
+    }
+
+    return ParsedKml(
+        polylines: polylines, markers: markers, finishPosition: finishPosition);
   }
 
   // ── KML AABBGGRR → HSV hue ────────────────────────────────────────────────

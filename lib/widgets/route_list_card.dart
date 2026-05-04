@@ -6,6 +6,8 @@ class RouteListCard extends StatelessWidget {
   final String? subtitle;
   final VoidCallback onTap;
   final IconData leadingIcon;
+  final Color? leadingColor;
+  final Widget? trailing;
 
   const RouteListCard({
     super.key,
@@ -13,6 +15,8 @@ class RouteListCard extends StatelessWidget {
     this.subtitle,
     required this.onTap,
     this.leadingIcon = Icons.directions_run,
+    this.leadingColor,
+    this.trailing,
   });
 
   @override
@@ -29,10 +33,11 @@ class RouteListCard extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: AppTheme.primary.withValues(alpha: 0.1),
+                  color: (leadingColor ?? AppTheme.primary).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(leadingIcon, color: AppTheme.primary, size: 22),
+                child: Icon(leadingIcon,
+                    color: leadingColor ?? AppTheme.primary, size: 22),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -63,7 +68,8 @@ class RouteListCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              const Icon(Icons.chevron_right, color: Color(0xFFD1D5DB)),
+              trailing ??
+                  const Icon(Icons.chevron_right, color: Color(0xFFD1D5DB)),
             ],
           ),
         ),

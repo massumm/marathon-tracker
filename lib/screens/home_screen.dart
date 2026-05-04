@@ -5,8 +5,38 @@ import '../app/routes/app_routes.dart';
 import '../controllers/home_controller.dart';
 import '../controllers/kml_map_controller.dart';
 import '../core/theme.dart';
+import '../services/offline_storage_service.dart';
 import 'map_screen.dart';
 import 'my_page_screen.dart';
+
+class _OfflineBanner extends StatelessWidget {
+  const _OfflineBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final online = OfflineStorageService.instance.isOnline.value;
+      return AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        height: online ? 0 : 28,
+        color: const Color(0xFF424242),
+        child: online
+            ? null
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.wifi_off, size: 12, color: Colors.white70),
+                  const SizedBox(width: 6),
+                  Text(
+                    'offline_banner'.tr,
+                    style: const TextStyle(fontSize: 11, color: Colors.white70),
+                  ),
+                ],
+              ),
+      );
+    });
+  }
+}
 
 class _RunningBanner extends StatelessWidget {
   const _RunningBanner();
@@ -61,6 +91,7 @@ class HomeScreen extends GetView<HomeController> {
     return Obx(() => Scaffold(
           body: Column(
             children: [
+              const _OfflineBanner(),
               const _RunningBanner(),
               Expanded(
                 child: IndexedStack(

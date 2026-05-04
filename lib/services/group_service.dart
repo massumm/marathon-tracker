@@ -281,11 +281,11 @@ class GroupService {
   }
 
   Stream<List<GroupMemberModel>> watchGroupMembers(String groupId) {
-    return _db.ref('group_members/$groupId').onValue.map((event) {
+    return _db.ref('group_members/$groupId').onValue.asyncMap((event) async {
       final data = event.snapshot.value;
       if (data == null) return <GroupMemberModel>[];
       final map = data as Map<dynamic, dynamic>;
-      return map.entries
+      final members = map.entries
           .map((e) => GroupMemberModel.fromMap(
               e.key as String, e.value as Map<dynamic, dynamic>))
           .toList()
@@ -294,6 +294,35 @@ class GroupService {
           if (b.isAdmin) return 1;
           return a.joinedAt.compareTo(b.joinedAt);
         });
+
+      // Fill missing photoUrls from user_stats (RTDB-cached, fast).
+      // Also patch the stored record so future reads are correct.
+      final enriched = await Future.wait(members.map((m) async {
+        if (m.photoUrl.isNotEmpty) return m;
+        try {
+          final snap =
+              await _db.ref('user_stats/${m.uid}/photoUrl').get();
+          final url = snap.value as String? ?? '';
+          if (url.isNotEmpty) {
+            // Patch stored value so it's correct next time.
+            await _db
+                .ref('group_members/$groupId/${m.uid}/photoUrl')
+                .set(url);
+          }
+          return GroupMemberModel(
+            uid: m.uid,
+            displayName: m.displayName,
+            photoUrl: url,
+            email: m.email,
+            joinedAt: m.joinedAt,
+            isAdmin: m.isAdmin,
+          );
+        } catch (_) {
+          return m;
+        }
+      }));
+
+      return enriched;
     });
   }
 

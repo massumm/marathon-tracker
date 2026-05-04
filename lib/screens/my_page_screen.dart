@@ -1,10 +1,9 @@
-import 'dart:convert';
-
+import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_storage/firebase_storage.dart' as fs;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:http/http.dart' as http;
+
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../app/routes/app_routes.dart';
 import '../controllers/my_page_controller.dart';
@@ -12,7 +11,6 @@ import '../core/theme.dart';
 import '../models/group_model.dart';
 import '../models/tracked_route.dart';
 import '../models/user_stats.dart';
-import '../services/firebase_service.dart';
 
 class MyPageScreen extends GetView<MyPageController> {
   const MyPageScreen({super.key});
@@ -213,7 +211,8 @@ class _CompletedRunsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final refs = controller.routeRefs;
-    if (refs.isEmpty) {
+    final pending = controller.localPendingNames;
+    if (refs.isEmpty && pending.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: _EmptyHexPlaceholder(
@@ -222,11 +221,13 @@ class _CompletedRunsSection extends StatelessWidget {
         ),
       );
     }
+    final tiles = <Widget>[
+      ...pending.map((name) => _LocalRouteHexTile(fileName: name)),
+      ...refs.map((ref) => _RouteHexTile(ref: ref)),
+    ];
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: _HexGrid(
-        children: refs.take(6).map((ref) => _RouteHexTile(ref: ref)).toList(),
-      ),
+      child: _HexGrid(children: tiles.take(6).toList()),
     );
   }
 }
@@ -320,224 +321,51 @@ class _HexClipper extends CustomClipper<Path> {
 
 // ── Route hex tile ────────────────────────────────────────────────────────────
 
-class _RouteHexTile extends StatefulWidget {
+class _RouteHexTile extends StatelessWidget {
   final fs.Reference ref;
   const _RouteHexTile({required this.ref});
 
   @override
-  State<_RouteHexTile> createState() => _RouteHexTileState();
-}
-
-class _RouteHexTileState extends State<_RouteHexTile> {
-  late final Future<TrackedRoute?> _future;
-
-  @override
-  void initState() {
-    super.initState();
-    _future = _load();
-  }
-
-  Future<TrackedRoute?> _load() async {
-    try {
-      final url =
-          await FirebaseService.instance.getDownloadUrl(widget.ref.fullPath);
-      final res = await http.get(Uri.parse(url));
-      final json = jsonDecode(res.body) as Map<String, dynamic>;
-      return TrackedRoute.fromJson(json, widget.ref.fullPath);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final eventName = TrackedRoute.parseEventFromFileName(ref.name);
+    final date = TrackedRoute.parseDateTimeFromFileName(ref.name);
+    final dateLabel = date.year > 2000
+        ? '${date.month}/${date.day}'
+        : '';
     return GestureDetector(
-      onTap: () =>
-          Get.toNamed(AppRoutes.routeDetail, arguments: widget.ref.fullPath),
+      onTap: () => Get.toNamed(AppRoutes.routeDetail, arguments: ref.fullPath),
       child: ClipPath(
         clipper: _HexClipper(),
         child: Container(
-          decoration: BoxDecoration(
-            color: AppTheme.primary.withValues(alpha: 0.08),
-          ),
-          child: FutureBuilder<TrackedRoute?>(
-            future: _future,
-            builder: (ctx, snap) {
-              if (!snap.hasData) {
-                return Center(
-                  child: Icon(
-                    Icons.directions_run,
-                    color: AppTheme.primary.withValues(alpha: 0.35),
-                    size: 28,
-                  ),
-                );
-              }
-              final route = snap.data;
-              if (route == null || route.route.length < 2) {
-                return Center(
-                  child: Icon(
-                    Icons.directions_run,
-                    color: AppTheme.primary.withValues(alpha: 0.35),
-                    size: 28,
-                  ),
-                );
-              }
-              return Stack(
-                fit: StackFit.expand,
-                children: [
-                  CustomPaint(
-                    painter: _RoutePainter(route.route),
-                  ),
-                  Positioned(
-                    bottom: 12,
-                    left: 6,
-                    right: 6,
-                    child: Text(
-                      TrackedRoute.parseEventFromFileName(widget.ref.name),
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 7.5,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.primary,
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── Route canvas painter ──────────────────────────────────────────────────────
-
-class _RoutePainter extends CustomPainter {
-  final List<LatLng> points;
-  const _RoutePainter(this.points);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (points.length < 2) return;
-
-    double minLat = points.first.latitude;
-    double maxLat = points.first.latitude;
-    double minLng = points.first.longitude;
-    double maxLng = points.first.longitude;
-
-    for (final p in points) {
-      if (p.latitude < minLat) minLat = p.latitude;
-      if (p.latitude > maxLat) maxLat = p.latitude;
-      if (p.longitude < minLng) minLng = p.longitude;
-      if (p.longitude > maxLng) maxLng = p.longitude;
-    }
-
-    final latRange = maxLat == minLat ? 0.0001 : maxLat - minLat;
-    final lngRange = maxLng == minLng ? 0.0001 : maxLng - minLng;
-    const pad = 12.0;
-    final drawW = size.width - pad * 2;
-    final drawH = size.height - pad * 2 - 16; // leave room for label
-
-    Offset toOff(LatLng p) => Offset(
-          pad + (p.longitude - minLng) / lngRange * drawW,
-          pad + (maxLat - p.latitude) / latRange * drawH,
-        );
-
-    final linePaint = Paint()
-      ..color = AppTheme.savedRouteRed
-      ..strokeWidth = 2.0
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-
-    final path = Path();
-    path.moveTo(toOff(points.first).dx, toOff(points.first).dy);
-    for (final p in points.skip(1)) {
-      final o = toOff(p);
-      path.lineTo(o.dx, o.dy);
-    }
-    canvas.drawPath(path, linePaint);
-
-    // Start dot
-    final startOff = toOff(points.first);
-    canvas.drawCircle(startOff, 3.5, Paint()..color = AppTheme.trackingGreen);
-  }
-
-  @override
-  bool shouldRepaint(_RoutePainter other) => other.points != points;
-}
-
-// ── Group hex tile ────────────────────────────────────────────────────────────
-
-class _GroupHexTile extends StatelessWidget {
-  final GroupModel group;
-  const _GroupHexTile({required this.group});
-
-  static const _colors = [
-    Color(0xFF00B4D8),
-    Color(0xFF7B2FBE),
-    Color(0xFF0077B6),
-    Color(0xFF2D6A4F),
-    Color(0xFFE63946),
-    Color(0xFFF4A261),
-  ];
-
-  Color get _color => _colors[group.name.hashCode.abs() % _colors.length];
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => Get.toNamed(AppRoutes.groupDetail, arguments: group),
-      child: ClipPath(
-        clipper: _HexClipper(),
-        child: Container(
-          color: _color.withValues(alpha: 0.13),
+          color: AppTheme.primary.withValues(alpha: 0.08),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(6, 14, 6, 10),
+            padding: const EdgeInsets.fromLTRB(6, 12, 6, 8),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: _color.withValues(alpha: 0.18),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Text(
-                      group.name.isNotEmpty ? group.name[0].toUpperCase() : 'G',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: _color,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 5),
+                Icon(Icons.directions_run,
+                    color: AppTheme.primary.withValues(alpha: 0.7), size: 24),
+                const SizedBox(height: 3),
                 Text(
-                  group.name,
+                  eventName,
                   textAlign: TextAlign.center,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 8,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '${group.memberCount} ${'members'.tr}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 7,
-                    color: AppTheme.textSecondary,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.primary.withValues(alpha: 0.85),
                   ),
                 ),
+                if (dateLabel.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    dateLabel,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        fontSize: 6.5, color: AppTheme.textSecondary),
+                  ),
+                ],
               ],
             ),
           ),
@@ -545,6 +373,152 @@ class _GroupHexTile extends StatelessWidget {
       ),
     );
   }
+}
+
+// ── Local (pending-sync) hex tile ─────────────────────────────────────────────
+
+class _LocalRouteHexTile extends StatelessWidget {
+  final String fileName;
+  const _LocalRouteHexTile({required this.fileName});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+        Get.toNamed(AppRoutes.routeDetail,
+            arguments: 'local/$uid/$fileName');
+      },
+      child: ClipPath(
+        clipper: _HexClipper(),
+        child: Container(
+          color: Colors.orange.withValues(alpha: 0.1),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.directions_run,
+                      color: Colors.orange.withValues(alpha: 0.7), size: 28),
+                  const SizedBox(height: 4),
+                  Text(
+                    'pending_sync'.tr,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        fontSize: 7, color: Colors.deepOrange),
+                  ),
+                ],
+              ),
+              Positioned(
+                top: 6,
+                right: 6,
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: const BoxDecoration(
+                      color: Colors.orange, shape: BoxShape.circle),
+                  child: const Icon(Icons.cloud_upload_outlined,
+                      size: 9, color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Group hex tile ────────────────────────────────────────────────────────────
+
+class _GroupHexTile extends StatefulWidget {
+  final GroupModel group;
+  const _GroupHexTile({required this.group});
+
+  @override
+  State<_GroupHexTile> createState() => _GroupHexTileState();
+}
+
+class _GroupHexTileState extends State<_GroupHexTile> {
+  String? _bannerUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBanner();
+  }
+
+  Future<void> _loadBanner() async {
+    try {
+      final snap = await FirebaseDatabase.instance
+          .ref('events/${widget.group.eventId}/bannerUrl')
+          .get();
+      final url = snap.value as String? ?? '';
+      if (url.isNotEmpty && mounted) setState(() => _bannerUrl = url);
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Get.toNamed(AppRoutes.groupDetail, arguments: widget.group),
+      child: ClipPath(
+        clipper: _HexClipper(),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Banner image or fallback colour
+            if (_bannerUrl != null)
+              Image.network(_bannerUrl!, fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => _fallbackBg())
+            else
+              _fallbackBg(),
+            // Dark gradient overlay so text is readable
+            Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.transparent, Colors.black54],
+                ),
+              ),
+            ),
+            // Group name + member count at bottom
+            Positioned(
+              bottom: 10,
+              left: 4,
+              right: 4,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    widget.group.name,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 7.5,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                  Text(
+                    '${widget.group.memberCount} ${'members'.tr}',
+                    style: TextStyle(
+                      fontSize: 6.5,
+                      color: Colors.white.withValues(alpha: 0.8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _fallbackBg() => Container(color: AppTheme.primary.withValues(alpha: 0.15));
 }
 
 // ── Empty hex placeholder ─────────────────────────────────────────────────────

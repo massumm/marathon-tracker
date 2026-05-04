@@ -2,19 +2,23 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart' as fs;
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../controllers/auth_controller.dart';
+import '../core/config.dart';
 import '../models/group_model.dart';
 import '../models/user_stats.dart';
 import '../services/firebase_service.dart';
 import '../services/friends_service.dart';
 import '../services/group_service.dart';
+import '../services/offline_storage_service.dart';
 import '../services/user_stats_service.dart';
 
 class MyPageController extends GetxController {
   final routeRefs = <fs.Reference>[].obs;
+  final localPendingNames = <String>[].obs;
   final myGroups = <GroupModel>[].obs;
   final isLoading = false.obs;
   final isUploading = false.obs;
@@ -59,12 +63,32 @@ class MyPageController extends GetxController {
   }
 
   Future<void> fetchRoutes() async {
+    final uid = user?.uid;
+    if (uid == null) return;
+
+    // 1. Load from local index immediately — no spinner, instant display
+    final cachedNames =
+        await OfflineStorageService.instance.getCachedRouteNames(uid);
+    if (cachedNames.isNotEmpty && routeRefs.isEmpty) {
+      routeRefs.value = cachedNames
+          .map((n) => fs.FirebaseStorage.instance
+              .ref('${AppConfig.routesStoragePath}/$uid/$n'))
+          .toList();
+    }
+
+    // 2. Show pending-upload names (local only, not yet on cloud)
+    localPendingNames.value =
+        await OfflineStorageService.instance.getPendingFileNames(uid);
+
+    // 3. Refresh from cloud in background
     isLoading.value = true;
     try {
-      routeRefs.value =
-          await FirebaseService.instance.fetchSavedRouteRefs();
+      final refs = await FirebaseService.instance.fetchSavedRouteRefs();
+      await OfflineStorageService.instance
+          .cacheRouteNames(uid, refs.map((r) => r.name).toList());
+      routeRefs.value = refs;
     } catch (_) {
-      routeRefs.value = [];
+      // Keep cached data — already shown above
     } finally {
       isLoading.value = false;
     }
@@ -87,6 +111,14 @@ class MyPageController extends GetxController {
       final u = user;
       if (u == null) return;
       final bytes = await picked.readAsBytes();
+      if (bytes.length > 3 * 1024 * 1024) {
+        Get.snackbar('', 'image_too_large'.tr,
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.red.shade600,
+            colorText: Colors.white,
+            margin: const EdgeInsets.all(12));
+        return;
+      }
       final ref = fs.FirebaseStorage.instance
           .ref('profile_images/${u.uid}.jpg');
       await ref.putData(

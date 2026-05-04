@@ -33,10 +33,22 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
 
   Future<void> _takePhoto() async {
     final picker = ImagePicker();
-    final photo =
-        await picker.pickImage(source: ImageSource.camera, imageQuality: 70);
+    final photo = await picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 70,
+      maxWidth: 1920,
+      maxHeight: 1080,
+    );
     if (photo == null) return;
     final bytes = await photo.readAsBytes();
+    if (bytes.length > 3 * 1024 * 1024) {
+      Get.snackbar('', 'image_too_large'.tr,
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.shade600,
+          colorText: Colors.white,
+          margin: const EdgeInsets.all(12));
+      return;
+    }
     await FirebaseService.instance.saveRunPhoto(_ctrl.runStartMs, bytes);
   }
 
@@ -310,15 +322,21 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
     return Stack(children: [
       // ── Map ───────────────────────────────────────────────────────────────
       GoogleMap(
-        initialCameraPosition:
+        initialCameraPosition: _ctrl.lastCameraPosition ??
             CameraPosition(target: _ctrl.initialLocation, zoom: 17),
         myLocationEnabled: true,
         myLocationButtonEnabled: false,
         onMapCreated: (c) {
           _ctrl.mapController = c;
-          c.animateCamera(CameraUpdate.newLatLng(_ctrl.initialLocation));
+          final saved = _ctrl.lastCameraPosition;
+          if (saved != null) {
+            c.animateCamera(CameraUpdate.newCameraPosition(saved));
+          } else {
+            c.animateCamera(CameraUpdate.newLatLng(_ctrl.initialLocation));
+          }
         },
-        onCameraMove: (_) {
+        onCameraMove: (pos) {
+          _ctrl.saveCamera(pos);
           if (isTracking) _ctrl.onUserPan();
         },
         polylines: {
@@ -360,10 +378,14 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
             children: [
               FloatingActionButton.small(
                 heroTag: 'recenter',
-                backgroundColor: Colors.white,
-                foregroundColor: AppTheme.primary,
+                backgroundColor:
+                    _ctrl.isUserPanned.value ? Colors.white : AppTheme.primary,
+                foregroundColor:
+                    _ctrl.isUserPanned.value ? AppTheme.primary : Colors.white,
                 onPressed: _ctrl.recenterCamera,
-                child: const Icon(Icons.my_location),
+                child: Icon(_ctrl.isUserPanned.value
+                    ? Icons.my_location
+                    : Icons.navigation),
               ),
               const SizedBox(height: 8),
               FloatingActionButton.small(
