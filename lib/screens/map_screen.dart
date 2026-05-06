@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../app/routes/app_routes.dart';
 import '../controllers/home_controller.dart';
@@ -95,7 +96,8 @@ class _EventCardState extends State<_EventCard> {
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(const Duration(minutes: 1), (_) {
+    // Tick every second so the hour/minute display stays accurate
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() {});
     });
   }
@@ -107,23 +109,13 @@ class _EventCardState extends State<_EventCard> {
   }
 
   String? _countdown() {
-    final parts = widget.event.date.split('-');
-    if (parts.length != 3) return null;
-    final year = int.tryParse(parts[0]);
-    final month = int.tryParse(parts[1]);
-    final day = int.tryParse(parts[2]);
-    if (year == null || month == null || day == null) return null;
-
-    final eventDay = DateTime(year, month, day);
-    final now = DateTime.now();
-    final diff = eventDay.difference(DateTime(now.year, now.month, now.day));
-
+    final eventDt = widget.event.eventDateTime;
+    if (eventDt.year == 0) return null;
+    final diff = eventDt.difference(DateTime.now());
     if (diff.isNegative) return 'finished';
     if (diff.inDays == 0) {
-      final todayDiff = eventDay.difference(now);
-      if (todayDiff.isNegative) return 'finished';
-      final h = todayDiff.inHours;
-      final m = todayDiff.inMinutes % 60;
+      final h = diff.inHours;
+      final m = diff.inMinutes % 60;
       if (h == 0) return '$m min remaining';
       return '${h}h ${m}m remaining';
     }
@@ -138,8 +130,9 @@ class _EventCardState extends State<_EventCard> {
     final month = int.tryParse(parts[1]);
     final day = int.tryParse(parts[2]);
     if (year == null || month == null || day == null) return false;
-    final eventDay = DateTime(year, month, day + 1); // day ends at midnight
-    return DateTime.now().isAfter(eventDay);
+    // Finished the next calendar day (event takes the full day to complete)
+    final endOfEvent = DateTime(year, month, day + 1);
+    return DateTime.now().isAfter(endOfEvent);
   }
 
   @override
@@ -209,6 +202,12 @@ class _EventCardState extends State<_EventCard> {
                 ],
               ),
             ),
+
+            // ── Registration bar ───────────────────────────────────────
+            if (widget.event.hasRegistration) ...[
+              const Divider(height: 1, thickness: 1),
+              _RegistrationBar(event: widget.event),
+            ],
 
             // ── Groups bar ─────────────────────────────────────────────
             const Divider(height: 1, thickness: 1),
@@ -588,6 +587,117 @@ class _GroupBar extends StatelessWidget {
 }
 
 
+
+// ── Registration bar ─────────────────────────────────────────────────────────
+
+class _RegistrationBar extends StatelessWidget {
+  final EventModel event;
+  const _RegistrationBar({required this.event});
+
+  @override
+  Widget build(BuildContext context) {
+    final isOpen = event.isRegistrationOpen;
+
+    // Determine display label
+    String label;
+    Color textColor;
+    Color iconColor;
+    if (isOpen) {
+      label = 'register_now'.tr;
+      textColor = Colors.white;
+      iconColor = Colors.white;
+    } else {
+      // Check if registration hasn't started yet
+      final startParts = event.registrationStartDate.split('-');
+      bool beforeStart = false;
+      if (startParts.length == 3) {
+        final startDate = DateTime(
+          int.tryParse(startParts[0]) ?? 0,
+          int.tryParse(startParts[1]) ?? 0,
+          int.tryParse(startParts[2]) ?? 0,
+        );
+        final today = DateTime.now();
+        final todayDate =
+            DateTime(today.year, today.month, today.day);
+        beforeStart = todayDate.isBefore(startDate);
+      }
+      label = beforeStart
+          ? 'registration_opens'
+              .tr
+              .replaceAll('@date', event.registrationStartDate)
+          : 'registration_closed'.tr;
+      textColor = Colors.grey.shade500;
+      iconColor = Colors.grey.shade400;
+    }
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: isOpen ? () => _launch(context, event.registrationUrl) : null,
+        child: Ink(
+          decoration: BoxDecoration(
+            gradient: isOpen
+                ? const LinearGradient(
+                    colors: [Color(0xFF1565C0), Color(0xFF0D47A1)],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  )
+                : null,
+            color: isOpen ? null : Colors.grey.shade50,
+          ),
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(
+              children: [
+                Icon(
+                  isOpen
+                      ? Icons.app_registration_rounded
+                      : Icons.lock_outline_rounded,
+                  size: 16,
+                  color: iconColor,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: textColor,
+                    ),
+                  ),
+                ),
+                if (isOpen)
+                  Icon(Icons.open_in_new_rounded,
+                      size: 14, color: Colors.white.withValues(alpha: 0.8)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  static Future<void> _launch(BuildContext context, String raw) async {
+    // Prepend https:// if the URL has no scheme
+    final normalized =
+        raw.startsWith('http://') || raw.startsWith('https://')
+            ? raw
+            : 'https://$raw';
+    final uri = Uri.tryParse(normalized);
+    if (uri == null) return;
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open registration link.')),
+        );
+      }
+    }
+  }
+}
 
 // ── Category picker bottom sheet ──────────────────────────────────────────────
 

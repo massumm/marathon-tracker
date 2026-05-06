@@ -30,4 +30,12 @@ class AdminUser {
   }
 
   bool get isSuperAdmin => role == AdminRole.superAdmin;
+
+  AdminUser copyWith({String? displayName}) => AdminUser(
+        uid: uid,
+        email: email,
+        displayName: displayName ?? this.displayName,
+        role: role,
+        createdAt: createdAt,
+      );
 }

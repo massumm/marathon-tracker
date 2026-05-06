@@ -15,4 +15,8 @@ class AppConfig {
   // Google APIs
   static const String googleMapsApiKey =
       'AIzaSyBpC0p4Ii20PRsABxxuJrZTeRhc4ysRnfA';
+
+  // Tutorial links — update these URLs to point to the correct videos
+  static const String drawOnMapTutorialUrl =
+      'https://www.youtube.com/watch?v=42_QTluGfok';
 }

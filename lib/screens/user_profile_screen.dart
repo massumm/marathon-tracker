@@ -1,9 +1,9 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../core/theme.dart';
 import '../models/user_stats.dart';
-import '../services/friends_service.dart';
 import '../services/user_stats_service.dart';
 
 class UserProfileScreen extends StatefulWidget {
@@ -17,7 +17,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   late final String _uid;
   UserStats? _stats;
   bool _loading = true;
-  String _friendStatus = ''; // '', 'self', 'friends', 'sent', 'add'
 
   @override
   void initState() {
@@ -28,220 +27,322 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   Future<void> _load() async {
     final stats = await UserStatsService.instance.getUserStats(_uid);
-    final status = await _friendStatus_();
     if (mounted) {
       setState(() {
         _stats = stats;
-        _friendStatus = status;
         _loading = false;
       });
     }
   }
 
-  Future<String> _friendStatus_() async {
-    if (await FriendsService.instance.isFriend(_uid)) return 'friends';
-    if (await FriendsService.instance.requestSent(_uid)) return 'sent';
-    return 'add';
-  }
-
-  Future<void> _sendRequest() async {
-    final s = _stats;
-    if (s == null) return;
-    await FriendsService.instance
-        .sendRequest(_uid, s.email, s.displayName);
-    if (mounted) setState(() => _friendStatus = 'sent');
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('profile'.tr)),
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
+        title: Text('profile'.tr,
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.w700)),
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _stats == null
               ? Center(child: Text('user_not_found'.tr))
-              : _buildProfile(),
+              : _ProfileBody(stats: _stats!),
     );
   }
+}
 
-  Widget _buildProfile() {
-    final s = _stats!;
+// ── Profile body ──────────────────────────────────────────────────────────────
+
+class _ProfileBody extends StatelessWidget {
+  final UserStats stats;
+  const _ProfileBody({required this.stats});
+
+  @override
+  Widget build(BuildContext context) {
+    final s = stats;
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
       child: Column(
         children: [
-          const SizedBox(height: 12),
-          // ── Avatar ──────────────────────────────────────────────────────
-          CircleAvatar(
-            radius: 52,
-            backgroundColor: AppTheme.primary.withValues(alpha: 0.15),
-            backgroundImage:
-                s.photoUrl.isNotEmpty ? NetworkImage(s.photoUrl) : null,
-            child: s.photoUrl.isEmpty
-                ? Text(
-                    s.label.isNotEmpty ? s.label[0].toUpperCase() : '?',
-                    style: const TextStyle(
-                        fontSize: 36,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.primary),
-                  )
-                : null,
+          // ── Banner + avatar ───────────────────────────────────────
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              _Banner(),
+              Positioned(
+                bottom: -52,
+                left: 0,
+                right: 0,
+                child: Center(child: _Avatar(stats: s)),
+              ),
+            ],
           ),
-          const SizedBox(height: 14),
-          Text(
-            s.label,
-            style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: AppTheme.textPrimary),
-          ),
-          const SizedBox(height: 4),
-          Text(s.email,
-              style: const TextStyle(
-                  fontSize: 13, color: AppTheme.textSecondary)),
-          const SizedBox(height: 16),
 
-          // ── Friend action ────────────────────────────────────────────────
-          if (_friendStatus == 'friends')
-            Chip(
-              avatar: const Icon(Icons.check, size: 16, color: Colors.green),
-              label: Text('already_friends'.tr,
+          const SizedBox(height: 68),
+
+          // ── Name + email ──────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              children: [
+                Text(
+                  s.label,
+                  textAlign: TextAlign.center,
                   style: const TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.w600)),
-              backgroundColor: const Color(0xFFE8F5E9),
-            )
-          else if (_friendStatus == 'sent')
-            Chip(
-              label: Text('request_sent'.tr,
-                  style: const TextStyle(fontSize: 13)),
-              backgroundColor: const Color(0xFFFFF8E1),
-            )
-          else if (_friendStatus == 'add')
-            ElevatedButton.icon(
-              onPressed: _sendRequest,
-              icon: const Icon(Icons.person_add_outlined, size: 18),
-              label: Text('add_friend'.tr),
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.textPrimary,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                if (s.email.isNotEmpty)
+                  Text(
+                    s.email,
+                    style: const TextStyle(
+                        fontSize: 13, color: AppTheme.textSecondary),
+                  ),
+              ],
             ),
+          ),
 
           const SizedBox(height: 28),
 
-          // ── Stats grid ───────────────────────────────────────────────────
-          _StatsGrid(stats: s),
+          // ── Stats ─────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: _StatsSection(stats: s),
+          ),
+
+          const SizedBox(height: 36),
         ],
       ),
     );
   }
 }
 
-class _StatsGrid extends StatelessWidget {
-  final UserStats stats;
-  const _StatsGrid({required this.stats});
+// ── Gradient banner ───────────────────────────────────────────────────────────
 
+class _Banner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Row(
-          children: [
-            _StatCard(
-              icon: Icons.straighten,
-              value: stats.distanceStr,
-              label: 'total_distance'.tr,
-              color: AppTheme.primary,
-            ),
-            const SizedBox(width: 12),
-            _StatCard(
-              icon: Icons.directions_run,
-              value: '${stats.totalRuns}',
-              label: 'total_runs'.tr,
-              color: AppTheme.secondary,
-            ),
-          ],
+    return Container(
+      height: 210,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFFFF8C5A), AppTheme.primaryDark],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            _StatCard(
-              icon: Icons.timer_outlined,
-              value: stats.timeStr,
-              label: 'total_time'.tr,
-              color: const Color(0xFF8E6BBF),
-            ),
-            const SizedBox(width: 12),
-            _StatCard(
-              icon: Icons.speed,
-              value: stats.avgPaceStr,
-              label: 'avg_pace'.tr,
-              color: AppTheme.trackingGreen,
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            _StatCard(
-              icon: Icons.directions_walk,
-              value: stats.stepsStr,
-              label: 'total_steps'.tr,
-              color: const Color(0xFF0288D1),
-            ),
-            const SizedBox(width: 12),
-            _StatCard(
-              icon: Icons.local_fire_department,
-              value: stats.caloriesStr,
-              label: 'total_calories'.tr,
-              color: const Color(0xFFE64A19),
-            ),
-          ],
-        ),
-      ],
+      ),
+      child: const Stack(
+        children: [
+          // Decorative circles
+          Positioned(
+            top: -30,
+            right: -30,
+            child: _DecorCircle(size: 130, opacity: 0.08),
+          ),
+          Positioned(
+            bottom: 20,
+            left: -20,
+            child: _DecorCircle(size: 90, opacity: 0.06),
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _StatCard extends StatelessWidget {
+class _DecorCircle extends StatelessWidget {
+  final double size;
+  final double opacity;
+  const _DecorCircle({required this.size, required this.opacity});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white.withValues(alpha: opacity),
+      ),
+    );
+  }
+}
+
+// ── Avatar ────────────────────────────────────────────────────────────────────
+
+class _Avatar extends StatelessWidget {
+  final UserStats stats;
+  const _Avatar({required this.stats});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 4),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: stats.photoUrl.isNotEmpty
+          ? CachedNetworkImage(
+              imageUrl: stats.photoUrl,
+              width: 108,
+              height: 108,
+              imageBuilder: (_, img) => CircleAvatar(
+                radius: 52,
+                backgroundImage: img,
+              ),
+              placeholder: (_, __) => _InitialCircle(label: stats.label),
+              errorWidget: (_, __, ___) => _InitialCircle(label: stats.label),
+            )
+          : _InitialCircle(label: stats.label),
+    );
+  }
+}
+
+class _InitialCircle extends StatelessWidget {
+  final String label;
+  const _InitialCircle({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return CircleAvatar(
+      radius: 52,
+      backgroundColor: AppTheme.primary.withValues(alpha: 0.15),
+      child: Text(
+        label.isNotEmpty ? label[0].toUpperCase() : '?',
+        style: const TextStyle(
+          fontSize: 40,
+          fontWeight: FontWeight.w700,
+          color: AppTheme.primary,
+        ),
+      ),
+    );
+  }
+}
+
+// ── Stats section ─────────────────────────────────────────────────────────────
+
+class _StatsSection extends StatelessWidget {
+  final UserStats stats;
+  const _StatsSection({required this.stats});
+
+  @override
+  Widget build(BuildContext context) {
+    final items = [
+      _StatItem(Icons.straighten_rounded, stats.distanceStr,
+          'total_distance'.tr, const Color(0xFFFF6B35)),
+      _StatItem(Icons.directions_run_rounded, '${stats.totalRuns}',
+          'total_runs'.tr, const Color(0xFF00B4D8)),
+      _StatItem(Icons.timer_rounded, stats.timeStr,
+          'total_time'.tr, const Color(0xFF8E6BBF)),
+      _StatItem(Icons.speed_rounded, stats.avgPaceStr,
+          'avg_pace'.tr, const Color(0xFF48BB78)),
+      _StatItem(Icons.hiking_rounded, stats.stepsStr,
+          'total_steps'.tr, const Color(0xFF0288D1)),
+      _StatItem(Icons.local_fire_department_rounded, stats.caloriesStr,
+          'total_calories'.tr, const Color(0xFFE64A19)),
+    ];
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: items.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 1.6,
+      ),
+      itemBuilder: (_, i) => _StatCard(item: items[i]),
+    );
+  }
+}
+
+class _StatItem {
   final IconData icon;
   final String value;
   final String label;
   final Color color;
-  const _StatCard(
-      {required this.icon,
-      required this.value,
-      required this.label,
-      required this.color});
+  const _StatItem(this.icon, this.value, this.label, this.color);
+}
+
+class _StatCard extends StatelessWidget {
+  final _StatItem item;
+  const _StatCard({required this.item});
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: item.color.withValues(alpha: 0.10),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: item.color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: color, size: 22),
-            const SizedBox(height: 10),
-            Text(value,
-                style: TextStyle(
-                    fontSize: 20,
+            child: Icon(item.icon, color: item.color, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  item.value,
+                  style: TextStyle(
+                    fontSize: 16,
                     fontWeight: FontWeight.w800,
-                    color: color)),
-            const SizedBox(height: 2),
-            Text(label,
-                style: const TextStyle(
-                    fontSize: 11, color: AppTheme.textSecondary)),
-          ],
-        ),
+                    color: item.color,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  item.label,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: AppTheme.textSecondary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

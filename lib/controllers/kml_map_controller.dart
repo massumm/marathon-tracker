@@ -156,9 +156,27 @@ class KmlMapController extends GetxController {
   Future<BitmapDescriptor> _getRunnerIcon(RunnerData runner) async {
     final key = '${runner.uid}_${runner.photoUrl}';
     if (_iconCache.containsKey(key)) return _iconCache[key]!;
-    final icon = await _buildRunnerIcon(runner);
-    _iconCache[key] = icon;
-    return icon;
+    try {
+      final icon = await _buildRunnerIcon(runner);
+      _iconCache[key] = icon;
+      return icon;
+    } catch (_) {
+      // Build initial-letter fallback so one failure doesn't kill all markers
+      final noPhoto = RunnerData(
+        uid: runner.uid,
+        email: runner.email,
+        displayName: runner.displayName,
+        photoUrl: '',
+        lat: runner.lat,
+        lng: runner.lng,
+        startedAt: runner.startedAt,
+        distanceKm: runner.distanceKm,
+        eventId: runner.eventId,
+      );
+      final fallback = await _buildRunnerIcon(noPhoto);
+      _iconCache[key] = fallback;
+      return fallback;
+    }
   }
 
   Future<BitmapDescriptor> _buildRunnerIcon(RunnerData runner) async {
@@ -588,6 +606,10 @@ class KmlMapController extends GetxController {
     // 3. Stats are queued by RTDB persistence — safe offline
     await UserStatsService.instance
         .addRunStats(totalDistance, elapsedSeconds.value);
+    if (currentEventId.isNotEmpty) {
+      await UserStatsService.instance.addEventRunStats(
+          currentEventId, totalDistance, elapsedSeconds.value);
+    }
     isSaving.value = false;
 
     Get.find<HomeController>()

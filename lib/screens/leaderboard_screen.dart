@@ -123,8 +123,11 @@ class _GroupSection extends StatelessWidget {
               }
               final memberUids = members.map((m) => m.uid).toList();
               return StreamBuilder<List<UserStats>>(
-                stream: UserStatsService.instance
-                    .watchFriendLeaderboard(memberUids),
+                stream: group.eventId.isNotEmpty
+                    ? UserStatsService.instance
+                        .watchEventLeaderboard(group.eventId, memberUids)
+                    : UserStatsService.instance
+                        .watchFriendLeaderboard(memberUids),
                 builder: (ctx, statsSnap) {
                   if (statsSnap.connectionState == ConnectionState.waiting) {
                     return const Padding(

@@ -97,11 +97,70 @@ class UserStatsService {
     return watchLeaderboard().map((all) {
       final filtered =
           all.where((s) => allowed.contains(s.uid)).toList();
-      // Re-rank within the filtered set
       for (int i = 0; i < filtered.length; i++) {
         filtered[i].rank = i + 1;
       }
       return filtered;
+    });
+  }
+
+  /// Saves per-event best run stats under event_stats/{eventId}/{uid}.
+  /// Keeps the best (longest distance) run for the event.
+  Future<void> addEventRunStats(
+      String eventId, double distanceKm, int seconds) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final ref = _db.ref('event_stats/$eventId/${user.uid}');
+    final snap = await ref.get();
+    final existing = snap.exists ? snap.value as Map<dynamic, dynamic> : null;
+    final prevDist = (existing?['distanceKm'] as num?)?.toDouble() ?? 0.0;
+    if (distanceKm >= prevDist) {
+      await ref.set({
+        'distanceKm': distanceKm,
+        'seconds': seconds,
+        'displayName': user.displayName ??
+            user.email?.split('@').first ??
+            'Runner',
+        'photoUrl': user.photoURL ?? '',
+        'completedAt': ServerValue.timestamp,
+      });
+    }
+  }
+
+  /// Event-specific leaderboard filtered to [memberUids], sorted by distance.
+  Stream<List<UserStats>> watchEventLeaderboard(
+      String eventId, List<String> memberUids) {
+    if (eventId.isEmpty || memberUids.isEmpty) return Stream.value([]);
+    final allowed = memberUids.toSet();
+    return _db.ref('event_stats/$eventId').onValue.map((event) {
+      final data = event.snapshot.value;
+      if (data == null) return <UserStats>[];
+      final map = data as Map<dynamic, dynamic>;
+      final list = map.entries
+          .where((e) => allowed.contains(e.key as String))
+          .map((e) {
+            final m = e.value as Map<dynamic, dynamic>;
+            final s = UserStats(
+              uid: e.key as String,
+              displayName: m['displayName'] as String? ?? '',
+              email: '',
+              photoUrl: m['photoUrl'] as String? ?? '',
+              totalDistanceKm:
+                  (m['distanceKm'] as num?)?.toDouble() ?? 0.0,
+              totalRuns: 1,
+              totalSeconds: (m['seconds'] as num?)?.toInt() ?? 0,
+            );
+            return s;
+          })
+          .toList()
+        ..sort((a, b) {
+          final d = b.totalDistanceKm.compareTo(a.totalDistanceKm);
+          return d != 0 ? d : a.totalSeconds.compareTo(b.totalSeconds);
+        });
+      for (int i = 0; i < list.length; i++) {
+        list[i].rank = i + 1;
+      }
+      return list;
     });
   }
 }

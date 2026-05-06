@@ -84,7 +84,7 @@ class NotificationService {
       message.hashCode,
       n.title,
       n.body,
-      NotificationDetails(
+      const NotificationDetails(
         android: AndroidNotificationDetails(
           _channelId,
           _channelName,
@@ -92,7 +92,7 @@ class NotificationService {
           priority: Priority.high,
           icon: '@mipmap/ic_launcher',
         ),
-        iOS: const DarwinNotificationDetails(),
+        iOS: DarwinNotificationDetails(),
       ),
       payload: jsonEncode(message.data),
     );
@@ -110,14 +110,37 @@ class NotificationService {
 
   void _navigate(Map<String, dynamic> data) async {
     final type = data['type'] as String?;
+    final currentUid = FirebaseAuth.instance.currentUser?.uid;
+
+    // targetUid is set by cloud functions so only the right user navigates
+    // (prevents shared-device or token-collision side effects)
+    final targetUid = data['targetUid'] as String?;
+    if (targetUid != null && targetUid != currentUid) return;
+
     switch (type) {
       case 'group_join_request':
+        // Admin taps: open group detail so they can review the request
+        final groupId = data['groupId'] as String?;
+        if (groupId == null) return;
+        final group = await GroupService.instance.getGroup(groupId);
+        if (group == null) return;
+        if (group.adminUid != currentUid) return;
+        Get.toNamed(AppRoutes.groupDetail, arguments: group);
+        break;
+
+      case 'group_join_accepted':
+        // Requester taps: open the group they just joined
         final groupId = data['groupId'] as String?;
         if (groupId == null) return;
         final group = await GroupService.instance.getGroup(groupId);
         if (group == null) return;
         Get.toNamed(AppRoutes.groupDetail, arguments: group);
         break;
+
+      case 'group_join_declined':
+        // Nothing to navigate to — notification text already told the user
+        break;
+
       case 'leaderboard':
         Get.toNamed(AppRoutes.leaderboard);
         break;

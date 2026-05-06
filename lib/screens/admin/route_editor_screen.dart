@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 import 'package:xml/xml.dart';
 
 import '../../core/config.dart';
@@ -173,6 +175,10 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
   bool _loading = false;
   bool _searchLoading = false;
 
+  // Custom marker icons — built once, cached here
+  BitmapDescriptor? _routeDotIcon;
+  final _typeIcons = <_MarkerType, BitmapDescriptor>{};
+
   final List<LatLng> _routePoints = [];
   final List<_PlacedMarker> _markers = [];
   int _markerCounter = 0;
@@ -185,6 +191,7 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
   @override
   void initState() {
     super.initState();
+    _buildIcons();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.existingKmlPath.isNotEmpty) {
         _loadExistingKml();
@@ -192,6 +199,78 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
         _moveToCurrentLocation();
       }
     });
+  }
+
+  Future<void> _buildIcons() async {
+    final dot = await _makeDotIcon();
+    final icons = <_MarkerType, BitmapDescriptor>{};
+    for (final t in _MarkerType.values) {
+      icons[t] = await _makeTypeIcon(t);
+    }
+    if (!mounted) return;
+    setState(() {
+      _routeDotIcon = dot;
+      _typeIcons.addAll(icons);
+    });
+  }
+
+  static Future<BitmapDescriptor> _makeDotIcon() async {
+    const int sz = 18;
+    final recorder = ui.PictureRecorder();
+    final c = Canvas(recorder);
+    const cx = sz / 2.0;
+
+    // soft shadow
+    c.drawCircle(Offset(cx + 0.5, cx + 0.5), cx - 1,
+        Paint()..color = Colors.black26);
+    // white ring
+    c.drawCircle(Offset(cx, cx), cx - 1, Paint()..color = Colors.white);
+    // blue core
+    c.drawCircle(Offset(cx, cx), cx - 3.5,
+        Paint()..color = const Color(0xFF4285F4));
+
+    final img = await recorder.endRecording().toImage(sz, sz);
+    final bytes = await img.toByteData(format: ui.ImageByteFormat.png);
+    return BitmapDescriptor.bytes(bytes!.buffer.asUint8List());
+  }
+
+  static Future<BitmapDescriptor> _makeTypeIcon(_MarkerType type) async {
+    const int sz = 48;
+    const double cx = sz / 2.0;
+    const double r = cx - 2;
+
+    final recorder = ui.PictureRecorder();
+    final c = Canvas(recorder);
+
+    // drop shadow
+    c.drawCircle(Offset(cx + 1.5, cx + 1.5), r,
+        Paint()..color = Colors.black.withValues(alpha: 0.28));
+    // filled circle
+    c.drawCircle(Offset(cx, cx), r, Paint()..color = type.color);
+    // white border
+    c.drawCircle(
+        Offset(cx, cx),
+        r,
+        Paint()
+          ..color = Colors.white
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.5);
+    // icon glyph
+    final tp = TextPainter(textDirection: TextDirection.ltr)
+      ..text = TextSpan(
+        text: String.fromCharCode(type.icon.codePoint),
+        style: TextStyle(
+          fontSize: sz * 0.44,
+          fontFamily: type.icon.fontFamily,
+          color: Colors.white,
+        ),
+      )
+      ..layout();
+    tp.paint(c, Offset(cx - tp.width / 2, cx - tp.height / 2));
+
+    final img = await recorder.endRecording().toImage(sz, sz);
+    final bytes = await img.toByteData(format: ui.ImageByteFormat.png);
+    return BitmapDescriptor.bytes(bytes!.buffer.asUint8List());
   }
 
   @override
@@ -549,7 +628,9 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
         .map((m) => Marker(
               markerId: MarkerId(m.id),
               position: m.position,
-              icon: BitmapDescriptor.defaultMarkerWithHue(m.type.hue),
+              icon: _typeIcons[m.type] ??
+                  BitmapDescriptor.defaultMarkerWithHue(m.type.hue),
+              anchor: const Offset(0.5, 0.5),
               infoWindow: InfoWindow(title: m.name, snippet: m.type.label),
             ))
         .toSet();
@@ -558,7 +639,8 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
       return Marker(
         markerId: MarkerId('pt_${e.key}'),
         position: e.value,
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+        icon: _routeDotIcon ??
+            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
         anchor: const Offset(0.5, 0.5),
         infoWindow: InfoWindow(title: 'Point ${e.key + 1}'),
       );
@@ -617,6 +699,47 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
                       label: 'Add Marker',
                       active: _mode == _EditMode.marker,
                       onTap: () => setState(() => _mode = _EditMode.marker),
+                    ),
+                    const SizedBox(width: 8),
+                    Tooltip(
+                      message: 'Watch tutorial',
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: () async {
+                          final uri =
+                              Uri.parse(AppConfig.drawOnMapTutorialUrl);
+                          try {
+                            await launchUrl(uri,
+                                mode: LaunchMode.externalApplication);
+                          } catch (_) {}
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFF0000)
+                                .withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: const Color(0xFFFF0000)
+                                  .withValues(alpha: 0.25),
+                            ),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.play_circle_outline_rounded,
+                                  size: 16, color: Color(0xFFCC0000)),
+                              SizedBox(width: 5),
+                              Text('Tutorial',
+                                  style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFFCC0000))),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                     const Spacer(),
                     Text(

@@ -1,11 +1,14 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/config.dart';
 import '../../core/theme.dart';
 import '../../models/event_model.dart';
 import '../../services/admin_service.dart';
 import 'route_editor_screen.dart';
+
 
 class EventFormScreen extends StatefulWidget {
   final EventModel? existing;
@@ -20,7 +23,11 @@ class _EventFormScreenState extends State<EventFormScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameCtrl;
   late final TextEditingController _dateCtrl;
+  late final TextEditingController _timeCtrl;
   late final TextEditingController _locationCtrl;
+  late final TextEditingController _regStartCtrl;
+  late final TextEditingController _regEndCtrl;
+  late final TextEditingController _regUrlCtrl;
 
   late final String _tmpEventId;
   bool _saving = false;
@@ -38,7 +45,11 @@ class _EventFormScreenState extends State<EventFormScreen> {
     final e = widget.existing;
     _nameCtrl = TextEditingController(text: e?.name ?? '');
     _dateCtrl = TextEditingController(text: e?.date ?? '');
+    _timeCtrl = TextEditingController(text: e?.startTime ?? '');
     _locationCtrl = TextEditingController(text: e?.location ?? '');
+    _regStartCtrl = TextEditingController(text: e?.registrationStartDate ?? '');
+    _regEndCtrl = TextEditingController(text: e?.registrationEndDate ?? '');
+    _regUrlCtrl = TextEditingController(text: e?.registrationUrl ?? '');
     _tmpEventId =
         widget.existing?.id ?? DateTime.now().millisecondsSinceEpoch.toString();
     _bannerUrl = e?.bannerUrl ?? '';
@@ -60,7 +71,11 @@ class _EventFormScreenState extends State<EventFormScreen> {
   void dispose() {
     _nameCtrl.dispose();
     _dateCtrl.dispose();
+    _timeCtrl.dispose();
     _locationCtrl.dispose();
+    _regStartCtrl.dispose();
+    _regEndCtrl.dispose();
+    _regUrlCtrl.dispose();
     for (final c in _categories) {
       c.labelCtrl.dispose();
       c.cutoffCtrl.dispose();
@@ -180,11 +195,15 @@ class _EventFormScreenState extends State<EventFormScreen> {
       final data = {
         'name': _nameCtrl.text.trim(),
         'date': _dateCtrl.text.trim(),
+        'startTime': _timeCtrl.text.trim(),
         'location': _locationCtrl.text.trim(),
         'bannerUrl': bannerUrl,
         'createdAt':
             widget.existing?.createdAt ?? DateTime.now().millisecondsSinceEpoch,
         'organizerUid': widget.existing?.organizerUid ?? widget.organizerUid,
+        'registrationStartDate': _regStartCtrl.text.trim(),
+        'registrationEndDate': _regEndCtrl.text.trim(),
+        'registrationUrl': _regUrlCtrl.text.trim(),
         'categories': catMaps,
       };
 
@@ -352,15 +371,138 @@ class _EventFormScreenState extends State<EventFormScreen> {
                     const SizedBox(width: 14),
                     Expanded(
                       child: _buildField(
-                        controller: _locationCtrl,
-                        label: 'Location',
-                        hint: 'e.g. Iwaki City, Fukushima',
-                        icon: Icons.location_on_outlined,
-                        validator: (v) =>
-                            v == null || v.trim().isEmpty ? 'Required' : null,
+                        controller: _timeCtrl,
+                        label: 'Start Time',
+                        hint: 'e.g. 08:00',
+                        icon: Icons.access_time_rounded,
+                        readOnly: true,
+                        onTap: () async {
+                          final initial = TimeOfDay.now();
+                          final picked = await showTimePicker(
+                            context: context,
+                            initialTime: initial,
+                            builder: (ctx, child) => MediaQuery(
+                              data: MediaQuery.of(ctx)
+                                  .copyWith(alwaysUse24HourFormat: true),
+                              child: child!,
+                            ),
+                          );
+                          if (picked != null) {
+                            _timeCtrl.text =
+                                '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+                          }
+                        },
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 14),
+                _buildField(
+                  controller: _locationCtrl,
+                  label: 'Location',
+                  hint: 'e.g. Iwaki City, Fukushima',
+                  icon: Icons.location_on_outlined,
+                  validator: (v) =>
+                      v == null || v.trim().isEmpty ? 'Required' : null,
+                ),
+
+                const SizedBox(height: 32),
+
+                // ── Registration ─────────────────────────────────────────
+                _buildSectionHeader('Registration', null),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Set a date range and URL to show a "Register Now" button in the app.',
+                        style: TextStyle(
+                            fontSize: 12, color: Colors.grey.shade500),
+                      ),
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildField(
+                              controller: _regStartCtrl,
+                              label: 'Registration Start',
+                              hint: 'e.g. 2025-10-01',
+                              icon: Icons.event_available_outlined,
+                              readOnly: true,
+                              onTap: () async {
+                                final picked = await showDatePicker(
+                                  context: context,
+                                  initialDate: DateTime.now(),
+                                  firstDate: DateTime(2020),
+                                  lastDate: DateTime(2030),
+                                );
+                                if (picked != null) {
+                                  setState(() {
+                                    _regStartCtrl.text =
+                                        '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+                                  });
+                                }
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: _buildField(
+                              controller: _regEndCtrl,
+                              label: 'Registration End',
+                              hint: 'e.g. 2025-11-20',
+                              icon: Icons.event_busy_outlined,
+                              readOnly: true,
+                              onTap: () async {
+                                final picked = await showDatePicker(
+                                  context: context,
+                                  initialDate: DateTime.now(),
+                                  firstDate: DateTime(2020),
+                                  lastDate: DateTime(2030),
+                                );
+                                if (picked != null) {
+                                  setState(() {
+                                    _regEndCtrl.text =
+                                        '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+                                  });
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      _buildField(
+                        controller: _regUrlCtrl,
+                        label: 'Registration URL',
+                        hint: 'https://example.com/register',
+                        icon: Icons.link_rounded,
+                      ),
+                      const SizedBox(height: 4),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton.icon(
+                          onPressed: () => setState(() {
+                            _regStartCtrl.clear();
+                            _regEndCtrl.clear();
+                            _regUrlCtrl.clear();
+                          }),
+                          icon: const Icon(Icons.clear, size: 15),
+                          label: const Text('Clear registration',
+                              style: TextStyle(fontSize: 12)),
+                          style: TextButton.styleFrom(
+                              foregroundColor: Colors.red),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
 
                 const SizedBox(height: 32),
@@ -562,6 +704,40 @@ class _EventFormScreenState extends State<EventFormScreen> {
                                       borderRadius: BorderRadius.circular(8)),
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 14, vertical: 10),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Tooltip(
+                                message: 'Watch tutorial',
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(8),
+                                  onTap: () async {
+                                    final uri = Uri.parse(
+                                        AppConfig.drawOnMapTutorialUrl);
+                                    try {
+                                      await launchUrl(uri,
+                                          mode: LaunchMode
+                                              .externalApplication);
+                                    } catch (_) {}
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFF0000)
+                                          .withValues(alpha: 0.08),
+                                      borderRadius:
+                                          BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: const Color(0xFFFF0000)
+                                            .withValues(alpha: 0.25),
+                                      ),
+                                    ),
+                                    child: const Icon(
+                                      Icons.play_circle_outline_rounded,
+                                      size: 20,
+                                      color: Color(0xFFCC0000),
+                                    ),
+                                  ),
                                 ),
                               ),
                             ],

@@ -106,6 +106,14 @@
           ".write": "auth != null && (auth.uid === $uid || root.child('groups').child($groupId).child('adminUid').val() === auth.uid)"
         }
       }
+    },
+    "group_join_responses": {
+      "$groupId": {
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid",
+          ".write": "auth != null && root.child('groups').child($groupId).child('adminUid').val() === auth.uid"
+        }
+      }
     }
   }
 }

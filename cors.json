@@ -1,8 +1,8 @@
 [
   {
-    "origin": ["*"],
+    "origin": ["https://runmate.xorgeek.com", "http://localhost:*"],
     "method": ["GET", "HEAD"],
-    "responseHeader": ["Content-Type", "Content-Disposition"],
+    "responseHeader": ["Content-Type", "Authorization", "Content-Length"],
     "maxAgeSeconds": 3600
   }
 ]

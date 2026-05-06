@@ -8,6 +8,7 @@ import 'package:firebase_storage/firebase_storage.dart' as fs;
 import '../models/admin_user_model.dart';
 import '../models/event_model.dart';
 import '../models/runner_data.dart';
+import '../models/user_stats.dart';
 
 class AdminService {
   AdminService._();
@@ -96,6 +97,35 @@ class AdminService {
         );
       }).toList()
         ..sort((a, b) => b.distanceKm.compareTo(a.distanceKm));
+    });
+  }
+
+  /// Streams all finisher stats for a completed event, sorted by distance desc.
+  Stream<List<UserStats>> watchEventResults(String eventId) {
+    return _db.ref('event_stats/$eventId').onValue.map((e) {
+      final data = e.snapshot.value;
+      if (data == null) return <UserStats>[];
+      final map = data as Map<dynamic, dynamic>;
+      final list = map.entries.map((entry) {
+        final m = entry.value as Map<dynamic, dynamic>;
+        return UserStats(
+          uid: entry.key as String,
+          displayName: m['displayName'] as String? ?? '',
+          email: '',
+          photoUrl: m['photoUrl'] as String? ?? '',
+          totalDistanceKm: (m['distanceKm'] as num?)?.toDouble() ?? 0.0,
+          totalRuns: 1,
+          totalSeconds: (m['seconds'] as num?)?.toInt() ?? 0,
+        );
+      }).toList()
+        ..sort((a, b) {
+          final d = b.totalDistanceKm.compareTo(a.totalDistanceKm);
+          return d != 0 ? d : a.totalSeconds.compareTo(b.totalSeconds);
+        });
+      for (int i = 0; i < list.length; i++) {
+        list[i].rank = i + 1;
+      }
+      return list;
     });
   }
 

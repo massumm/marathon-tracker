@@ -232,7 +232,7 @@ class _CompletedRunsSection extends StatelessWidget {
   }
 }
 
-// ── My clubs hex section ──────────────────────────────────────────────────────
+// ── My clubs card section ─────────────────────────────────────────────────────
 
 class _MyClubsSection extends StatelessWidget {
   final MyPageController controller;
@@ -250,10 +250,14 @@ class _MyClubsSection extends StatelessWidget {
         ),
       );
     }
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: _HexGrid(
-        children: groups.take(6).map((g) => _GroupHexTile(group: g)).toList(),
+    return SizedBox(
+      height: 148,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: groups.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        itemBuilder: (_, i) => _GroupCard(group: groups[i]),
       ),
     );
   }
@@ -397,32 +401,40 @@ class _LocalRouteHexTile extends StatelessWidget {
   }
 }
 
-// ── Group hex tile ────────────────────────────────────────────────────────────
+// ── Group card (horizontal list item) ────────────────────────────────────────
 
-class _GroupHexTile extends StatefulWidget {
+class _GroupCard extends StatefulWidget {
   final GroupModel group;
-  const _GroupHexTile({required this.group});
+  const _GroupCard({required this.group});
 
   @override
-  State<_GroupHexTile> createState() => _GroupHexTileState();
+  State<_GroupCard> createState() => _GroupCardState();
 }
 
-class _GroupHexTileState extends State<_GroupHexTile> {
+class _GroupCardState extends State<_GroupCard> {
   String? _bannerUrl;
+  String _eventName = '';
 
   @override
   void initState() {
     super.initState();
-    _loadBanner();
+    _loadEvent();
   }
 
-  Future<void> _loadBanner() async {
+  Future<void> _loadEvent() async {
     try {
       final snap = await FirebaseDatabase.instance
-          .ref('events/${widget.group.eventId}/bannerUrl')
+          .ref('events/${widget.group.eventId}')
           .get();
-      final url = snap.value as String? ?? '';
-      if (url.isNotEmpty && mounted) setState(() => _bannerUrl = url);
+      if (!mounted) return;
+      final data = snap.value as Map<dynamic, dynamic>?;
+      if (data == null) return;
+      final banner = data['bannerUrl'] as String? ?? '';
+      final name = data['name'] as String? ?? '';
+      setState(() {
+        if (banner.isNotEmpty) _bannerUrl = banner;
+        if (name.isNotEmpty) _eventName = name;
+      });
     } catch (_) {}
   }
 
@@ -430,51 +442,98 @@ class _GroupHexTileState extends State<_GroupHexTile> {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () => Get.toNamed(AppRoutes.groupDetail, arguments: widget.group),
-      child: ClipPath(
-        clipper: _HexClipper(),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // Banner image or fallback colour
-            if (_bannerUrl != null)
-              Image.network(_bannerUrl!, fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => _fallbackBg())
-            else
-              _fallbackBg(),
-            // Dark gradient overlay so text is readable
-            Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, Colors.black54],
-                ),
-              ),
+      child: Container(
+        width: 160,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
             ),
-            // Group name + member count at bottom
-            Positioned(
-              bottom: 10,
-              left: 4,
-              right: 4,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+          ],
+        ),
+        clipBehavior: Clip.hardEdge,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Event banner ──────────────────────────────────────────
+            SizedBox(
+              height: 88,
+              child: Stack(
+                fit: StackFit.expand,
                 children: [
-                  Text(
-                    widget.group.name,
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 7.5,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
+                  if (_bannerUrl != null)
+                    CachedNetworkImage(
+                      imageUrl: _bannerUrl!,
+                      fit: BoxFit.cover,
+                      placeholder: (_, __) => _bannerFallback(),
+                      errorWidget: (_, __, ___) => _bannerFallback(),
+                    )
+                  else
+                    _bannerFallback(),
+                  // gradient so text is readable
+                  Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.transparent, Colors.black45],
+                      ),
                     ),
                   ),
+                  if (_eventName.isNotEmpty)
+                    Positioned(
+                      bottom: 6,
+                      left: 8,
+                      right: 8,
+                      child: Text(
+                        _eventName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            // ── Club info ─────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.group_outlined,
+                          size: 12, color: AppTheme.primary),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          widget.group.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.textPrimary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
                   Text(
                     '${widget.group.memberCount} ${'members'.tr}',
-                    style: TextStyle(
-                      fontSize: 6.5,
-                      color: Colors.white.withValues(alpha: 0.8),
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: AppTheme.textSecondary,
                     ),
                   ),
                 ],
@@ -486,7 +545,13 @@ class _GroupHexTileState extends State<_GroupHexTile> {
     );
   }
 
-  Widget _fallbackBg() => Container(color: AppTheme.primary.withValues(alpha: 0.15));
+  Widget _bannerFallback() => Container(
+        color: AppTheme.primary.withValues(alpha: 0.12),
+        child: const Center(
+          child: Icon(Icons.emoji_events_outlined,
+              color: AppTheme.primary, size: 32),
+        ),
+      );
 }
 
 // ── Empty hex placeholder ─────────────────────────────────────────────────────

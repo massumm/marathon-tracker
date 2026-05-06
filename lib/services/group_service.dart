@@ -140,17 +140,32 @@ class GroupService {
     final requestData = requestSnap.value as Map<dynamic, dynamic>;
     final countSnap = await _db.ref('groups/$groupId/memberCount').get();
     final count = countSnap.value as int? ?? 0;
+    final nameSnap = await _db.ref('groups/$groupId/name').get();
+    final groupName = nameSnap.value as String? ?? '';
 
     await Future.wait([
       _db.ref('group_members/$groupId/$uid').set(requestData),
       _db.ref('groups/$groupId/memberCount').set(count + 1),
       _db.ref('user_groups/$uid/$groupId').set(true),
       _db.ref('group_join_requests/$groupId/$uid').remove(),
+      _db.ref('group_join_responses/$groupId/$uid').set({
+        'status': 'accepted',
+        'groupName': groupName,
+      }),
     ]);
   }
 
   Future<void> declineJoinRequest(String groupId, String uid) async {
-    await _db.ref('group_join_requests/$groupId/$uid').remove();
+    final nameSnap = await _db.ref('groups/$groupId/name').get();
+    final groupName = nameSnap.value as String? ?? '';
+
+    await Future.wait([
+      _db.ref('group_join_requests/$groupId/$uid').remove(),
+      _db.ref('group_join_responses/$groupId/$uid').set({
+        'status': 'declined',
+        'groupName': groupName,
+      }),
+    ]);
   }
 
   Stream<List<GroupMemberModel>> watchJoinRequests(String groupId) {
@@ -295,23 +310,34 @@ class GroupService {
           return a.joinedAt.compareTo(b.joinedAt);
         });
 
-      // Fill missing photoUrls from user_stats (RTDB-cached, fast).
+      // Fill missing displayName/photoUrl from user_stats.
       // Also patch the stored record so future reads are correct.
       final enriched = await Future.wait(members.map((m) async {
-        if (m.photoUrl.isNotEmpty) return m;
+        if (m.displayName.isNotEmpty && m.photoUrl.isNotEmpty) return m;
         try {
-          final snap =
-              await _db.ref('user_stats/${m.uid}/photoUrl').get();
-          final url = snap.value as String? ?? '';
-          if (url.isNotEmpty) {
-            // Patch stored value so it's correct next time.
+          final snap = await _db.ref('user_stats/${m.uid}').get();
+          final stats = snap.value as Map<dynamic, dynamic>?;
+          final name = m.displayName.isNotEmpty
+              ? m.displayName
+              : (stats?['displayName'] as String? ?? '');
+          final url = m.photoUrl.isNotEmpty
+              ? m.photoUrl
+              : (stats?['photoUrl'] as String? ?? '');
+          final updates = <String, dynamic>{};
+          if (name.isNotEmpty && m.displayName.isEmpty) {
+            updates['displayName'] = name;
+          }
+          if (url.isNotEmpty && m.photoUrl.isEmpty) {
+            updates['photoUrl'] = url;
+          }
+          if (updates.isNotEmpty) {
             await _db
-                .ref('group_members/$groupId/${m.uid}/photoUrl')
-                .set(url);
+                .ref('group_members/$groupId/${m.uid}')
+                .update(updates);
           }
           return GroupMemberModel(
             uid: m.uid,
-            displayName: m.displayName,
+            displayName: name,
             photoUrl: url,
             email: m.email,
             joinedAt: m.joinedAt,

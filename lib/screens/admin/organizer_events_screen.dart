@@ -8,10 +8,12 @@ import 'event_form_screen.dart';
 class OrganizerEventsScreen extends StatelessWidget {
   final String organizerUid;
   final void Function(EventModel event)? onLeaderboardTap;
+  final void Function(EventModel event)? onResultsTap;
   const OrganizerEventsScreen({
     super.key,
     required this.organizerUid,
     this.onLeaderboardTap,
+    this.onResultsTap,
   });
 
   @override
@@ -66,6 +68,7 @@ class OrganizerEventsScreen extends StatelessWidget {
                 event: events[i],
                 organizerUid: organizerUid,
                 onLeaderboardTap: onLeaderboardTap,
+                onResultsTap: onResultsTap,
               ),
             );
           },
@@ -95,10 +98,12 @@ class _EventCard extends StatelessWidget {
   final EventModel event;
   final String organizerUid;
   final void Function(EventModel event)? onLeaderboardTap;
+  final void Function(EventModel event)? onResultsTap;
   const _EventCard({
     required this.event,
     required this.organizerUid,
     this.onLeaderboardTap,
+    this.onResultsTap,
   });
 
   @override
@@ -191,11 +196,60 @@ class _EventCard extends StatelessWidget {
                     const Icon(Icons.location_on_outlined,
                         size: 14, color: AppTheme.textSecondary),
                     const SizedBox(width: 6),
-                    Text(event.location,
-                        style: const TextStyle(
-                            fontSize: 13, color: AppTheme.textSecondary)),
+                    Expanded(
+                      child: Text(event.location,
+                          style: const TextStyle(
+                              fontSize: 13, color: AppTheme.textSecondary),
+                          overflow: TextOverflow.ellipsis),
+                    ),
                   ],
                 ),
+                if (event.registrationUrl.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Icon(Icons.app_registration_rounded,
+                          size: 14,
+                          color: event.isRegistrationOpen
+                              ? const Color(0xFF1565C0)
+                              : AppTheme.textSecondary),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Registration: ${event.registrationStartDate.isNotEmpty ? event.registrationStartDate : '?'}'
+                        ' → ${event.registrationEndDate.isNotEmpty ? event.registrationEndDate : '?'}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: event.isRegistrationOpen
+                              ? const Color(0xFF1565C0)
+                              : AppTheme.textSecondary,
+                          fontWeight: event.isRegistrationOpen
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                        ),
+                      ),
+                      if (event.isRegistrationOpen) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1565C0).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text(
+                            'OPEN',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF1565C0),
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 16),
                 Wrap(
                   spacing: 8,
@@ -258,7 +312,8 @@ class _EventCard extends StatelessWidget {
                 const SizedBox(height: 14),
                 _LiveLeaderboardButton(
                   event: event,
-                  onTap: onLeaderboardTap,
+                  onLiveTap: onLeaderboardTap,
+                  onResultsTap: onResultsTap,
                 ),
               ],
             ),
@@ -342,80 +397,121 @@ class _ActionIcon extends StatelessWidget {
 
 class _LiveLeaderboardButton extends StatelessWidget {
   final EventModel event;
-  final void Function(EventModel event)? onTap;
-  const _LiveLeaderboardButton({required this.event, this.onTap});
+  final void Function(EventModel event)? onLiveTap;
+  final void Function(EventModel event)? onResultsTap;
+  const _LiveLeaderboardButton({
+    required this.event,
+    this.onLiveTap,
+    this.onResultsTap,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final isFinished = event.isFinished;
     final isToday = event.isToday;
 
-    return StreamBuilder(
-      stream: isToday
-          ? AdminService.instance.watchLiveRunners()
-          : const Stream.empty(),
-      builder: (_, snap) {
-        final runnerCount = snap.data?.length ?? 0;
+    // Finished event → green "View Results"
+    if (isFinished) {
+      return _buildButton(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF2E7D32), Color(0xFF1B5E20)],
+        ),
+        icon: Icons.emoji_events_outlined,
+        label: 'View Results',
+        onTap: () => onResultsTap?.call(event),
+      );
+    }
 
-        return SizedBox(
-          width: double.infinity,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              gradient: isToday
-                  ? const LinearGradient(
-                      colors: [Color(0xFFE53935), Color(0xFFB71C1C)],
-                    )
-                  : null,
-              color: isToday ? null : Colors.grey.shade200,
+    // Today → red LIVE with live runner count
+    if (isToday) {
+      return StreamBuilder(
+        stream: AdminService.instance.watchLiveRunners(),
+        builder: (_, snap) {
+          final count = snap.data?.length ?? 0;
+          return _buildButton(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFE53935), Color(0xFFB71C1C)],
             ),
-            child: Material(
-              color: Colors.transparent,
-              borderRadius: BorderRadius.circular(10),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(10),
-                onTap: isToday ? () => onTap?.call(event) : null,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                      vertical: 11, horizontal: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (isToday) ...[
-                        Container(
-                          width: 7,
-                          height: 7,
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                      ] else
-                        Icon(Icons.leaderboard_outlined,
-                            size: 16, color: Colors.grey.shade500),
-                      const SizedBox(width: 6),
-                      Text(
-                        isToday
-                            ? 'LIVE — View Leaderboard${runnerCount > 0 ? '  ($runnerCount running)' : ''}'
-                            : 'Leaderboard (not today\'s event)',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: isToday
-                              ? Colors.white
-                              : Colors.grey.shade500,
-                          letterSpacing: isToday ? 0.3 : 0,
-                        ),
+            liveDot: true,
+            label:
+                'LIVE — View Leaderboard${count > 0 ? '  ($count running)' : ''}',
+            onTap: () => onLiveTap?.call(event),
+          );
+        },
+      );
+    }
+
+    // Upcoming → disabled gray
+    return _buildButton(
+      color: Colors.grey.shade200,
+      icon: Icons.leaderboard_outlined,
+      iconColor: Colors.grey.shade400,
+      label: 'Leaderboard (upcoming)',
+      labelColor: Colors.grey.shade500,
+      onTap: null,
+    );
+  }
+
+  Widget _buildButton({
+    LinearGradient? gradient,
+    Color? color,
+    IconData? icon,
+    Color? iconColor,
+    bool liveDot = false,
+    required String label,
+    Color? labelColor,
+    VoidCallback? onTap,
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          gradient: gradient,
+          color: color,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: onTap,
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(vertical: 11, horizontal: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (liveDot)
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
                       ),
-                    ],
+                    )
+                  else if (icon != null)
+                    Icon(icon,
+                        size: 16,
+                        color: iconColor ?? Colors.white),
+                  const SizedBox(width: 8),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: labelColor ?? Colors.white,
+                      letterSpacing: gradient != null ? 0.3 : 0,
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }

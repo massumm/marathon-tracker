@@ -6,7 +6,9 @@ import '../../models/admin_user_model.dart';
 import '../../models/event_model.dart';
 import 'organizer_dashboard.dart';
 import 'organizer_events_screen.dart';
+import 'organizer_event_leaderboard_screen.dart';
 import 'organizer_live_leaderboard_screen.dart';
+import 'organizer_profile_screen.dart';
 
 class OrganizerShell extends StatefulWidget {
   final AdminUser organizer;
@@ -19,13 +21,21 @@ class OrganizerShell extends StatefulWidget {
 class _OrganizerShellState extends State<OrganizerShell> {
   int _selected = 0;
   String? _subPageTitle;
+  late String _displayName;
 
   final _innerNavKey = GlobalKey<NavigatorState>();
 
   static const _navItems = [
     _NavItem(Icons.dashboard_outlined, Icons.dashboard, 'Dashboard'),
     _NavItem(Icons.event_outlined, Icons.event, 'Events'),
+    _NavItem(Icons.person_outline, Icons.person, 'Profile'),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _displayName = widget.organizer.displayName;
+  }
 
   void _selectTab(int i) {
     while (_innerNavKey.currentState?.canPop() ?? false) {
@@ -42,6 +52,15 @@ class _OrganizerShellState extends State<OrganizerShell> {
     _innerNavKey.currentState?.push(
       MaterialPageRoute(
         builder: (_) => OrganizerLiveLeaderboardScreen(event: event),
+      ),
+    );
+  }
+
+  void _pushEventLeaderboard(EventModel event) {
+    setState(() => _subPageTitle = 'Results — ${event.name}');
+    _innerNavKey.currentState?.push(
+      MaterialPageRoute(
+        builder: (_) => OrganizerEventLeaderboardScreen(event: event),
       ),
     );
   }
@@ -111,7 +130,7 @@ class _OrganizerShellState extends State<OrganizerShell> {
                                 ),
                               ),
                               Text(
-                                widget.organizer.displayName,
+                                _displayName,
                                 style: const TextStyle(
                                   color: Colors.orange,
                                   fontSize: 11,
@@ -284,7 +303,7 @@ class _OrganizerShellState extends State<OrganizerShell> {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
-                            widget.organizer.displayName,
+                            _displayName,
                             style: const TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
@@ -301,19 +320,27 @@ class _OrganizerShellState extends State<OrganizerShell> {
                         ],
                       ),
                       const SizedBox(width: 12),
-                      CircleAvatar(
-                        radius: 18,
-                        backgroundColor: Colors.orange.withValues(alpha: 0.15),
-                        child: Text(
-                          (widget.organizer.displayName.isNotEmpty
-                                  ? widget.organizer.displayName
-                                  : widget.organizer.email)
-                              .substring(0, 1)
-                              .toUpperCase(),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                            color: Colors.orange,
-                            fontSize: 15,
+                      Tooltip(
+                        message: 'Profile',
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(18),
+                          onTap: () => _selectTab(2),
+                          child: CircleAvatar(
+                            radius: 18,
+                            backgroundColor:
+                                Colors.orange.withValues(alpha: 0.15),
+                            child: Text(
+                              (_displayName.isNotEmpty
+                                      ? _displayName
+                                      : widget.organizer.email)
+                                  .substring(0, 1)
+                                  .toUpperCase(),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: Colors.orange,
+                                fontSize: 15,
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -333,6 +360,10 @@ class _OrganizerShellState extends State<OrganizerShell> {
                           OrganizerEventsScreen(
                             organizerUid: widget.organizer.uid,
                             onLeaderboardTap: _pushLeaderboard,
+                            onResultsTap: _pushEventLeaderboard,
+                          ),
+                          OrganizerProfileScreen(
+                            organizer: widget.organizer,
                           ),
                         ],
                       ),
