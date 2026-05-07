@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -6,7 +7,6 @@ import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../app/routes/app_routes.dart';
-import '../controllers/home_controller.dart';
 import '../controllers/kml_map_controller.dart';
 import '../controllers/map_controller.dart';
 import '../core/theme.dart';
@@ -19,16 +19,6 @@ class MapScreen extends GetView<MapController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('events_title'.tr),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.person_outline),
-            tooltip: 'nav_my_page'.tr,
-            onPressed: () => Get.find<HomeController>().changeTab(1),
-          ),
-        ],
-      ),
       body: Obx(() {
         if (controller.isLoading.value) {
           return const Center(child: CircularProgressIndicator());
@@ -42,7 +32,8 @@ class MapScreen extends GetView<MapController> {
                     size: 48, color: Colors.redAccent),
                 const SizedBox(height: 12),
                 Text('error_loading'.tr,
-                    style: const TextStyle(color: AppTheme.textSecondary)),
+                    style:
+                        const TextStyle(color: AppTheme.textSecondary)),
                 const SizedBox(height: 12),
                 ElevatedButton(
                   onPressed: controller.fetchEvents,
@@ -52,30 +43,189 @@ class MapScreen extends GetView<MapController> {
             ),
           );
         }
-        if (controller.events.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.map_outlined,
-                    size: 64, color: Color(0xFFB0BEC5)),
-                const SizedBox(height: 16),
-                Text('no_events'.tr,
-                    style: const TextStyle(
-                        fontSize: 16, color: AppTheme.textSecondary)),
-              ],
-            ),
-          );
-        }
         return RefreshIndicator(
           onRefresh: controller.fetchEvents,
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: controller.events.length,
-            itemBuilder: (_, i) => _EventCard(event: controller.events[i]),
-          ),
+          child: _EventListView(events: controller.events),
         );
       }),
+    );
+  }
+}
+
+// ── Horizontal PageView with title + filter tabs ──────────────────────────────
+
+class _EventListView extends StatefulWidget {
+  final List<EventModel> events;
+  const _EventListView({required this.events});
+
+  @override
+  State<_EventListView> createState() => _EventListViewState();
+}
+
+class _EventListViewState extends State<_EventListView> {
+  late final PageController _pageCtrl =
+      PageController(viewportFraction: 0.87);
+  String _filter = 'all';
+
+  @override
+  void dispose() {
+    _pageCtrl.dispose();
+    super.dispose();
+  }
+
+  void _setFilter(String f) {
+    setState(() => _filter = f);
+    if (_pageCtrl.hasClients) _pageCtrl.jumpToPage(0);
+  }
+
+  DateTime _eventDate(EventModel e) {
+    final parts = e.date.split('-');
+    if (parts.length != 3) return DateTime(0);
+    return DateTime(
+      int.tryParse(parts[0]) ?? 0,
+      int.tryParse(parts[1]) ?? 0,
+      int.tryParse(parts[2]) ?? 0,
+    );
+  }
+
+  List<EventModel> get _filtered {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    if (_filter == 'live') {
+      return widget.events.where((e) => _eventDate(e) == today).toList();
+    }
+    if (_filter == 'upcoming') {
+      return widget.events
+          .where((e) => _eventDate(e).isAfter(today))
+          .toList();
+    }
+    return widget.events;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final screenH = MediaQuery.of(context).size.height;
+    final filtered = _filtered;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── Title + filter tabs ────────────────────────────
+        SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 16, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'events_title'.tr,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    _FilterTab('all', _filter, _setFilter),
+                    _FilterTab('live', _filter, _setFilter),
+                    _FilterTab('upcoming', _filter, _setFilter),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+
+        // ── Event cards or empty state ─────────────────────
+        Expanded(
+          child: filtered.isEmpty
+              ? Center(
+                  child: Text('no_events_filter'.tr,
+                      style: const TextStyle(
+                          fontSize: 14, color: AppTheme.textSecondary)))
+              : SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: SizedBox(
+                    height: screenH * 0.60,
+                    child: PageView.builder(
+                      clipBehavior: Clip.none,
+                      controller: _pageCtrl,
+                      itemCount: filtered.length,
+                      itemBuilder: (_, i) => AnimatedBuilder(
+                        animation: _pageCtrl,
+                        builder: (_, __) {
+                          double pageOffset = 0;
+                          if (_pageCtrl.position.haveDimensions) {
+                            pageOffset = _pageCtrl.page! - i;
+                          }
+                          final gauss = math.exp(-(math
+                              .pow((pageOffset.abs() - 0.5), 2) /
+                              0.08));
+                          return Transform.translate(
+                            offset: Offset(
+                                -32 * gauss * pageOffset.sign, 0),
+                            child: _EventCard(
+                              event: filtered[i],
+                              pageOffset: pageOffset,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Filter tab widget ─────────────────────────────────────────────────────────
+
+class _FilterTab extends StatelessWidget {
+  final String value;
+  final String selected;
+  final void Function(String) onTap;
+  const _FilterTab(this.value, this.selected, this.onTap);
+
+  @override
+  Widget build(BuildContext context) {
+    final active = value == selected;
+    return GestureDetector(
+      onTap: () => onTap(value),
+      child: Padding(
+        padding: const EdgeInsets.only(right: 16, top: 4, bottom: 4),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'filter_$value'.tr,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight:
+                    active ? FontWeight.w700 : FontWeight.w500,
+                color: active
+                    ? AppTheme.primary
+                    : AppTheme.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 3),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              height: 2,
+              width: active ? 22 : 0,
+              decoration: BoxDecoration(
+                color: AppTheme.primary,
+                borderRadius: BorderRadius.circular(1),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -84,7 +234,8 @@ class MapScreen extends GetView<MapController> {
 
 class _EventCard extends StatefulWidget {
   final EventModel event;
-  const _EventCard({required this.event});
+  final double pageOffset;
+  const _EventCard({required this.event, required this.pageOffset});
 
   @override
   State<_EventCard> createState() => _EventCardState();
@@ -96,7 +247,6 @@ class _EventCardState extends State<_EventCard> {
   @override
   void initState() {
     super.initState();
-    // Tick every second so the hour/minute display stays accurate
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() {});
     });
@@ -112,7 +262,7 @@ class _EventCardState extends State<_EventCard> {
     final eventDt = widget.event.eventDateTime;
     if (eventDt.year == 0) return null;
     final diff = eventDt.difference(DateTime.now());
-    if (diff.isNegative) return 'finished';
+    if (diff.isNegative) return null;
     if (diff.inDays == 0) {
       final h = diff.inHours;
       final m = diff.inMinutes % 60;
@@ -130,87 +280,192 @@ class _EventCardState extends State<_EventCard> {
     final month = int.tryParse(parts[1]);
     final day = int.tryParse(parts[2]);
     if (year == null || month == null || day == null) return false;
-    // Finished the next calendar day (event takes the full day to complete)
-    final endOfEvent = DateTime(year, month, day + 1);
-    return DateTime.now().isAfter(endOfEvent);
+    return DateTime.now().isAfter(DateTime(year, month, day + 1));
   }
 
   @override
   Widget build(BuildContext context) {
-    final countdown = _countdown();
     final finished = _isFinished;
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: finished ? null : () => _showCategoryPicker(context),
+    final countdown = _countdown();
+    final screenH = MediaQuery.of(context).size.height;
+
+    return Container(
+      clipBehavior: Clip.none,
+      margin: const EdgeInsets.only(left: 8, right: 8, bottom: 24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(32),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            offset: const Offset(8, 20),
+            blurRadius: 24,
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(32),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // ── Banner with floating title / date / place overlay ──────
-            _BannerWithOverlay(event: widget.event, finished: finished),
+            // ── Parallax banner image ──────────────────────
+            GestureDetector(
+              onTap: finished ? null : () => _showCategoryPicker(context),
+              child: SizedBox(
+                height: screenH * 0.30,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // Banner with parallax alignment
+                    widget.event.bannerUrl.isNotEmpty
+                        ? CachedNetworkImage(
+                            imageUrl: widget.event.bannerUrl,
+                            fit: BoxFit.cover,
+                            alignment: Alignment(
+                                -widget.pageOffset.abs().clamp(0.0, 1.0), 0),
+                            placeholder: (_, __) => _gradientBg(),
+                            errorWidget: (_, __, ___) => _gradientBg(),
+                          )
+                        : _gradientBg(),
 
-            // ── Countdown + category row ───────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-              child: Row(
-                children: [
-                  if (finished) ...[
-                    const Icon(Icons.flag, size: 13, color: Colors.grey),
-                    const SizedBox(width: 4),
-                    Text(
-                      'event_finished'.tr,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.grey,
+                    // Bottom scrim
+                    const DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          stops: [0.4, 1.0],
+                          colors: [Colors.transparent, Color(0xCC000000)],
+                        ),
                       ),
                     ),
-                  ] else if (countdown != null && countdown != 'finished') ...[
-                    const Icon(Icons.timer_outlined,
-                        size: 13, color: Colors.redAccent),
-                    const SizedBox(width: 4),
-                    Text(
-                      countdown,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.redAccent,
+
+                    // Finished overlay
+                    if (finished) Container(color: const Color(0x73000000)),
+
+                    // Finished badge
+                    if (finished)
+                      Positioned(
+                        top: 14,
+                        right: 14,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xA6000000),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: Colors.white24),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.flag,
+                                  size: 13, color: Colors.white70),
+                              const SizedBox(width: 5),
+                              Text('event_finished'.tr,
+                                  style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white70)),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                    // Event name bottom-left
+                    Positioned(
+                      left: 16,
+                      right: 16,
+                      bottom: 14,
+                      child: Text(
+                        widget.event.name,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          shadows: [
+                            Shadow(blurRadius: 8, color: Colors.black54)
+                          ],
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      'categories_label'.tr.replaceAll('@count', '${widget.event.categories.length}'),
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.primary,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  const Icon(Icons.chevron_right,
-                      color: AppTheme.textSecondary, size: 18),
-                ],
+                ),
               ),
             ),
 
-            // ── Registration bar ───────────────────────────────────────
-            if (widget.event.hasRegistration) ...[
-              const Divider(height: 1, thickness: 1),
-              _RegistrationBar(event: widget.event),
-            ],
+            // ── Info section ───────────────────────────────
+            Expanded(
+              child: GestureDetector(
+                onTap: finished ? null : () => _showCategoryPicker(context),
+                child: Container(
+                  color: Colors.white,
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.event.name,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.textPrimary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          const Icon(Icons.calendar_today_outlined,
+                              size: 12, color: AppTheme.textSecondary),
+                          const SizedBox(width: 4),
+                          Text(widget.event.date,
+                              style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppTheme.textSecondary)),
+                          const SizedBox(width: 12),
+                          const Icon(Icons.location_on_outlined,
+                              size: 12, color: AppTheme.textSecondary),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              widget.event.location,
+                              style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppTheme.textSecondary),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (countdown != null) ...[
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            const Icon(Icons.timer_outlined,
+                                size: 12, color: Colors.redAccent),
+                            const SizedBox(width: 4),
+                            Text(countdown,
+                                style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.redAccent)),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
 
-            // ── Groups bar ─────────────────────────────────────────────
-            const Divider(height: 1, thickness: 1),
+            // ── Registration bar ───────────────────────────
+            _RegistrationBar(event: widget.event),
+
+            // ── Groups bar ─────────────────────────────────
             _GroupBar(eventId: widget.event.id),
           ],
         ),
@@ -218,33 +473,43 @@ class _EventCardState extends State<_EventCard> {
     );
   }
 
-  void _showCategoryPicker(BuildContext context) {
-    final cats = widget.event.categories.values.toList();
-
-    if (cats.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('no_categories'.tr),
-          backgroundColor: Colors.orange,
+  Widget _gradientBg() => Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppTheme.primary,
+              AppTheme.primary.withValues(alpha: 0.65),
+            ],
+          ),
+        ),
+        child: const Center(
+          child:
+              Icon(Icons.directions_run, color: Colors.white54, size: 52),
         ),
       );
+
+  void _showCategoryPicker(BuildContext context) {
+    final cats = widget.event.categories.values.toList();
+    if (cats.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('no_categories'.tr),
+          backgroundColor: Colors.orange));
       return;
     }
-
-    // If only one category with KML, go directly
-    final withKml =
-        cats.where((c) => c.kmlUrl.isNotEmpty || c.kmlPath.isNotEmpty).toList();
+    final withKml = cats
+        .where((c) => c.kmlUrl.isNotEmpty || c.kmlPath.isNotEmpty)
+        .toList();
     if (withKml.length == 1 && cats.length == 1) {
       _openMap(withKml.first);
       return;
     }
-
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => _CategoryPickerSheet(
         eventName: widget.event.name,
         categories: cats,
@@ -262,8 +527,8 @@ class _EventCardState extends State<_EventCard> {
       showDialog(
         context: context,
         builder: (_) => AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16)),
           icon: const Icon(Icons.directions_run,
               color: AppTheme.trackingGreen, size: 40),
           title: Text('already_running_title'.tr,
@@ -276,9 +541,8 @@ class _EventCardState extends State<_EventCard> {
           actionsAlignment: MainAxisAlignment.center,
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('cancel'.tr),
-            ),
+                onPressed: () => Navigator.pop(context),
+                child: Text('cancel'.tr)),
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context);
@@ -294,161 +558,13 @@ class _EventCardState extends State<_EventCard> {
       );
       return;
     }
-    Get.toNamed(
-      AppRoutes.kmlMap,
-      arguments: {
-        'kmlUrl': cat.kmlUrl,
-        'storagePath': cat.kmlPath,
-        'label': '${widget.event.name} (${cat.label})',
-        'eventId': widget.event.id,
-      },
-    );
+    Get.toNamed(AppRoutes.kmlMap, arguments: {
+      'kmlUrl': cat.kmlUrl,
+      'storagePath': cat.kmlPath,
+      'label': '${widget.event.name} (${cat.label})',
+      'eventId': widget.event.id,
+    });
   }
-}
-
-// ── Banner with floating title / date / place overlay ────────────────────────
-
-class _BannerWithOverlay extends StatelessWidget {
-  final EventModel event;
-  final bool finished;
-  const _BannerWithOverlay({required this.event, this.finished = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 190,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // Background: cached network image or gradient fallback
-          if (event.bannerUrl.isNotEmpty)
-            CachedNetworkImage(
-              imageUrl: event.bannerUrl,
-              fit: BoxFit.cover,
-              placeholder: (_, __) => _gradientBg(),
-              errorWidget: (_, __, ___) => _gradientBg(),
-            )
-          else
-            _gradientBg(),
-
-          // Dark gradient from bottom so text is always readable
-          DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                stops: const [0.35, 1.0],
-                colors: [
-                  Colors.transparent,
-                  Colors.black.withValues(alpha: 0.78),
-                ],
-              ),
-            ),
-          ),
-
-          // Finished dimming overlay
-          if (finished)
-            Container(color: Colors.black.withValues(alpha: 0.45)),
-
-          // Finished badge top-right
-          if (finished)
-            Positioned(
-              top: 10,
-              right: 10,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.65),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white24),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.flag, size: 13, color: Colors.white70),
-                    const SizedBox(width: 5),
-                    Text(
-                      'event_finished'.tr,
-                      style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white70),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-          // Title + date + location floating bottom-left
-          Positioned(
-            left: 14,
-            right: 14,
-            bottom: 12,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  event.name,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                    shadows: [
-                      Shadow(blurRadius: 4, color: Colors.black54),
-                    ],
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 5),
-                Row(
-                  children: [
-                    const Icon(Icons.calendar_today_outlined,
-                        size: 12, color: Colors.white70),
-                    const SizedBox(width: 4),
-                    Text(event.date,
-                        style: const TextStyle(
-                            fontSize: 12, color: Colors.white70)),
-                    const SizedBox(width: 12),
-                    const Icon(Icons.location_on_outlined,
-                        size: 12, color: Colors.white70),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        event.location,
-                        style: const TextStyle(
-                            fontSize: 12, color: Colors.white70),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _gradientBg() => Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppTheme.primary,
-              AppTheme.primary.withValues(alpha: 0.65),
-            ],
-          ),
-        ),
-        child: const Center(
-          child: Icon(Icons.directions_run,
-              color: Colors.white54, size: 52),
-        ),
-      );
 }
 
 // ── Groups bar ────────────────────────────────────────────────────────────────
@@ -464,12 +580,9 @@ class _GroupBar extends StatelessWidget {
       builder: (context, snap) {
         final count = snap.data ?? 0;
         final hasGroups = count > 0;
-
         return Material(
           color: Colors.transparent,
           child: InkWell(
-            borderRadius: const BorderRadius.vertical(
-                bottom: Radius.circular(12)),
             onTap: () => Get.toNamed(
               AppRoutes.groupManagement,
               arguments: {'eventId': eventId},
@@ -483,39 +596,33 @@ class _GroupBar extends StatelessWidget {
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
                 ),
-                borderRadius: const BorderRadius.vertical(
-                    bottom: Radius.circular(12)),
               ),
               child: Padding(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 11),
+                    horizontal: 16, vertical: 10),
                 child: Row(
                   children: [
                     Container(
-                      width: 36,
-                      height: 36,
+                      width: 32,
+                      height: 32,
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.18),
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(Icons.groups_rounded,
-                          color: Colors.white, size: 20),
+                          color: Colors.white, size: 17),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            'groups'.tr,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                              letterSpacing: 0.2,
-                            ),
-                          ),
+                          Text('groups'.tr,
+                              style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white)),
                           Text(
                             hasGroups
                                 ? 'groups_count'
@@ -523,10 +630,10 @@ class _GroupBar extends StatelessWidget {
                                     .replaceAll('@count', '$count')
                                 : 'groups_cta'.tr,
                             style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.white.withValues(alpha: 0.82),
-                              fontWeight: FontWeight.w500,
-                            ),
+                                fontSize: 10,
+                                color:
+                                    Colors.white.withValues(alpha: 0.82),
+                                fontWeight: FontWeight.w500),
                           ),
                         ],
                       ),
@@ -534,47 +641,42 @@ class _GroupBar extends StatelessWidget {
                     if (hasGroups)
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
+                            horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.22),
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(16),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             const Icon(Icons.people_alt_rounded,
-                                size: 13, color: Colors.white),
-                            const SizedBox(width: 4),
-                            Text(
-                              '$count',
-                              style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white),
-                            ),
+                                size: 12, color: Colors.white),
+                            const SizedBox(width: 3),
+                            Text('$count',
+                                style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white)),
                           ],
                         ),
                       )
                     else
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 5),
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(16),
                         ),
-                        child: Text(
-                          'join'.tr,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF7C4DFF),
-                          ),
-                        ),
+                        child: Text('join'.tr,
+                            style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF7C4DFF))),
                       ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 4),
                     const Icon(Icons.chevron_right,
-                        color: Colors.white70, size: 18),
+                        color: Colors.white70, size: 16),
                   ],
                 ),
               ),
@@ -586,9 +688,7 @@ class _GroupBar extends StatelessWidget {
   }
 }
 
-
-
-// ── Registration bar ─────────────────────────────────────────────────────────
+// ── Registration bar ──────────────────────────────────────────────────────────
 
 class _RegistrationBar extends StatelessWidget {
   final EventModel event;
@@ -597,8 +697,6 @@ class _RegistrationBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isOpen = event.isRegistrationOpen;
-
-    // Determine display label
     String label;
     Color textColor;
     Color iconColor;
@@ -607,7 +705,6 @@ class _RegistrationBar extends StatelessWidget {
       textColor = Colors.white;
       iconColor = Colors.white;
     } else {
-      // Check if registration hasn't started yet
       final startParts = event.registrationStartDate.split('-');
       bool beforeStart = false;
       if (startParts.length == 3) {
@@ -617,9 +714,8 @@ class _RegistrationBar extends StatelessWidget {
           int.tryParse(startParts[2]) ?? 0,
         );
         final today = DateTime.now();
-        final todayDate =
-            DateTime(today.year, today.month, today.day);
-        beforeStart = todayDate.isBefore(startDate);
+        beforeStart =
+            DateTime(today.year, today.month, today.day).isBefore(startDate);
       }
       label = beforeStart
           ? 'registration_opens'
@@ -629,7 +725,6 @@ class _RegistrationBar extends StatelessWidget {
       textColor = Colors.grey.shade500;
       iconColor = Colors.grey.shade400;
     }
-
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -647,30 +742,27 @@ class _RegistrationBar extends StatelessWidget {
           ),
           child: Padding(
             padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
             child: Row(
               children: [
                 Icon(
                   isOpen
                       ? Icons.app_registration_rounded
                       : Icons.lock_outline_rounded,
-                  size: 16,
+                  size: 15,
                   color: iconColor,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: textColor,
-                    ),
-                  ),
-                ),
+                    child: Text(label,
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: textColor))),
                 if (isOpen)
                   Icon(Icons.open_in_new_rounded,
-                      size: 14, color: Colors.white.withValues(alpha: 0.8)),
+                      size: 13,
+                      color: Colors.white.withValues(alpha: 0.8)),
               ],
             ),
           ),
@@ -680,7 +772,6 @@ class _RegistrationBar extends StatelessWidget {
   }
 
   static Future<void> _launch(BuildContext context, String raw) async {
-    // Prepend https:// if the URL has no scheme
     final normalized =
         raw.startsWith('http://') || raw.startsWith('https://')
             ? raw
@@ -691,9 +782,8 @@ class _RegistrationBar extends StatelessWidget {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open registration link.')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Could not open registration link.')));
       }
     }
   }
@@ -720,43 +810,37 @@ class _CategoryPickerSheet extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Drag handle
             Container(
               width: 40,
               height: 4,
               margin: const EdgeInsets.only(bottom: 12),
               decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
-              ),
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2)),
             ),
-            // Title
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
                 children: [
-                  Text(
-                    eventName,
-                    style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.textPrimary,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
+                  Text(eventName,
+                      style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textPrimary),
+                      textAlign: TextAlign.center),
                   const SizedBox(height: 4),
-                  Text(
-                    'select_category'.tr,
-                    style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
-                  ),
+                  Text('select_category'.tr,
+                      style: const TextStyle(
+                          fontSize: 13,
+                          color: AppTheme.textSecondary)),
                 ],
               ),
             ),
             const SizedBox(height: 16),
             const Divider(height: 1),
-            // Category list — all shown, disabled if no KML
             ...categories.map((cat) {
-              final hasKml = cat.kmlUrl.isNotEmpty || cat.kmlPath.isNotEmpty;
+              final hasKml =
+                  cat.kmlUrl.isNotEmpty || cat.kmlPath.isNotEmpty;
               return InkWell(
                 onTap: hasKml ? () => onSelect(cat) : null,
                 child: Opacity(
@@ -770,9 +854,9 @@ class _CategoryPickerSheet extends StatelessWidget {
                           width: 44,
                           height: 44,
                           decoration: BoxDecoration(
-                            color: AppTheme.primary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+                              color: AppTheme.primary
+                                  .withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12)),
                           child: const Icon(Icons.directions_run,
                               color: AppTheme.primary, size: 22),
                         ),
@@ -781,33 +865,24 @@ class _CategoryPickerSheet extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                cat.label,
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppTheme.textPrimary,
-                                ),
-                              ),
+                              Text(cat.label,
+                                  style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppTheme.textPrimary)),
                               if (cat.cutoff.isNotEmpty) ...[
                                 const SizedBox(height: 2),
-                                Text(
-                                  'Cut-Off: ${cat.cutoff}',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppTheme.textSecondary,
-                                  ),
-                                ),
+                                Text('Cut-Off: ${cat.cutoff}',
+                                    style: const TextStyle(
+                                        fontSize: 12,
+                                        color: AppTheme.textSecondary)),
                               ],
                               if (!hasKml) ...[
                                 const SizedBox(height: 2),
-                                Text(
-                                  'no_route_set'.tr,
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.orange,
-                                  ),
-                                ),
+                                Text('no_route_set'.tr,
+                                    style: const TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.orange)),
                               ],
                             ],
                           ),

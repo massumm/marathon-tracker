@@ -12,6 +12,10 @@ class AppStrings extends Translations {
           // Events
           'events_title': 'Events',
           'no_events': 'No events available',
+          'no_events_filter': 'No events in this category',
+          'filter_all': 'All',
+          'filter_live': 'Live',
+          'filter_upcoming': 'Upcoming',
           'view_map': 'View Map',
 
           // Comments
@@ -249,6 +253,10 @@ class AppStrings extends Translations {
           // Events
           'events_title': 'イベント一覧',
           'no_events': 'イベントがありません',
+          'no_events_filter': 'このカテゴリのイベントはありません',
+          'filter_all': '全て',
+          'filter_live': 'ライブ',
+          'filter_upcoming': '予定',
           'view_map': '地図を見る',
 
           // Comments

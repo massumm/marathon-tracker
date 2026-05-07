@@ -28,81 +28,99 @@ class MyPageScreen extends GetView<MyPageController> {
           ),
         ],
       ),
-      body: Obx(() => ListView(
-            padding: const EdgeInsets.only(bottom: 32),
-            children: [
-              // ── Profile header ─────────────────────────────────────────
-              _ProfileHeader(controller: controller),
-
-              // ── Stats row ──────────────────────────────────────────────
-              if (controller.myStats.value != null)
-                _StatsRow(stats: controller.myStats.value!),
-
-              const SizedBox(height: 20),
-
-              // ── My Completed Runs ──────────────────────────────────────
-              _SectionHeader(
-                title: 'my_completed_runs'.tr,
-                onSeeAll: () => Get.toNamed(AppRoutes.myRoutes),
-              ),
-              const SizedBox(height: 10),
-              _CompletedRunsSection(controller: controller),
-
-              const SizedBox(height: 24),
-
-              // ── My Clubs ───────────────────────────────────────────────
-              _SectionHeader(title: 'my_clubs'.tr),
-              const SizedBox(height: 10),
-              _MyClubsSection(controller: controller),
-
-              const SizedBox(height: 24),
-
-              // ── Action cards ───────────────────────────────────────────
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  'explore'.tr,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.textSecondary,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: GridView.count(
-                  crossAxisCount: 2,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 1.55,
-                  children: [
-                    _ActionCard(
-                      icon: Icons.emoji_events,
-                      label: 'leaderboard'.tr,
-                      color: const Color(0xFFFFB300),
-                      onTap: () => Get.toNamed(AppRoutes.leaderboard),
-                    ),
-                    _ActionCard(
-                      icon: Icons.map_outlined,
-                      label: 'my_routes'.tr,
-                      color: AppTheme.primary,
-                      onTap: () => Get.toNamed(AppRoutes.myRoutes),
-                    )
-                  ],
-                ),
-              ),
-
-              // ── Footer ─────────────────────────────────────────────────
-              const SizedBox(height: 32),
-              const _AppFooter(),
-            ],
-          )),
+      body: MyPageBody(controller: controller),
     );
+  }
+}
+
+/// Public widget — used by both MyPageScreen and the home bottom sheet.
+class MyPageBody extends StatelessWidget {
+  final MyPageController controller;
+  final ScrollController? scrollController;
+
+  const MyPageBody({
+    super.key,
+    required this.controller,
+    this.scrollController,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() => ListView(
+          controller: scrollController,
+          padding: const EdgeInsets.only(bottom: 32),
+          children: [
+            // ── Profile header ───────────────────────────────────────
+            _ProfileHeader(controller: controller),
+
+            // ── Stats row ────────────────────────────────────────────
+            if (controller.myStats.value != null)
+              _StatsRow(stats: controller.myStats.value!),
+
+            const SizedBox(height: 20),
+
+            // ── My Completed Runs ─────────────────────────────────────
+            _SectionHeader(
+              title: 'my_completed_runs'.tr,
+              onSeeAll: () => Get.toNamed(AppRoutes.myRoutes),
+            ),
+            const SizedBox(height: 10),
+            _CompletedRunsSection(controller: controller),
+
+            const SizedBox(height: 24),
+
+            // ── My Clubs ──────────────────────────────────────────────
+            _SectionHeader(title: 'my_clubs'.tr),
+            const SizedBox(height: 10),
+            _MyClubsSection(controller: controller),
+
+            const SizedBox(height: 24),
+
+            // ── Action cards ──────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'explore'.tr,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textSecondary,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: GridView.count(
+                crossAxisCount: 2,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 1.55,
+                children: [
+                  _ActionCard(
+                    icon: Icons.emoji_events,
+                    label: 'leaderboard'.tr,
+                    color: const Color(0xFFFFB300),
+                    onTap: () => Get.toNamed(AppRoutes.leaderboard),
+                  ),
+                  _ActionCard(
+                    icon: Icons.map_outlined,
+                    label: 'my_routes'.tr,
+                    color: AppTheme.primary,
+                    onTap: () => Get.toNamed(AppRoutes.myRoutes),
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Footer ───────────────────────────────────────────────
+            const SizedBox(height: 32),
+            const _AppFooter(),
+          ],
+        ));
   }
 }
 
