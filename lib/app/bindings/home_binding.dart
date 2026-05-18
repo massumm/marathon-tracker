@@ -7,7 +7,7 @@ class HomeBinding extends Bindings {
   @override
   void dependencies() {
     Get.put(HomeController());
-    Get.lazyPut(() => MapController());
+    Get.lazyPut(() => MapController(), fenix: true);
     Get.lazyPut(() => MyPageController());
   }
 }

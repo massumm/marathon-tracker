@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../core/theme.dart';
@@ -57,7 +59,7 @@ class AdminLiveLeaderboardScreen extends StatelessWidget {
         ],
       ),
       body: StreamBuilder<List<RunnerData>>(
-        stream: AdminService.instance.watchLiveRunners(),
+        stream: AdminService.instance.watchLiveRunnersForEvent(event.id),
         builder: (_, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -97,21 +99,62 @@ class AdminLiveLeaderboardScreen extends StatelessWidget {
   }
 }
 
-class _RunnerRow extends StatelessWidget {
+class _RunnerRow extends StatefulWidget {
   final RunnerData runner;
   final int rank;
   const _RunnerRow({required this.runner, required this.rank});
 
   @override
+  State<_RunnerRow> createState() => _RunnerRowState();
+}
+
+class _RunnerRowState extends State<_RunnerRow> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    // Refresh every 30 s so "last seen X ago" stays current.
+    _timer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  bool get _isOnline =>
+      DateTime.now().millisecondsSinceEpoch - widget.runner.lastSeen < 120000;
+
+  String _lastSeenText() {
+    final ms =
+        DateTime.now().millisecondsSinceEpoch - widget.runner.lastSeen;
+    if (ms < 60000) return 'just now';
+    if (ms < 3600000) return '${ms ~/ 60000}m ago';
+    final h = ms ~/ 3600000;
+    final m = (ms % 3600000) ~/ 60000;
+    return m > 0 ? '${h}h ${m}m ago' : '${h}h ago';
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final runner = widget.runner;
     final label = runner.displayName.isNotEmpty
         ? runner.displayName
         : runner.email.split('@').first;
+    final online = _isOnline;
 
-    final elapsed = DateTime.now().millisecondsSinceEpoch - runner.startedAt;
-    final minutes = elapsed ~/ 60000;
-    final seconds = (elapsed % 60000) ~/ 1000;
-    final timeStr = '${minutes}m ${seconds}s';
+    final elapsedMs =
+        (DateTime.now().millisecondsSinceEpoch - runner.startedAt)
+            .clamp(0, double.maxFinite.toInt());
+    final hours = elapsedMs ~/ 3600000;
+    final minutes = (elapsedMs % 3600000) ~/ 60000;
+    final seconds = (elapsedMs % 60000) ~/ 1000;
+    final timeStr =
+        hours > 0 ? '${hours}h ${minutes}m' : '${minutes}m ${seconds}s';
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 4),
@@ -129,10 +172,11 @@ class _RunnerRow extends StatelessWidget {
       ),
       child: Row(
         children: [
+          // Rank
           SizedBox(
-            width: 36,
+            width: 28,
             child: Text(
-              '#$rank',
+              '#${widget.rank}',
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 13,
@@ -141,9 +185,20 @@ class _RunnerRow extends StatelessWidget {
               ),
             ),
           ),
+          const SizedBox(width: 6),
+          // Online / offline dot
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: online ? const Color(0xFF2E7D32) : Colors.redAccent,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 8),
+          UserAvatar(label: label, photoUrl: runner.photoUrl, size: 38),
           const SizedBox(width: 10),
-          UserAvatar(label: label, photoUrl: runner.photoUrl, size: 40),
-          const SizedBox(width: 12),
+          // Name + status line
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -158,15 +213,20 @@ class _RunnerRow extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  runner.email,
-                  style: const TextStyle(
-                      fontSize: 11, color: AppTheme.textSecondary),
+                  online ? runner.email : 'offline · ${_lastSeenText()}',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: online
+                        ? AppTheme.textSecondary
+                        : Colors.redAccent.shade200,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
           const SizedBox(width: 8),
+          // Distance + elapsed time
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [

@@ -234,98 +234,44 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
     return Obx(() {
       final lb = _ctrl.leaderboard.toList();
       final myRank = lb.where((e) => e.isSelf).firstOrNull?.rank;
-      final isTracking = _ctrl.isTracking.value;
-      final isSharing = _ctrl.isSharing.value;
 
       return PopScope(
         canPop: !_ctrl.isSaving.value,
         child: Scaffold(
-          appBar: AppBar(
-            title: null,
-            actions: [
-              // ── Share / Unshare ────────────────────────────────────────────
-              if (isTracking)
-                IconButton(
-                  tooltip: isSharing ? 'unshare'.tr : 'share'.tr,
-                  icon: Icon(
-                    isSharing ? Icons.wifi_tethering : Icons.wifi_tethering_off,
-                    color: isSharing ? Colors.white : Colors.white38,
-                  ),
-                  onPressed: () => _ctrl.toggleSharing(),
-                ),
-              // ── Leaderboard ────────────────────────────────────────────────
-              if (lb.isNotEmpty)
-                Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    IconButton(
-                      icon: Icon(
-                        _leaderOpen
-                            ? Icons.leaderboard
-                            : Icons.leaderboard_outlined,
-                        color: _leaderOpen ? Colors.amberAccent : Colors.white,
-                      ),
-                      onPressed: () =>
-                          setState(() => _leaderOpen = !_leaderOpen),
-                    ),
-                    if (myRank != null && !_leaderOpen)
-                      Positioned(
-                        top: 8,
-                        right: 6,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 4, vertical: 1),
-                          decoration: BoxDecoration(
-                            color: Colors.amber,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            '#$myRank',
-                            style: const TextStyle(
-                                fontSize: 8,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.black),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              // ── Terminate ──────────────────────────────────────────────────
-              // if (isTracking)
-              //   IconButton(
-              //     tooltip: 'terminate'.tr,
-              //     icon: const Icon(Icons.stop_circle_outlined, color: Colors.white),
-              //     onPressed: () => _ctrl.stopTracking(),
-              //   ),
-              const SizedBox(width: 4),
-            ],
-          ),
-          body: _buildBody(lb),
+          body: _buildBody(context, lb, myRank),
         ),
       );
     });
   }
 
-  Widget _buildBody(List<LeaderboardEntry> lb) {
+  Widget _buildBody(
+      BuildContext context, List<LeaderboardEntry> lb, int? myRank) {
     if (!_ctrl.kmlLoaded.value) {
       return const Center(child: CircularProgressIndicator());
     }
 
     final isTracking = _ctrl.isTracking.value;
+    final isSharing = _ctrl.isSharing.value;
     final isSaving = _ctrl.isSaving.value;
     final elapsedSecs = _ctrl.elapsedSeconds.value;
     final snapped = _ctrl.snappedPoints.toList();
     final raw = _ctrl.trackingPoints.toList();
-    final points = snapped.isNotEmpty ? snapped : raw;
+    // During tracking use raw GPS for live continuous feedback — snappedPoints
+    // updates in batches of 10 which causes visible gaps. After the run ends
+    // prefer the cleaner road-snapped version if available.
+    final points = isTracking ? raw : (snapped.isNotEmpty ? snapped : raw);
     final runnerMarkersSet = _ctrl.runnerMarkers.values.toSet();
+    final topPad = MediaQuery.of(context).padding.top;
+    final lbShift = lb.isNotEmpty && _leaderOpen;
 
     return Stack(children: [
       // ── Map ───────────────────────────────────────────────────────────────
       GoogleMap(
         initialCameraPosition: _ctrl.lastCameraPosition ??
             CameraPosition(target: _ctrl.initialLocation, zoom: 17),
-        myLocationEnabled: true,
+        myLocationEnabled: false,
         myLocationButtonEnabled: false,
+        zoomControlsEnabled: false,
         onMapCreated: (c) {
           _ctrl.mapController = c;
           final saved = _ctrl.lastCameraPosition;
@@ -352,15 +298,30 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
         markers: {
           ..._ctrl.kmlMarkers,
           ...runnerMarkersSet,
+          if (_ctrl.selfMarker.value != null) _ctrl.selfMarker.value!,
         },
+      ),
+
+      // ── Back button ───────────────────────────────────────────────────────
+      Positioned(
+        top: topPad + 8,
+        left: 12,
+        child: FloatingActionButton.small(
+          heroTag: 'back',
+          backgroundColor: Colors.white,
+          foregroundColor: AppTheme.textSecondary,
+          elevation: 3,
+          onPressed: () => Get.back(),
+          child: const Icon(Icons.arrow_back, size: 20),
+        ),
       ),
 
       // ── Stats panel (tracking active) ─────────────────────────────────────
       if (isTracking)
         Positioned(
-          top: 12,
-          left: 16,
-          right: 16,
+          top: topPad + 8,
+          left: 62,
+          right: 12,
           child: _StatsPanel(
             time: _ctrl.formatTime(elapsedSecs),
             distance: _ctrl.currentDistanceKm,
@@ -371,7 +332,7 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
       // ── Camera + recenter buttons (visible during tracking) ──────────────
       if (isTracking)
         Positioned(
-          bottom: lb.isNotEmpty && _leaderOpen ? 204 : 52,
+          bottom: lbShift ? 204 : 52,
           right: 16,
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -399,17 +360,79 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
           ),
         ),
 
+      // ── Bottom-left: leaderboard + share FABs ─────────────────────────────
+      Positioned(
+        bottom: lbShift ? 208 : 40,
+        left: 16,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isTracking) ...[
+              FloatingActionButton.small(
+                heroTag: 'share',
+                backgroundColor: isSharing ? AppTheme.primary : Colors.white,
+                foregroundColor: isSharing ? Colors.white : AppTheme.primary,
+                elevation: 3,
+                tooltip: isSharing ? 'unshare'.tr : 'share'.tr,
+                onPressed: () => _ctrl.toggleSharing(),
+                child: Icon(isSharing
+                    ? Icons.wifi_tethering
+                    : Icons.wifi_tethering_off),
+              ),
+              const SizedBox(height: 8),
+            ],
+            if (lb.isNotEmpty)
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  FloatingActionButton.small(
+                    heroTag: 'leaderboard',
+                    backgroundColor:
+                        _leaderOpen ? Colors.amberAccent : Colors.white,
+                    foregroundColor:
+                        _leaderOpen ? Colors.black87 : AppTheme.primary,
+                    elevation: 3,
+                    onPressed: () => setState(() => _leaderOpen = !_leaderOpen),
+                    child: Icon(_leaderOpen
+                        ? Icons.leaderboard
+                        : Icons.leaderboard_outlined),
+                  ),
+                  if (myRank != null && !_leaderOpen)
+                    Positioned(
+                      top: -2,
+                      right: -2,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 4, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: Colors.amber,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '#$myRank',
+                          style: const TextStyle(
+                              fontSize: 8,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.black),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+          ],
+        ),
+      ),
+
       // ── Start / Stop button ───────────────────────────────────────────────
       Positioned(
-        bottom: lb.isNotEmpty && _leaderOpen ? 200 : 36,
+        bottom: lbShift ? 200 : 36,
         left: 0,
         right: 0,
         child: Center(
           child: _TrackingButton(
             isTracking: isTracking,
-            onTap: isTracking
-                ? () => _ctrl.stopTracking()
-                : () => _onStartTap(),
+            onTap:
+                isTracking ? () => _ctrl.stopTracking() : () => _onStartTap(),
           ),
         ),
       ),
@@ -482,8 +505,7 @@ class _TrackingButtonState extends State<_TrackingButton> {
         isStart ? const Color(0xFF48BB78) : const Color(0xFFE53E3E);
     final gradientB =
         isStart ? const Color(0xFF276749) : const Color(0xFF9B1C1C);
-    final icon =
-        isStart ? Icons.play_arrow_rounded : Icons.stop_rounded;
+    final icon = isStart ? Icons.play_arrow_rounded : Icons.stop_rounded;
     final label = isStart ? 'start_run'.tr : 'stop_run'.tr;
 
     return GestureDetector(
@@ -531,8 +553,8 @@ class _TrackingButtonState extends State<_TrackingButton> {
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 5),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
                   decoration: BoxDecoration(
                     color: Colors.black.withValues(alpha: 0.42),
                     borderRadius: BorderRadius.circular(20),

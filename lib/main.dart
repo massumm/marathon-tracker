@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:get/get.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
@@ -44,7 +47,29 @@ void main() async {
   DeepLinkService.instance.init();
   OfflineStorageService.instance.init();
   WakelockPlus.enable();
+  _initForegroundTask();
   runApp(const MapApp());
+}
+
+void _initForegroundTask() {
+  FlutterForegroundTask.init(
+    androidNotificationOptions: AndroidNotificationOptions(
+      channelId: 'runmate_tracking',
+      channelName: 'Run Tracking',
+      channelDescription: 'Keeps your run active in the background',
+      channelImportance: NotificationChannelImportance.LOW,
+      priority: NotificationPriority.LOW,
+    ),
+    iosNotificationOptions: const IOSNotificationOptions(
+      showNotification: false,
+    ),
+    foregroundTaskOptions: ForegroundTaskOptions(
+      eventAction: ForegroundTaskEventAction.nothing(),
+      autoRunOnBoot: false,
+      allowWakeLock: true,
+      allowWifiLock: true,
+    ),
+  );
 }
 
 Future<void> _initFirebase() async {
@@ -57,9 +82,10 @@ Future<void> _initFirebase() async {
   // Must be called before any DatabaseReference is used.
   // Wrapped in try/catch because background isolates (FCM) may call this
   // after the main engine has already initialized the DB instance.
-  try {
-    FirebaseDatabase.instance.setPersistenceEnabled(true);
-  } catch (_) {}
+  runZonedGuarded(
+    () => FirebaseDatabase.instance.setPersistenceEnabled(true),
+    (_, __) {}, // silently ignore — thrown on hot restart when DB is already initialised
+  );
 }
 
 class MapApp extends StatelessWidget {

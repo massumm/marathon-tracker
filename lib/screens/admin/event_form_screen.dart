@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -31,6 +32,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
 
   late final String _tmpEventId;
   bool _saving = false;
+  late final ScrollController _scrollCtrl;
 
   // Banner
   String _bannerUrl = '';
@@ -53,6 +55,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
     _tmpEventId =
         widget.existing?.id ?? DateTime.now().millisecondsSinceEpoch.toString();
     _bannerUrl = e?.bannerUrl ?? '';
+    _scrollCtrl = ScrollController();
 
     if (e != null && e.categories.isNotEmpty) {
       for (final entry in e.categories.entries) {
@@ -80,7 +83,28 @@ class _EventFormScreenState extends State<EventFormScreen> {
       c.labelCtrl.dispose();
       c.cutoffCtrl.dispose();
     }
+    _scrollCtrl.dispose();
     super.dispose();
+  }
+
+  DateTime? _parseEventDate() {
+    final parts = _dateCtrl.text.trim().split('-');
+    if (parts.length != 3) return null;
+    final y = int.tryParse(parts[0]);
+    final m = int.tryParse(parts[1]);
+    final d = int.tryParse(parts[2]);
+    if (y == null || m == null || d == null) return null;
+    return DateTime(y, m, d);
+  }
+
+  DateTime? _parseDate(String text) {
+    final parts = text.trim().split('-');
+    if (parts.length != 3) return null;
+    final y = int.tryParse(parts[0]);
+    final m = int.tryParse(parts[1]);
+    final d = int.tryParse(parts[2]);
+    if (y == null || m == null || d == null) return null;
+    return DateTime(y, m, d);
   }
 
   void _addCategory() {
@@ -147,6 +171,31 @@ class _EventFormScreenState extends State<EventFormScreen> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+
+    // Validate registration dates don't exceed event date
+    final eventDate = _parseEventDate();
+    if (eventDate != null) {
+      final regStart = _parseDate(_regStartCtrl.text);
+      final regEnd = _parseDate(_regEndCtrl.text);
+      if (regStart != null && !regStart.isBefore(eventDate)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Registration start date must be before the event date.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+      if (regEnd != null && !regEnd.isBefore(eventDate)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Registration end date must be before the event date.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+    }
 
     // Validate at least one category
     if (_categories.isEmpty) {
@@ -258,13 +307,23 @@ class _EventFormScreenState extends State<EventFormScreen> {
             ),
         ],
       ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 800),
-          child: Form(
-            key: _formKey,
-            child: ListView(
-              padding: const EdgeInsets.all(28),
+      body: Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerSignal: (event) {
+          if (event is PointerScrollEvent) {
+            final offset = (_scrollCtrl.offset + event.scrollDelta.dy)
+                .clamp(0.0, _scrollCtrl.position.maxScrollExtent);
+            _scrollCtrl.jumpTo(offset);
+          }
+        },
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: Form(
+              key: _formKey,
+              child: ListView(
+                controller: _scrollCtrl,
+                padding: const EdgeInsets.all(28),
               children: [
                 // ── Banner ───────────────────────────────────────────────
                 _buildSectionHeader('Event Banner', null),
@@ -355,15 +414,33 @@ class _EventFormScreenState extends State<EventFormScreen> {
                             v == null || v.trim().isEmpty ? 'Required' : null,
                         readOnly: true,
                         onTap: () async {
+                          final today = DateTime.now();
+                          final existing = _parseEventDate();
+                          // Allow editing an event that already has a past date,
+                          // but new events can only pick today or later.
+                          final first = (existing != null && existing.isBefore(today))
+                              ? existing
+                              : today;
                           final picked = await showDatePicker(
                             context: context,
-                            initialDate: DateTime.now(),
-                            firstDate: DateTime(2020),
-                            lastDate: DateTime(2030),
+                            initialDate: existing ?? today,
+                            firstDate: first,
+                            lastDate: DateTime(2035),
                           );
                           if (picked != null) {
-                            _dateCtrl.text =
-                                '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+                            setState(() {
+                              _dateCtrl.text =
+                                  '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+                              // Clear reg dates that became invalid after event date change
+                              final regStart = _parseDate(_regStartCtrl.text);
+                              final regEnd = _parseDate(_regEndCtrl.text);
+                              if (regStart != null && !regStart.isBefore(picked)) {
+                                _regStartCtrl.clear();
+                              }
+                              if (regEnd != null && !regEnd.isBefore(picked)) {
+                                _regEndCtrl.clear();
+                              }
+                            });
                           }
                         },
                       ),
@@ -375,6 +452,8 @@ class _EventFormScreenState extends State<EventFormScreen> {
                         label: 'Start Time',
                         hint: 'e.g. 08:00',
                         icon: Icons.access_time_rounded,
+                        validator: (v) =>
+                            v == null || v.trim().isEmpty ? 'Required' : null,
                         readOnly: true,
                         onTap: () async {
                           final initial = TimeOfDay.now();
@@ -437,16 +516,29 @@ class _EventFormScreenState extends State<EventFormScreen> {
                               icon: Icons.event_available_outlined,
                               readOnly: true,
                               onTap: () async {
+                                final eventDate = _parseEventDate();
+                                if (eventDate == null) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Please set the event date first.')),
+                                  );
+                                  return;
+                                }
+                                final lastAllowed = eventDate.subtract(const Duration(days: 1));
+                                final today = DateTime.now();
+                                final initial = _parseDate(_regStartCtrl.text) ??
+                                    (today.isBefore(lastAllowed) ? today : lastAllowed);
                                 final picked = await showDatePicker(
                                   context: context,
-                                  initialDate: DateTime.now(),
-                                  firstDate: DateTime(2020),
-                                  lastDate: DateTime(2030),
+                                  initialDate: initial,
+                                  firstDate: DateTime.now(),
+                                  lastDate: lastAllowed,
                                 );
                                 if (picked != null) {
                                   setState(() {
                                     _regStartCtrl.text =
                                         '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+                                    // End date must be re-selected after start date changes.
+                                    _regEndCtrl.clear();
                                   });
                                 }
                               },
@@ -461,11 +553,29 @@ class _EventFormScreenState extends State<EventFormScreen> {
                               icon: Icons.event_busy_outlined,
                               readOnly: true,
                               onTap: () async {
+                                final eventDate = _parseEventDate();
+                                if (eventDate == null) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Please set the event date first.')),
+                                  );
+                                  return;
+                                }
+                                final regStart = _parseDate(_regStartCtrl.text);
+                                if (regStart == null) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Please set the registration start date first.')),
+                                  );
+                                  return;
+                                }
+                                final firstAllowed = regStart.add(const Duration(days: 1));
+                                final lastAllowed = eventDate.subtract(const Duration(days: 1));
+                                final initial = _parseDate(_regEndCtrl.text) ??
+                                    (firstAllowed.isBefore(lastAllowed) ? firstAllowed : lastAllowed);
                                 final picked = await showDatePicker(
                                   context: context,
-                                  initialDate: DateTime.now(),
-                                  firstDate: DateTime(2020),
-                                  lastDate: DateTime(2030),
+                                  initialDate: initial,
+                                  firstDate: firstAllowed,
+                                  lastDate: lastAllowed,
                                 );
                                 if (picked != null) {
                                   setState(() {
@@ -641,9 +751,33 @@ class _EventFormScreenState extends State<EventFormScreen> {
                               Expanded(
                                 child: TextFormField(
                                   controller: entry.cutoffCtrl,
+                                  readOnly: true,
+                                  onTap: () async {
+                                    final existing = entry.cutoffCtrl.text.trim();
+                                    final parts = existing.split(':');
+                                    final initial = parts.length == 2
+                                        ? TimeOfDay(
+                                            hour: int.tryParse(parts[0]) ?? 3,
+                                            minute: int.tryParse(parts[1]) ?? 0,
+                                          )
+                                        : const TimeOfDay(hour: 3, minute: 0);
+                                    final picked = await showTimePicker(
+                                      context: context,
+                                      initialTime: initial,
+                                      builder: (ctx, child) => MediaQuery(
+                                        data: MediaQuery.of(ctx)
+                                            .copyWith(alwaysUse24HourFormat: true),
+                                        child: child!,
+                                      ),
+                                    );
+                                    if (picked != null) {
+                                      entry.cutoffCtrl.text =
+                                          '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+                                    }
+                                  },
                                   decoration: _inputDeco(
                                     'Cut-Off Time',
-                                    'e.g. 03:45 Hours',
+                                    'e.g. 03:45',
                                     Icons.timer_outlined,
                                   ),
                                 ),
@@ -750,6 +884,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
             ),
           ),
         ),
+      ),
       ),
     );
   }

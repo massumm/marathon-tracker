@@ -27,6 +27,7 @@ class _LoginBodyState extends State<_LoginBody> {
   _AuthMode _mode = _AuthMode.signIn;
   final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
+  final _usernameCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
   bool _obscurePassword = true;
@@ -35,6 +36,7 @@ class _LoginBodyState extends State<_LoginBody> {
   @override
   void dispose() {
     _emailCtrl.dispose();
+    _usernameCtrl.dispose();
     _passwordCtrl.dispose();
     _confirmCtrl.dispose();
     super.dispose();
@@ -59,13 +61,57 @@ class _LoginBodyState extends State<_LoginBody> {
       if (_mode == _AuthMode.signIn) {
         await _auth.signInWithEmail(_emailCtrl.text, _passwordCtrl.text);
       } else {
-        await _auth.signUpWithEmail(_emailCtrl.text, _passwordCtrl.text);
+        await _auth.signUpWithEmail(
+            _emailCtrl.text, _passwordCtrl.text, _usernameCtrl.text.trim());
       }
     } on FirebaseAuthException catch (e) {
       _showError(_friendlyError(e.code));
-    } catch (_) {
+    } catch (e) {
       _showError('Something went wrong. Please try again.');
     }
+  }
+
+  void _showForgotPassword() {
+    final emailCtrl = TextEditingController(text: _emailCtrl.text.trim());
+    Get.dialog(AlertDialog(
+      title: const Text('Forgot Password?'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Enter your email and we\'ll send you a reset link.'),
+          const SizedBox(height: 12),
+          TextField(
+            controller: emailCtrl,
+            autofocus: true,
+            keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(hintText: 'you@example.com'),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(onPressed: Get.back, child: const Text('Cancel')),
+        TextButton(
+          onPressed: () async {
+            final email = emailCtrl.text.trim();
+            if (email.isEmpty) return;
+            try {
+              await _auth.sendPasswordReset(email);
+              Get.back();
+              Get.snackbar('Email Sent', 'Check your inbox for a reset link.',
+                  snackPosition: SnackPosition.BOTTOM);
+            } on FirebaseAuthException catch (e) {
+              Get.back();
+              _showError(_friendlyError(e.code));
+            } catch (e) {
+              Get.back();
+              _showError('Something went wrong. Please try again.');
+            }
+          },
+          child: const Text('Send'),
+        ),
+      ],
+    ));
   }
 
   Future<void> _signInWithGoogle() async {
@@ -184,6 +230,25 @@ class _LoginBodyState extends State<_LoginBody> {
   Widget _buildForm() => Form(
         key: _formKey,
         child: Column(children: [
+          if (_mode == _AuthMode.signUp) ...[
+            TextFormField(
+              controller: _usernameCtrl,
+              textInputAction: TextInputAction.next,
+              decoration: _inputDeco(
+                label: 'Username',
+                hint: 'Your display name',
+                icon: Icons.person_outline,
+              ),
+              validator: (v) {
+                final val = v?.trim() ?? '';
+                if (val.isEmpty) return 'Username is required';
+                if (val.length < 3) return 'Minimum 3 characters';
+                if (val.length > 30) return 'Maximum 30 characters';
+                return null;
+              },
+            ),
+            const SizedBox(height: 14),
+          ],
           TextFormField(
             controller: _emailCtrl,
             keyboardType: TextInputType.emailAddress,
@@ -194,8 +259,9 @@ class _LoginBodyState extends State<_LoginBody> {
                 icon: Icons.email_outlined),
             validator: (v) {
               if (v == null || v.trim().isEmpty) return 'Email is required';
-              if (!v.contains('@') || !v.contains('.'))
+              if (!v.contains('@') || !v.contains('.')) {
                 return 'Enter a valid email';
+              }
               return null;
             },
           ),
@@ -230,6 +296,21 @@ class _LoginBodyState extends State<_LoginBody> {
               return null;
             },
           ),
+          if (_mode == _AuthMode.signIn) ...[
+            const SizedBox(height: 4),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: _showForgotPassword,
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: const Text('Forgot password?',
+                    style: TextStyle(fontSize: 13, color: AppTheme.primary)),
+              ),
+            ),
+          ],
           if (_mode == _AuthMode.signUp) ...[
             const SizedBox(height: 14),
             TextFormField(
@@ -254,8 +335,9 @@ class _LoginBodyState extends State<_LoginBody> {
                 ),
               ),
               validator: (v) {
-                if (v == null || v.isEmpty)
+                if (v == null || v.isEmpty) {
                   return 'Please confirm your password';
+                }
                 if (v != _passwordCtrl.text) return 'Passwords do not match';
                 return null;
               },

@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../app/routes/app_routes.dart';
 import '../services/friends_service.dart';
+import '../services/live_tracking_service.dart';
 import '../services/user_stats_service.dart';
 
 class AuthController extends GetxController {
@@ -12,6 +13,10 @@ class AuthController extends GetxController {
 
   final isLoading = false.obs;
 
+  // Username set just before account creation so the authStateChanges listener
+  // can write the correct displayName when it fires.
+  String? _pendingUsername;
+
   User? get currentUser => _auth.currentUser;
 
   @override
@@ -19,8 +24,12 @@ class AuthController extends GetxController {
     super.onReady();
     _auth.authStateChanges().listen((user) {
       if (user != null) {
-        FriendsService.instance.registerProfile();
-        UserStatsService.instance.registerOrUpdate();
+        final username = _pendingUsername;
+        _pendingUsername = null;
+        FriendsService.instance.registerProfile(displayName: username);
+        UserStatsService.instance.registerOrUpdate(displayName: username);
+        //LiveTrackingService.instance.cleanupStaleBroadcast();
+        //UserStatsService.instance.syncPendingStats();
         Get.offAllNamed(AppRoutes.home);
       } else {
         Get.offAllNamed(AppRoutes.login);
@@ -59,14 +68,24 @@ class AuthController extends GetxController {
     }
   }
 
-  Future<void> signUpWithEmail(String email, String password) async {
+  Future<void> signUpWithEmail(
+      String email, String password, String username) async {
     isLoading.value = true;
     try {
+      // Store before creation so authStateChanges listener picks it up.
+      _pendingUsername = username.trim();
       await _auth.createUserWithEmailAndPassword(
           email: email.trim(), password: password);
+    } catch (e) {
+      _pendingUsername = null;
+      rethrow;
     } finally {
       isLoading.value = false;
     }
+  }
+
+  Future<void> sendPasswordReset(String email) async {
+    await _auth.sendPasswordResetEmail(email: email.trim());
   }
 
   Future<void> signOut() async {

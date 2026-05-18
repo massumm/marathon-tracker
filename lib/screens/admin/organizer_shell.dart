@@ -1,4 +1,3 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/theme.dart';
@@ -12,7 +11,8 @@ import 'organizer_profile_screen.dart';
 
 class OrganizerShell extends StatefulWidget {
   final AdminUser organizer;
-  const OrganizerShell({super.key, required this.organizer});
+  final VoidCallback onSignOut;
+  const OrganizerShell({super.key, required this.organizer, required this.onSignOut});
 
   @override
   State<OrganizerShell> createState() => _OrganizerShellState();
@@ -218,7 +218,7 @@ class _OrganizerShellState extends State<OrganizerShell> {
                     borderRadius: BorderRadius.circular(10),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(10),
-                      onTap: () => FirebaseAuth.instance.signOut(),
+                      onTap: widget.onSignOut,
                       hoverColor: Colors.red.withValues(alpha: 0.15),
                       child: Container(
                         height: 46,

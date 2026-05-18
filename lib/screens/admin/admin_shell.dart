@@ -23,7 +23,8 @@ class AdminShellNavigator {
 }
 
 class AdminShell extends StatefulWidget {
-  const AdminShell({super.key});
+  final VoidCallback onSignOut;
+  const AdminShell({super.key, required this.onSignOut});
 
   @override
   State<AdminShell> createState() => _AdminShellState();
@@ -232,7 +233,7 @@ class _AdminShellState extends State<AdminShell> {
                     borderRadius: BorderRadius.circular(10),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(10),
-                      onTap: () => FirebaseAuth.instance.signOut(),
+                      onTap: widget.onSignOut,
                       hoverColor: Colors.red.withValues(alpha: 0.15),
                       child: Container(
                         height: 46,

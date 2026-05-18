@@ -643,6 +643,8 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
             BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
         anchor: const Offset(0.5, 0.5),
         infoWindow: InfoWindow(title: 'Point ${e.key + 1}'),
+        // In marker mode the dot consumes the tap, so forward it manually.
+        onTap: _mode == _EditMode.marker ? () => _onMapTap(e.value) : null,
       );
     }).toSet();
 
@@ -1057,9 +1059,9 @@ class _ModeButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: active
               ? AppTheme.primary.withValues(alpha: 0.12)
-              : Colors.grey.shade100,
+              : Colors.white,
           border: Border.all(
-            color: active ? AppTheme.primary : Colors.grey.shade300,
+            color: active ? AppTheme.primary : Colors.grey.shade400,
             width: active ? 1.5 : 1,
           ),
           borderRadius: BorderRadius.circular(8),
@@ -1069,14 +1071,14 @@ class _ModeButton extends StatelessWidget {
           children: [
             Icon(icon,
                 size: 16,
-                color: active ? AppTheme.primary : Colors.grey.shade600),
+                color: active ? AppTheme.primary : const Color(0xFF444444)),
             const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
                 fontSize: 13,
-                fontWeight: active ? FontWeight.w600 : FontWeight.normal,
-                color: active ? AppTheme.primary : Colors.grey.shade600,
+                fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+                color: active ? AppTheme.primary : const Color(0xFF444444),
               ),
             ),
           ],

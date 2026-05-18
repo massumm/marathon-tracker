@@ -1,5 +1,7 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../controllers/my_page_controller.dart';
 import '../core/theme.dart';
@@ -29,12 +31,7 @@ class SettingsScreen extends GetView<MyPageController> {
             icon: Icons.language,
             title: 'language_settings'.tr,
             subtitle: Get.locale?.languageCode == 'ja' ? '日本語' : 'English',
-            onTap: () {
-              final isJa = Get.locale?.languageCode == 'ja';
-              Get.updateLocale(
-                isJa ? const Locale('en', 'US') : const Locale('ja', 'JP'),
-              );
-            },
+            onTap: () => _selectLanguage(),
           ),
           _tile(
             icon: Icons.delete_outline,
@@ -44,10 +41,18 @@ class SettingsScreen extends GetView<MyPageController> {
           ),
           const Divider(height: 1),
           _sectionHeader('version'.tr),
-          _tile(
-            icon: Icons.info_outline,
-            title: 'version'.tr,
-            subtitle: 'app_version'.tr,
+          FutureBuilder<PackageInfo>(
+            future: PackageInfo.fromPlatform(),
+            builder: (_, snap) {
+              final version = snap.hasData
+                  ? '${snap.data!.version} (${snap.data!.buildNumber})'
+                  : '...';
+              return _tile(
+                icon: Icons.info_outline,
+                title: 'version'.tr,
+                subtitle: version,
+              );
+            },
           ),
           const Divider(height: 1),
           const SizedBox(height: 8),
@@ -107,26 +112,80 @@ class SettingsScreen extends GetView<MyPageController> {
         onTap: onTap,
       );
 
+  void _selectLanguage() {
+    final isJa = Get.locale?.languageCode == 'ja';
+    Get.dialog(SimpleDialog(
+      title: Text('language_settings'.tr),
+      children: [
+        SimpleDialogOption(
+          onPressed: () {
+            Get.back();
+            Get.updateLocale(const Locale('en', 'US'));
+          },
+          child: Row(children: [
+            Text('English', style: TextStyle(fontWeight: isJa ? FontWeight.normal : FontWeight.bold)),
+            if (!isJa) ...[const SizedBox(width: 8), const Icon(Icons.check, size: 18)],
+          ]),
+        ),
+        SimpleDialogOption(
+          onPressed: () {
+            Get.back();
+            Get.updateLocale(const Locale('ja', 'JP'));
+          },
+          child: Row(children: [
+            Text('日本語', style: TextStyle(fontWeight: isJa ? FontWeight.bold : FontWeight.normal)),
+            if (isJa) ...[const SizedBox(width: 8), const Icon(Icons.check, size: 18)],
+          ]),
+        ),
+      ],
+    ));
+  }
+
   void _changeEmail(BuildContext context) {
-    final ctrl = TextEditingController();
+    final emailCtrl = TextEditingController();
+    final passCtrl = TextEditingController();
     Get.dialog(AlertDialog(
       title: Text('change_email'.tr),
-      content: TextField(
-        controller: ctrl,
-        autofocus: true,
-        keyboardType: TextInputType.emailAddress,
-        decoration: InputDecoration(hintText: 'enter_new_email'.tr),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: emailCtrl,
+            autofocus: true,
+            keyboardType: TextInputType.emailAddress,
+            decoration: InputDecoration(hintText: 'enter_new_email'.tr),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: passCtrl,
+            obscureText: true,
+            decoration: InputDecoration(hintText: 'enter_current_password'.tr),
+          ),
+        ],
       ),
       actions: [
         TextButton(onPressed: Get.back, child: Text('cancel'.tr)),
         TextButton(
           onPressed: () async {
-            final email = ctrl.text.trim();
-            if (email.isNotEmpty) {
+            final email = emailCtrl.text.trim();
+            final password = passCtrl.text;
+            if (email.isEmpty || password.isEmpty) return;
+            try {
+              await controller.updateEmail(email, password);
               Get.back();
-              await controller.updateEmail(email);
-              Get.snackbar('change_email'.tr, 'password_reset_sent'.tr,
-                  snackPosition: SnackPosition.BOTTOM);
+              Get.snackbar('change_email'.tr, 'email_verification_sent'.tr,
+                  snackPosition: SnackPosition.BOTTOM, duration: const Duration(seconds: 5));
+            } on FirebaseAuthException catch (e) {
+              Get.back();
+              final msg = (e.code == 'wrong-password' || e.code == 'invalid-credential')
+                  ? 'wrong_password'.tr
+                  : e.message ?? e.code;
+              Get.snackbar('change_email'.tr, msg,
+                  snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+            } catch (e) {
+              Get.back();
+              Get.snackbar('change_email'.tr, e.toString(),
+                  snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
             }
           },
           child: Text('confirm'.tr),
@@ -136,17 +195,69 @@ class SettingsScreen extends GetView<MyPageController> {
   }
 
   void _resetPassword(BuildContext context) {
+    final currentCtrl = TextEditingController();
+    final newCtrl = TextEditingController();
+    final confirmCtrl = TextEditingController();
     Get.dialog(AlertDialog(
       title: Text('change_password'.tr),
-      content: Text('${'change_password'.tr}?'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: currentCtrl,
+            autofocus: true,
+            obscureText: true,
+            decoration: InputDecoration(hintText: 'current_password'.tr),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: newCtrl,
+            obscureText: true,
+            decoration: InputDecoration(hintText: 'new_password'.tr),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: confirmCtrl,
+            obscureText: true,
+            decoration: InputDecoration(hintText: 'confirm_new_password'.tr),
+          ),
+        ],
+      ),
       actions: [
         TextButton(onPressed: Get.back, child: Text('cancel'.tr)),
         TextButton(
           onPressed: () async {
-            Get.back();
-            await controller.sendPasswordReset();
-            Get.snackbar('change_password'.tr, 'password_reset_sent'.tr,
-                snackPosition: SnackPosition.BOTTOM);
+            final current = currentCtrl.text;
+            final newPass = newCtrl.text;
+            final confirm = confirmCtrl.text;
+            if (current.isEmpty || newPass.isEmpty) return;
+            if (newPass != confirm) {
+              Get.snackbar('change_password'.tr, 'password_mismatch'.tr,
+                  snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+              return;
+            }
+            if (newPass.length < 6) {
+              Get.snackbar('change_password'.tr, 'password_too_short'.tr,
+                  snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+              return;
+            }
+            try {
+              await controller.changePassword(current, newPass);
+              Get.back();
+              Get.snackbar('change_password'.tr, 'password_updated'.tr,
+                  snackPosition: SnackPosition.BOTTOM);
+            } on FirebaseAuthException catch (e) {
+              Get.back();
+              final msg = (e.code == 'wrong-password' || e.code == 'invalid-credential')
+                  ? 'wrong_password'.tr
+                  : e.message ?? e.code;
+              Get.snackbar('change_password'.tr, msg,
+                  snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+            } catch (e) {
+              Get.back();
+              Get.snackbar('change_password'.tr, e.toString(),
+                  snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+            }
           },
           child: Text('confirm'.tr),
         ),
@@ -155,15 +266,43 @@ class SettingsScreen extends GetView<MyPageController> {
   }
 
   void _deleteAccount(BuildContext context) {
+    final passCtrl = TextEditingController();
     Get.dialog(AlertDialog(
       title: Text('delete_account'.tr),
-      content: Text('delete_account_confirm'.tr),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('delete_account_confirm'.tr),
+          const SizedBox(height: 12),
+          TextField(
+            controller: passCtrl,
+            obscureText: true,
+            autofocus: true,
+            decoration: InputDecoration(hintText: 'enter_current_password'.tr),
+          ),
+        ],
+      ),
       actions: [
         TextButton(onPressed: Get.back, child: Text('cancel'.tr)),
         TextButton(
-          onPressed: () {
-            Get.back();
-            controller.deleteAccount();
+          onPressed: () async {
+            final password = passCtrl.text;
+            if (password.isEmpty) return;
+            try {
+              await controller.deleteAccount(password);
+              Get.back();
+            } on FirebaseAuthException catch (e) {
+              Get.back();
+              final msg = (e.code == 'wrong-password' || e.code == 'invalid-credential')
+                  ? 'wrong_password'.tr
+                  : e.message ?? e.code;
+              Get.snackbar('delete_account'.tr, msg,
+                  snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+            } catch (e) {
+              Get.back();
+              Get.snackbar('delete_account'.tr, e.toString(),
+                  snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+            }
           },
           style: TextButton.styleFrom(foregroundColor: Colors.red),
           child: Text('delete_account'.tr),

@@ -40,8 +40,24 @@ class MapController extends GetxController {
     );
   }
 
-  // Kept for UI pull-to-refresh; stream already auto-syncs.
-  Future<void> fetchEvents() async {}
+  Future<void> fetchEvents() async {
+    try {
+      final snap = await FirebaseDatabase.instance
+          .ref('events')
+          .orderByChild('createdAt')
+          .get();
+      if (snap.exists && snap.value != null) {
+        final map = snap.value as Map<dynamic, dynamic>;
+        events.value = map.entries
+            .map((e) => EventModel.fromMap(
+                e.key as String, e.value as Map<dynamic, dynamic>))
+            .toList()
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      } else {
+        events.value = [];
+      }
+    } catch (_) {}
+  }
 
   @override
   void onClose() {

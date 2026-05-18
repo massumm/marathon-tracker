@@ -156,24 +156,29 @@ class MyPageController extends GetxController {
     ageObs.value = age;
   }
 
-  Future<void> sendPasswordReset() async {
-    final email = user?.email;
-    if (email == null) return;
-    await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+  Future<void> changePassword(String currentPassword, String newPassword) async {
+    final u = user;
+    if (u == null || u.email == null) return;
+    final cred = EmailAuthProvider.credential(email: u.email!, password: currentPassword);
+    await u.reauthenticateWithCredential(cred);
+    await u.updatePassword(newPassword);
   }
 
-  Future<void> updateEmail(String newEmail) async {
+  Future<void> updateEmail(String newEmail, String currentPassword) async {
     final u = user;
-    if (u == null) return;
+    if (u == null || u.email == null) return;
+    final cred = EmailAuthProvider.credential(email: u.email!, password: currentPassword);
+    await u.reauthenticateWithCredential(cred);
     await u.verifyBeforeUpdateEmail(newEmail);
     await UserStatsService.instance.registerOrUpdate();
   }
 
-  Future<void> deleteAccount() async {
+  Future<void> deleteAccount(String password) async {
     final u = user;
-    if (u == null) return;
+    if (u == null || u.email == null) return;
+    final cred = EmailAuthProvider.credential(email: u.email!, password: password);
+    await u.reauthenticateWithCredential(cred);
     await u.delete();
-    await Get.find<AuthController>().signOut();
   }
 
   Future<void> signOut() async {

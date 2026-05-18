@@ -13,17 +13,31 @@ class GroupService {
   String? get _uid => FirebaseAuth.instance.currentUser?.uid;
 
   static const int maxGroupsPerUser = 3;
-  static const int maxMembersPerGroup = 20;
+  static const int maxMembersPerGroup = 10;
 
   // ── Create ────────────────────────────────────────────────────────────────
 
-  /// Returns the new groupId, or null if the user already owns 3 groups.
+  /// Returns the new groupId, or null if the user already owns 3 groups in [eventId].
   Future<String?> createGroup(String eventId, String name) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return null;
 
-    final owned = await ownedGroupsCount();
+    final owned = await ownedGroupsCountForEvent(eventId);
     if (owned >= maxGroupsPerUser) return null;
+
+    // Resolve display name and photo from user_stats — Firebase Auth profile
+    // is often empty for email/password users who updated their name in-app.
+    final statsSnap = await _db.ref('user_stats/${user.uid}').get();
+    final stats =
+        statsSnap.exists ? statsSnap.value as Map<dynamic, dynamic> : null;
+    final displayName = (stats?['displayName'] as String? ?? '').isNotEmpty
+        ? stats!['displayName'] as String
+        : (user.displayName ?? '').isNotEmpty
+            ? user.displayName!
+            : user.email?.split('@').first ?? '';
+    final photoUrl = (stats?['photoUrl'] as String? ?? '').isNotEmpty
+        ? stats!['photoUrl'] as String
+        : user.photoURL ?? '';
 
     final ref = _db.ref('groups').push();
     final groupId = ref.key!;
@@ -34,16 +48,16 @@ class GroupService {
       eventId: eventId,
       name: name,
       adminUid: user.uid,
-      adminDisplayName: user.displayName ?? user.email ?? '',
-      adminPhotoUrl: user.photoURL ?? '',
+      adminDisplayName: displayName,
+      adminPhotoUrl: photoUrl,
       createdAt: now,
       memberCount: 1,
     );
 
     final member = GroupMemberModel(
       uid: user.uid,
-      displayName: user.displayName ?? '',
-      photoUrl: user.photoURL ?? '',
+      displayName: displayName,
+      photoUrl: photoUrl,
       email: user.email ?? '',
       joinedAt: now,
       isAdmin: true,
@@ -238,6 +252,19 @@ class GroupService {
     return (snap.value as Map<dynamic, dynamic>).length;
   }
 
+  Future<int> ownedGroupsCountForEvent(String eventId) async {
+    final uid = _uid;
+    if (uid == null) return 0;
+    final results = await Future.wait([
+      _db.ref('user_owned_groups/$uid').get(),
+      _db.ref('event_groups/$eventId').get(),
+    ]);
+    if (!results[0].exists || !results[1].exists) return 0;
+    final ownedIds = (results[0].value as Map<dynamic, dynamic>).keys.toSet();
+    final eventIds = (results[1].value as Map<dynamic, dynamic>).keys.toSet();
+    return ownedIds.intersection(eventIds).length;
+  }
+
   Future<bool> isMember(String groupId) async {
     final uid = _uid;
     if (uid == null) return false;
@@ -316,19 +343,26 @@ class GroupService {
         if (m.displayName.isNotEmpty && m.photoUrl.isNotEmpty) return m;
         try {
           final snap = await _db.ref('user_stats/${m.uid}').get();
-          final stats = snap.value as Map<dynamic, dynamic>?;
+          final stats = snap.exists ? snap.value as Map<dynamic, dynamic> : null;
           final name = m.displayName.isNotEmpty
               ? m.displayName
-              : (stats?['displayName'] as String? ?? '');
+              : (stats?['displayName'] as String? ??
+                  (m.email.isNotEmpty ? m.email.split('@').first : ''));
           final url = m.photoUrl.isNotEmpty
               ? m.photoUrl
               : (stats?['photoUrl'] as String? ?? '');
+          final email = m.email.isNotEmpty
+              ? m.email
+              : (stats?['email'] as String? ?? '');
           final updates = <String, dynamic>{};
           if (name.isNotEmpty && m.displayName.isEmpty) {
             updates['displayName'] = name;
           }
           if (url.isNotEmpty && m.photoUrl.isEmpty) {
             updates['photoUrl'] = url;
+          }
+          if (email.isNotEmpty && m.email.isEmpty) {
+            updates['email'] = email;
           }
           if (updates.isNotEmpty) {
             await _db
@@ -339,7 +373,7 @@ class GroupService {
             uid: m.uid,
             displayName: name,
             photoUrl: url,
-            email: m.email,
+            email: email,
             joinedAt: m.joinedAt,
             isAdmin: m.isAdmin,
           );

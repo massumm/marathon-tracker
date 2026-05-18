@@ -13,14 +13,17 @@ class FriendsService {
   // ── User profile ──────────────────────────────────────────────────────────
 
   /// Write/update current user's public profile so others can search them.
-  Future<void> registerProfile() async {
+  /// Uses update() so existing fields are preserved.
+  /// Pass [displayName] to override the value from FirebaseAuth (needed during
+  /// signup when authStateChanges fires before updateDisplayName completes).
+  Future<void> registerProfile({String? displayName}) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
-    final displayName = user.displayName ?? '';
-    await _db.ref('users/${user.uid}').set({
+    final name = displayName ?? user.displayName ?? '';
+    await _db.ref('users/${user.uid}').update({
       'email': user.email ?? '',
-      'displayName': displayName,
-      'displayNameLower': displayName.toLowerCase(),
+      'displayName': name,
+      'displayNameLower': name.toLowerCase(),
     });
   }
 

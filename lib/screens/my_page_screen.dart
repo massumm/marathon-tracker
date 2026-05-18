@@ -3,6 +3,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_storage/firebase_storage.dart' as fs;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -159,11 +160,16 @@ class _AppFooter extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 6),
-        Text(
-          'app_version_label'.tr,
-          style: const TextStyle(
-            fontSize: 11,
-            color: AppTheme.textSecondary,
+        FutureBuilder<PackageInfo>(
+          future: PackageInfo.fromPlatform(),
+          builder: (_, snap) => Text(
+            snap.hasData
+                ? '${('version'.tr)} ${snap.data!.version} (${snap.data!.buildNumber})'
+                : 'version'.tr,
+            style: const TextStyle(
+              fontSize: 11,
+              color: AppTheme.textSecondary,
+            ),
           ),
         ),
         const SizedBox(height: 4),

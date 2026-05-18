@@ -60,8 +60,11 @@ class GroupMemberModel {
     this.isAdmin = false,
   });
 
-  String get label =>
-      displayName.isNotEmpty ? displayName : email.split('@').first;
+  String get label {
+    if (displayName.isNotEmpty) return displayName;
+    if (email.isNotEmpty) return email.split('@').first;
+    return uid.length >= 6 ? uid.substring(0, 6) : uid;
+  }
 
   factory GroupMemberModel.fromMap(String uid, Map<dynamic, dynamic> map) {
     return GroupMemberModel(

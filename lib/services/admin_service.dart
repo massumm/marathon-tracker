@@ -65,54 +65,90 @@ class AdminService {
       if (data == null) return <RunnerData>[];
       final map = data as Map<dynamic, dynamic>;
 
+      // Filter out runners whose lastSeen is stale (> 10 min) — covers brief
+      // background suspensions on OEM devices while still hiding truly dead
+      // sessions (crash / force-quit) from the admin leaderboard.
+      final cutoff = DateTime.now()
+          .subtract(const Duration(minutes: 10))
+          .millisecondsSinceEpoch;
+
       final statsSnap = await _db.ref('user_stats').get();
       final statsMap = statsSnap.exists
           ? statsSnap.value as Map<dynamic, dynamic>
           : <dynamic, dynamic>{};
 
-      return map.entries.map((e) {
-        final uid = e.key as String;
-        final runner = RunnerData.fromMap(uid, e.value as Map<dynamic, dynamic>);
-        final stats = statsMap[uid];
-        final resolvedName = (stats is Map)
-            ? (stats['displayName'] as String? ?? '').trim()
-            : '';
-        final displayName = resolvedName.isNotEmpty
-            ? resolvedName
-            : runner.displayName.isNotEmpty && runner.displayName != 'Runner'
-                ? runner.displayName
-                : runner.email.isNotEmpty
-                    ? runner.email.split('@').first
-                    : uid;
-        return RunnerData(
-          uid: runner.uid,
-          email: runner.email,
-          displayName: displayName,
-          photoUrl: runner.photoUrl,
-          lat: runner.lat,
-          lng: runner.lng,
-          startedAt: runner.startedAt,
-          distanceKm: runner.distanceKm,
-          eventId: runner.eventId,
-        );
-      }).toList()
+      return map.entries
+          .map((e) {
+            final uid = e.key as String;
+            final runner =
+                RunnerData.fromMap(uid, e.value as Map<dynamic, dynamic>);
+            final stats = statsMap[uid];
+            final resolvedName = (stats is Map)
+                ? (stats['displayName'] as String? ?? '').trim()
+                : '';
+            final displayName = resolvedName.isNotEmpty
+                ? resolvedName
+                : runner.displayName.isNotEmpty &&
+                        runner.displayName != 'Runner'
+                    ? runner.displayName
+                    : runner.email.isNotEmpty
+                        ? runner.email.split('@').first
+                        : uid;
+            return RunnerData(
+              uid: runner.uid,
+              email: runner.email,
+              displayName: displayName,
+              photoUrl: runner.photoUrl,
+              lat: runner.lat,
+              lng: runner.lng,
+              startedAt: runner.startedAt,
+              lastSeen: runner.lastSeen,
+              distanceKm: runner.distanceKm,
+              eventId: runner.eventId,
+            );
+          })
+          .where((r) => r.lastSeen >= cutoff)
+          .toList()
         ..sort((a, b) => b.distanceKm.compareTo(a.distanceKm));
     });
   }
 
   /// Streams all finisher stats for a completed event, sorted by distance desc.
+  /// Cross-references user_stats so names/photos are always up to date.
   Stream<List<UserStats>> watchEventResults(String eventId) {
-    return _db.ref('event_stats/$eventId').onValue.map((e) {
+    return _db.ref('event_stats/$eventId').onValue.asyncMap((e) async {
       final data = e.snapshot.value;
       if (data == null) return <UserStats>[];
       final map = data as Map<dynamic, dynamic>;
+
+      final statsSnap = await _db.ref('user_stats').get();
+      final statsMap = statsSnap.exists
+          ? statsSnap.value as Map<dynamic, dynamic>
+          : <dynamic, dynamic>{};
+
       final list = map.entries.map((entry) {
+        final uid = entry.key as String;
         final m = entry.value as Map<dynamic, dynamic>;
+        final userStats = statsMap[uid];
+        final storedName = m['displayName'] as String? ?? '';
+        final resolvedName = storedName.isNotEmpty
+            ? storedName
+            : (userStats is Map
+                ? (userStats['displayName'] as String? ?? '')
+                : '');
+        final resolvedEmail =
+            userStats is Map ? (userStats['email'] as String? ?? '') : '';
+        final storedPhoto = m['photoUrl'] as String? ?? '';
+        final resolvedPhoto = storedPhoto.isNotEmpty
+            ? storedPhoto
+            : (userStats is Map
+                ? (userStats['photoUrl'] as String? ?? '')
+                : '');
         return UserStats(
-          uid: entry.key as String,
-          displayName: m['displayName'] as String? ?? '',
-          email: '',
-          photoUrl: m['photoUrl'] as String? ?? '',
+          uid: uid,
+          displayName: resolvedName,
+          email: resolvedEmail,
+          photoUrl: resolvedPhoto,
           totalDistanceKm: (m['distanceKm'] as num?)?.toDouble() ?? 0.0,
           totalRuns: 1,
           totalSeconds: (m['seconds'] as num?)?.toInt() ?? 0,
@@ -130,10 +166,68 @@ class AdminService {
   }
 
   /// Streams runners for a specific event, sorted by distanceKm descending.
+  /// Uses a server-side Firebase query (orderByChild + equalTo) so only the
+  /// matching event's runners come over the wire — client-side chaining on
+  /// watchLiveRunners() was unreliable when multiple events ran simultaneously.
   Stream<List<RunnerData>> watchLiveRunnersForEvent(String eventId) {
-    return watchLiveRunners().map(
-      (runners) => runners.where((r) => r.eventId == eventId).toList(),
-    );
+    return _db
+        .ref('live_runners')
+        .orderByChild('eventId')
+        .equalTo(eventId)
+        .onValue
+        .asyncMap((event) async {
+      final data = event.snapshot.value;
+      if (data == null) return <RunnerData>[];
+      final map = data as Map<dynamic, dynamic>;
+
+      final statsSnap = await _db.ref('user_stats').get();
+      final statsMap = statsSnap.exists
+          ? statsSnap.value as Map<dynamic, dynamic>
+          : <dynamic, dynamic>{};
+
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final list = map.entries
+          .map((e) {
+            final uid = e.key as String;
+            final runner =
+                RunnerData.fromMap(uid, e.value as Map<dynamic, dynamic>);
+            final stats = statsMap[uid];
+            final resolvedName = (stats is Map)
+                ? (stats['displayName'] as String? ?? '').trim()
+                : '';
+            final displayName = resolvedName.isNotEmpty
+                ? resolvedName
+                : runner.displayName.isNotEmpty &&
+                        runner.displayName != 'Runner'
+                    ? runner.displayName
+                    : runner.email.isNotEmpty
+                        ? runner.email.split('@').first
+                        : uid;
+            return RunnerData(
+              uid: runner.uid,
+              email: runner.email,
+              displayName: displayName,
+              photoUrl: runner.photoUrl,
+              lat: runner.lat,
+              lng: runner.lng,
+              startedAt: runner.startedAt,
+              lastSeen: runner.lastSeen,
+              distanceKm: runner.distanceKm,
+              eventId: runner.eventId,
+            );
+          })
+          .toList();
+
+      // Online runners (lastSeen < 2 min) first, then offline — both groups
+      // sorted by distance descending so the leaderboard stays meaningful.
+      list.sort((a, b) {
+        final aOnline = now - a.lastSeen < 120000;
+        final bOnline = now - b.lastSeen < 120000;
+        if (aOnline != bOnline) return aOnline ? -1 : 1;
+        return b.distanceKm.compareTo(a.distanceKm);
+      });
+      return list;
+    });
   }
 
   // ── Dashboard stats ───────────────────────────────────────────────────────
@@ -158,6 +252,29 @@ class AdminService {
       }
     }
     return {'users': userCount, 'events': eventCount};
+  }
+
+  /// Real-time stats stream — emits whenever the events collection changes,
+  /// and fetches the latest user count alongside each emission.
+  Stream<Map<String, int>> watchStats({String? organizerUid}) {
+    return _db.ref('events').onValue.asyncMap((eventsEvent) async {
+      final usersSnap = await _db.ref('user_stats').get();
+      final userCount =
+          usersSnap.exists ? (usersSnap.value as Map).length : 0;
+      int eventCount = 0;
+      if (eventsEvent.snapshot.exists) {
+        final eventsMap = eventsEvent.snapshot.value as Map;
+        if (organizerUid != null) {
+          eventCount = eventsMap.values
+              .whereType<Map>()
+              .where((e) => e['organizerUid'] == organizerUid)
+              .length;
+        } else {
+          eventCount = eventsMap.length;
+        }
+      }
+      return {'users': userCount, 'events': eventCount};
+    });
   }
 
   // ── Events ────────────────────────────────────────────────────────────────

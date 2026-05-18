@@ -345,16 +345,16 @@ class _EventCard extends StatelessWidget {
   void _confirmDelete(BuildContext context) {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
         title: const Text('Delete Event'),
         content: Text('Delete "${event.name}"? This cannot be undone.'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogCtx),
               child: const Text('Cancel')),
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.pop(dialogCtx);
               AdminService.instance.deleteEvent(event.id);
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
@@ -422,10 +422,10 @@ class _LiveLeaderboardButton extends StatelessWidget {
       );
     }
 
-    // Today → red LIVE with live runner count
+    // Today → red LIVE with live runner count (scoped to this event only)
     if (isToday) {
       return StreamBuilder(
-        stream: AdminService.instance.watchLiveRunners(),
+        stream: AdminService.instance.watchLiveRunnersForEvent(event.id),
         builder: (_, snap) {
           final count = snap.data?.length ?? 0;
           return _buildButton(

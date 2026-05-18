@@ -3,7 +3,9 @@ import 'dart:convert';
 import 'dart:ui' as ui;
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
@@ -80,10 +82,14 @@ class KmlMapController extends GetxController {
 
   int get runStartMs => _runStartMs;
 
+  // ── Self marker ───────────────────────────────────────────────────────────
+  BitmapDescriptor? _selfIcon;
+  final selfMarker = Rxn<Marker>();
+
   // ── Live runners ──────────────────────────────────────────────────────────
   final isLive = false.obs;
   final isSharing = true.obs;
-  final activeRunners = <RunnerData>[].obs;   // friends/group — map markers
+  final activeRunners = <RunnerData>[].obs; // friends/group — map markers
   final allEventRunners = <RunnerData>[].obs; // same eventId — leaderboard
 
   // ── Leaderboard ───────────────────────────────────────────────────────────
@@ -118,6 +124,7 @@ class KmlMapController extends GetxController {
     kmlPolylines = {};
     kmlMarkers = {};
     _loadFriendsAndSubscribe(); // safe here — user is authenticated
+    _initSelfIcon();
     if (args is Map) {
       kmlDirectUrl = args['kmlUrl'] as String? ?? '';
       kmlFilePath = args['storagePath'] as String? ?? '';
@@ -148,6 +155,7 @@ class KmlMapController extends GetxController {
     _runnersSub?.cancel();
     _iconCache.clear();
     if (isLive.value) LiveTrackingService.instance.stopBroadcasting();
+    if (isTracking.value) FlutterForegroundTask.stopService();
     super.onClose();
   }
 
@@ -243,6 +251,121 @@ class KmlMapController extends GetxController {
     return BitmapDescriptor.bytes(bytes!.buffer.asUint8List());
   }
 
+  // ── Self icon (photo/initial + heading arrow) ─────────────────────────────
+
+  Future<void> _initSelfIcon() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    String photoUrl = user.photoURL ?? '';
+    String displayName = user.displayName ?? '';
+    try {
+      final snap =
+          await FirebaseDatabase.instance.ref('user_stats/${user.uid}').get();
+      if (snap.exists) {
+        final data = snap.value as Map<dynamic, dynamic>;
+        final p = data['photoUrl'] as String? ?? '';
+        final n = data['displayName'] as String? ?? '';
+        if (p.isNotEmpty) photoUrl = p;
+        if (n.isNotEmpty) displayName = n;
+      }
+    } catch (_) {}
+    _selfIcon = await _buildSelfIcon(photoUrl, displayName);
+    // If a position already arrived before the icon was ready, paint it now.
+    final pos = currentPosition.value;
+    if (pos != null) _updateSelfMarker(pos);
+  }
+
+  Future<BitmapDescriptor> _buildSelfIcon(
+      String photoUrl, String displayName) async {
+    const double w = 56;
+    const double h = 72;
+    const double cx = w / 2;
+    const double circleRadius = 22.0;
+    // Circle sits near the bottom; arrow tip starts at top.
+    const double circleCy = h - circleRadius - 2;
+    const double border = 3.0;
+    const double innerRadius = circleRadius - border;
+
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+
+    // Directional arrow triangle pointing up (North when rotation = 0).
+    final arrowPaint = Paint()..color = AppTheme.primary;
+    final arrowPath = Path()
+      ..moveTo(cx, 0)
+      ..lineTo(cx - 11, 22)
+      ..lineTo(cx + 11, 22)
+      ..close();
+    canvas.drawPath(arrowPath, arrowPaint);
+
+    // White border ring.
+    canvas.drawCircle(
+        Offset(cx, circleCy), circleRadius, Paint()..color = Colors.white);
+
+    // Clip to avatar area.
+    canvas.save();
+    canvas.clipPath(Path()
+      ..addOval(
+          Rect.fromCircle(center: Offset(cx, circleCy), radius: innerRadius)));
+
+    bool drewPhoto = false;
+    if (photoUrl.isNotEmpty) {
+      try {
+        final resp = await http.get(Uri.parse(photoUrl));
+        if (resp.statusCode == 200) {
+          final completer = Completer<ui.Image>();
+          ui.decodeImageFromList(resp.bodyBytes, completer.complete);
+          final img = await completer.future;
+          final minSide = img.width < img.height
+              ? img.width.toDouble()
+              : img.height.toDouble();
+          final src = Rect.fromLTWH((img.width - minSide) / 2,
+              (img.height - minSide) / 2, minSide, minSide);
+          final dst = Rect.fromLTWH(cx - innerRadius, circleCy - innerRadius,
+              innerRadius * 2, innerRadius * 2);
+          canvas.drawImageRect(img, src, dst, Paint());
+          drewPhoto = true;
+        }
+      } catch (_) {}
+    }
+
+    if (!drewPhoto) {
+      canvas.drawCircle(
+          Offset(cx, circleCy), innerRadius, Paint()..color = AppTheme.primary);
+      final initial =
+          displayName.isNotEmpty ? displayName[0].toUpperCase() : 'M';
+      final tp = TextPainter(textDirection: TextDirection.ltr)
+        ..text = TextSpan(
+            text: initial,
+            style: const TextStyle(
+                fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white))
+        ..layout();
+      tp.paint(canvas, Offset(cx - tp.width / 2, circleCy - tp.height / 2));
+    }
+
+    canvas.restore();
+
+    final img = await recorder.endRecording().toImage(w.toInt(), h.toInt());
+    final bytes = await img.toByteData(format: ui.ImageByteFormat.png);
+    return BitmapDescriptor.bytes(bytes!.buffer.asUint8List());
+  }
+
+  void _updateSelfMarker(LatLng pos) {
+    final icon = _selfIcon;
+    if (icon == null) return;
+    selfMarker.value = Marker(
+      markerId: const MarkerId('_self'),
+      position: pos,
+      icon: icon,
+      rotation: _lastHeading,
+      // Pin point = center of the avatar circle (circle center at y=48/72).
+      anchor: const Offset(0.5, 48 / 72),
+      flat: true,
+      zIndexInt: 10,
+      consumeTapEvents: false,
+    );
+  }
+
   // ── Leaderboard helpers ───────────────────────────────────────────────────
 
   void _rebuildLeaderboard() {
@@ -276,8 +399,18 @@ class KmlMapController extends GetxController {
       ));
     }
 
-    // Sort descending — most distance = 1st; cap at 10 entries
-    entries.sort((a, b) => b.distanceKm.compareTo(a.distanceKm));
+    // Sort descending with hysteresis: runners within _kHysteresisKm of each
+    // other keep their previous relative order instead of swapping on GPS noise.
+    final prevRank = {for (final e in leaderboard) e.uid: e.rank};
+    entries.sort((a, b) {
+      final diff = b.distanceKm - a.distanceKm;
+      if (diff.abs() < _kHysteresisKm) {
+        final ra = prevRank[a.uid] ?? 999;
+        final rb = prevRank[b.uid] ?? 999;
+        return ra.compareTo(rb);
+      }
+      return diff > 0 ? 1 : -1;
+    });
     final capped = entries.length > 10 ? entries.sublist(0, 10) : entries;
     leaderboard.value = [
       for (var i = 0; i < capped.length; i++) capped[i].withRank(i + 1)
@@ -332,6 +465,16 @@ class KmlMapController extends GetxController {
   final snappedPoints = <LatLng>[].obs;
   double _cachedDistanceKm = 0.0;
 
+  // Route-projection lookup tables built after KML loads.
+  // _routePath flattens all KML polyline points; _routeCumDist[i] is the
+  // cumulative metres from the route start to _routePath[i].
+  final _routePath = <LatLng>[];
+  final _routeCumDist = <double>[];
+
+  // Leaderboard rank stability: runners within this gap keep their previous
+  // relative order instead of swapping on GPS noise.
+  static const double _kHysteresisKm = 0.05;
+
   // Called from onCameraMove — only register as a user pan when WE are
   // not the ones moving the camera programmatically.
   void onUserPan() {
@@ -350,7 +493,7 @@ class KmlMapController extends GetxController {
     final cam = CameraPosition(
       target: target,
       bearing: bearing,
-      tilt: 50.0,
+      tilt: 0.0,
       zoom: 18.5,
     );
     lastCameraPosition = cam;
@@ -419,8 +562,7 @@ class KmlMapController extends GetxController {
 
     final pos = await LocationService.instance.getCurrentPosition();
     if (pos != null) {
-      _animateNavCamera(
-          LatLng(pos.latitude, pos.longitude), _lastHeading);
+      _animateNavCamera(LatLng(pos.latitude, pos.longitude), _lastHeading);
     }
 
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -430,7 +572,19 @@ class KmlMapController extends GetxController {
     _positionSub =
         LocationService.instance.getPositionStream().listen((position) async {
       final latLng = LatLng(position.latitude, position.longitude);
-      // Update incremental distance before adding point
+
+      // Always update the map marker and camera — the user must always see
+      // their own position regardless of whether we record the point.
+      _lastHeading = position.heading;
+      if (!isUserPanned.value) {
+        _animateNavCamera(latLng, position.heading);
+      }
+      currentPosition.value = latLng;
+      _updateSelfMarker(latLng);
+      _lbTickCount++;
+
+      // Record every point that passes the OS distanceFilter — the filter
+      // already rejects updates shorter than 2 m so no extra guard is needed.
       if (trackingPoints.isNotEmpty) {
         final prev = trackingPoints.last;
         _cachedDistanceKm += Geolocator.distanceBetween(
@@ -441,21 +595,17 @@ class KmlMapController extends GetxController {
             ) /
             1000;
       }
-      _lastHeading = position.heading;
-      if (!isUserPanned.value) {
-        _animateNavCamera(latLng, position.heading);
-      }
-      currentPosition.value = latLng;
       trackingPoints.add(latLng);
       _rawBuffer.add(latLng);
-      _lbTickCount++;
 
       // Finish line detection — arm only after runner leaves the finish zone
       // (handles loop courses where start == finish)
       if (!_finishAlertShown && finishPosition != null) {
         final dist = Geolocator.distanceBetween(
-          latLng.latitude, latLng.longitude,
-          finishPosition!.latitude, finishPosition!.longitude,
+          latLng.latitude,
+          latLng.longitude,
+          finishPosition!.latitude,
+          finishPosition!.longitude,
         );
         if (!_hasLeftFinishZone) {
           if (dist > _finishArmRadiusM) _hasLeftFinishZone = true;
@@ -495,6 +645,22 @@ class KmlMapController extends GetxController {
     isLive.value = true;
 
     isTracking.value = true;
+
+    // Ask the user to exempt the app from battery optimisation.
+    // This is critical on Samsung/Xiaomi/OnePlus — without it the OS can
+    // suspend our network connection and throttle the Dart event loop even
+    // while a foreground service is running.
+    if (!(await FlutterForegroundTask.isIgnoringBatteryOptimizations)) {
+      await FlutterForegroundTask.requestIgnoreBatteryOptimization();
+    }
+
+    await FlutterForegroundTask.startService(
+      serviceId: 256,
+      notificationTitle: 'RunMate – Run in progress',
+      notificationText: 'Your run is being tracked in the background.',
+      // no callback — we only need the service to exist so Android keeps the
+      // process alive; a background Dart isolate would conflict on relaunch
+    );
   }
 
   /// Calls the Google Roads Snap-to-Roads API.
@@ -588,7 +754,8 @@ class KmlMapController extends GetxController {
     final uid = FirebaseAuth.instance.currentUser?.uid ?? 'unknown';
 
     // 1. Always save locally first — data is never lost
-    await OfflineStorageService.instance.saveRouteLocally(uid, fileName, jsonBody);
+    await OfflineStorageService.instance
+        .saveRouteLocally(uid, fileName, jsonBody);
 
     // 2. Try uploading to Firebase Storage; queue for sync if offline
     try {
@@ -603,14 +770,20 @@ class KmlMapController extends GetxController {
           margin: const EdgeInsets.all(12));
     }
 
-    // 3. Stats are queued by RTDB persistence — safe offline
-    await UserStatsService.instance
-        .addRunStats(totalDistance, elapsedSeconds.value);
+    // 3. Save stats with local backup — survives process death while offline
+    final runId = startTime.millisecondsSinceEpoch.toString();
+    await UserStatsService.instance.addRunStats(
+      totalDistance,
+      elapsedSeconds.value,
+      runId: runId,
+      eventId: currentEventId,
+    );
     if (currentEventId.isNotEmpty) {
       await UserStatsService.instance.addEventRunStats(
           currentEventId, totalDistance, elapsedSeconds.value);
     }
     isSaving.value = false;
+    await FlutterForegroundTask.stopService();
 
     Get.find<HomeController>()
         .changeTab(2); // MyPage is index 2 (0=Events,1=Friends,2=MyPage)
@@ -624,17 +797,19 @@ class KmlMapController extends GetxController {
     _runnersSub?.cancel();
     _runnersSub = LiveTrackingService.instance.watchRunners().listen(
       (runners) async {
-        // Leaderboard: everyone running the same event (or fall back to friend filter)
-        allEventRunners.value = currentEventId.isEmpty
-            ? (friendSet.isEmpty
-                ? <RunnerData>[]
-                : runners.where((r) => friendSet.contains(r.uid)).toList())
-            : runners.where((r) => r.eventId == currentEventId).toList();
-
-        // Map markers: friends + group members only
+        // Only friends/group members running the same event.
+        // Strangers in the same event are not shown on the map or leaderboard.
         final filtered = friendSet.isEmpty
             ? <RunnerData>[]
-            : runners.where((r) => friendSet.contains(r.uid)).toList();
+            : runners.where((r) {
+                if (!friendSet.contains(r.uid)) return false;
+                if (currentEventId.isNotEmpty && r.eventId != currentEventId) {
+                  return false;
+                }
+                return true;
+              }).toList();
+
+        allEventRunners.value = filtered;
         final updated = <String, Marker>{};
         // Fetch all icons in parallel instead of sequentially
         final icons = await Future.wait(filtered.map(_getRunnerIcon));

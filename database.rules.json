@@ -8,6 +8,7 @@
     },
     "live_runners": {
       ".read": "auth != null",
+      ".indexOn": ["eventId"],
       "$uid": {
         ".write": "auth != null && auth.uid === $uid"
       }
@@ -91,6 +92,14 @@
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
         ".write": "auth != null"
+      }
+    },
+    "event_stats": {
+      ".read": "auth != null",
+      "$eventId": {
+        "$uid": {
+          ".write": "auth != null && auth.uid === $uid"
+        }
       }
     },
     "group_comments": {
