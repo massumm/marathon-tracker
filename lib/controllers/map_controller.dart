@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:get/get.dart';
 import '../models/event_model.dart';
+import '../services/event_notification_service.dart';
 
 class MapController extends GetxController {
   final events = <EventModel>[].obs;
@@ -32,6 +33,7 @@ class MapController extends GetxController {
         }
         isLoading.value = false;
         errorMsg.value = '';
+        EventNotificationService.instance.scheduleForEvents(events.toList());
       },
       onError: (_) {
         errorMsg.value = 'Error loading events';

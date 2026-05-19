@@ -16,6 +16,7 @@ import '../core/theme.dart';
 import '../models/runner_data.dart';
 import 'package:geolocator/geolocator.dart';
 
+import '../services/event_notification_service.dart';
 import '../services/firebase_service.dart';
 import '../services/offline_storage_service.dart';
 import '../services/friends_service.dart';
@@ -107,7 +108,12 @@ class KmlMapController extends GetxController {
   bool _programmaticCamera = false;
   double _lastHeading = 0.0;
   String currentEventId = '';
+  DateTime? eventStartTime;
+  DateTime? cutoffDateTime;
   CameraPosition? lastCameraPosition;
+  Timer? _countdownTimer;
+  Timer? _cutoffTimer;
+  bool _countdownCancelled = false;
   LatLng? finishPosition;
   bool _finishAlertShown = false;
   bool _hasLeftFinishZone = false;
@@ -130,11 +136,22 @@ class KmlMapController extends GetxController {
       kmlFilePath = args['storagePath'] as String? ?? '';
       routeLabel = args['label'] as String? ?? '';
       currentEventId = args['eventId'] as String? ?? '';
+      final evMs = args['eventDateTime'] as int? ?? 0;
+      final hasTime = args['hasStartTime'] as bool? ?? false;
+      eventStartTime = (hasTime && evMs > 0)
+          ? DateTime.fromMillisecondsSinceEpoch(evMs)
+          : null;
+      final cutMins = args['cutoffMinutes'] as int? ?? 0;
+      cutoffDateTime = (eventStartTime != null && cutMins > 0)
+          ? eventStartTime!.add(Duration(minutes: cutMins))
+          : null;
     } else if (args is String) {
       kmlFilePath = args;
       kmlDirectUrl = null;
       routeLabel = '';
       currentEventId = '';
+      eventStartTime = null;
+      cutoffDateTime = null;
     }
     _loadKml();
   }
@@ -151,12 +168,69 @@ class KmlMapController extends GetxController {
   @override
   void onClose() {
     _timer?.cancel();
+    _countdownTimer?.cancel();
+    _cutoffTimer?.cancel();
     _positionSub?.cancel();
     _runnersSub?.cancel();
     _iconCache.clear();
     if (isLive.value) LiveTrackingService.instance.stopBroadcasting();
     if (isTracking.value) FlutterForegroundTask.stopService();
     super.onClose();
+  }
+
+  /// Starts the foreground service (keeps Dart isolate alive in background)
+  /// and schedules a one-shot timer that calls [startTracking] at [eventStart].
+  Future<void> beginCountdown(DateTime eventStart) async {
+    _countdownCancelled = false;
+    _countdownTimer?.cancel();
+    debugPrint('[COUNTDOWN] beginCountdown called. eventStart=$eventStart now=${DateTime.now()}');
+
+    if (!await FlutterForegroundTask.isIgnoringBatteryOptimizations) {
+      debugPrint('[COUNTDOWN] requesting battery optimisation exemption');
+      await FlutterForegroundTask.requestIgnoreBatteryOptimization();
+    }
+    if (_countdownCancelled) {
+      debugPrint('[COUNTDOWN] cancelled during setup — aborting');
+      return;
+    }
+
+    await EventNotificationService.instance
+        .scheduleCountdownAutoStart(eventStart.millisecondsSinceEpoch);
+    debugPrint('[COUNTDOWN] AlarmManager alarm scheduled at $eventStart');
+
+    await FlutterForegroundTask.startService(
+      serviceId: 256,
+      notificationTitle: 'RunMate – Starting Soon',
+      notificationText: 'Auto-starts when event begins. Keep notification visible.',
+    );
+    debugPrint('[COUNTDOWN] foreground service started');
+
+    if (_countdownCancelled) {
+      debugPrint('[COUNTDOWN] cancelled during FGT startup — aborting');
+      EventNotificationService.instance.cancelCountdownAutoStart();
+      FlutterForegroundTask.stopService();
+      return;
+    }
+
+    final delay = eventStart.difference(DateTime.now());
+    debugPrint('[COUNTDOWN] Dart timer delay = ${delay.inSeconds}s');
+    if (delay.inSeconds <= 0) {
+      debugPrint('[COUNTDOWN] already past start time — calling startTracking immediately');
+      await startTracking();
+      return;
+    }
+    _countdownTimer = Timer(delay, () async {
+      debugPrint('[COUNTDOWN] Dart timer fired — calling startTracking');
+      await startTracking();
+    });
+  }
+
+  void cancelCountdown() {
+    _countdownCancelled = true;
+    _countdownTimer?.cancel();
+    _countdownTimer = null;
+    EventNotificationService.instance.cancelCountdownAutoStart();
+    FlutterForegroundTask.stopService();
   }
 
   // ── Runner profile icon ───────────────────────────────────────────────────
@@ -548,6 +622,14 @@ class KmlMapController extends GetxController {
   }
 
   Future<void> startTracking() async {
+    debugPrint('[TRACKING] startTracking called. isTracking=${isTracking.value}');
+    if (isTracking.value) {
+      debugPrint('[TRACKING] already tracking — skipped');
+      return;
+    }
+    _countdownTimer?.cancel();
+    _countdownTimer = null;
+    EventNotificationService.instance.cancelCountdownAutoStart();
     trackingPoints.clear();
     snappedPoints.clear();
     _rawBuffer.clear();
@@ -560,11 +642,17 @@ class KmlMapController extends GetxController {
     _runStartMs = DateTime.now().millisecondsSinceEpoch;
     _timer?.cancel();
 
-    final pos = await LocationService.instance.getCurrentPosition();
+    // Use a short timeout so a slow GPS fix (common when screen is off) does
+    // not block the stream subscription from starting.
+    debugPrint('[TRACKING] awaiting getCurrentPosition (5 s timeout)');
+    final pos = await LocationService.instance.getCurrentPosition()
+        .timeout(const Duration(seconds: 5), onTimeout: () => null);
+    debugPrint('[TRACKING] getCurrentPosition returned: ${pos?.latitude}, ${pos?.longitude}');
     if (pos != null) {
       _animateNavCamera(LatLng(pos.latitude, pos.longitude), _lastHeading);
     }
 
+    debugPrint('[TRACKING] starting elapsed timer + position stream');
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       elapsedSeconds.value++;
     });
@@ -640,11 +728,27 @@ class KmlMapController extends GetxController {
     // Auto-broadcast when tracking starts
     final lat = pos?.latitude ?? initialLocation.latitude;
     final lng = pos?.longitude ?? initialLocation.longitude;
+    debugPrint('[TRACKING] calling startBroadcasting');
     await LiveTrackingService.instance
-        .startBroadcasting(lat, lng, eventId: currentEventId);
+        .startBroadcasting(lat, lng, eventId: currentEventId)
+        .timeout(const Duration(seconds: 5), onTimeout: () {});
+    debugPrint('[TRACKING] startBroadcasting done');
     isLive.value = true;
 
     isTracking.value = true;
+    debugPrint('[TRACKING] isTracking set to true — run started');
+
+    // Arm the cutoff timer — auto-stop tracking when the event closes.
+    _cutoffTimer?.cancel();
+    final cutoff = cutoffDateTime;
+    if (cutoff != null) {
+      final delay = cutoff.difference(DateTime.now());
+      if (delay.inSeconds <= 0) {
+        stopTracking();
+      } else {
+        _cutoffTimer = Timer(delay, () => stopTracking());
+      }
+    }
 
     // Ask the user to exempt the app from battery optimisation.
     // This is critical on Samsung/Xiaomi/OnePlus — without it the OS can

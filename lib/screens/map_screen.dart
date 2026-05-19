@@ -392,6 +392,9 @@ class _EventCardState extends State<_EventCard> {
         'storagePath': cat.kmlPath,
         'label': '${widget.event.name} (${cat.label})',
         'eventId': widget.event.id,
+        'eventDateTime': widget.event.eventDateTime.millisecondsSinceEpoch,
+        'hasStartTime': widget.event.startTime.isNotEmpty,
+        'cutoffMinutes': widget.event.cutoffMinutes,
       },
     );
   }
@@ -531,14 +534,26 @@ class _BannerWithOverlay extends StatelessWidget {
 
 // ── Groups bar ────────────────────────────────────────────────────────────────
 
-class _GroupBar extends StatelessWidget {
+class _GroupBar extends StatefulWidget {
   final String eventId;
   const _GroupBar({required this.eventId});
+  @override
+  State<_GroupBar> createState() => _GroupBarState();
+}
+
+class _GroupBarState extends State<_GroupBar> {
+  late final Stream<int> _stream;
+
+  @override
+  void initState() {
+    super.initState();
+    _stream = GroupService.instance.watchMyGroupCountForEvent(widget.eventId);
+  }
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<int>(
-      stream: GroupService.instance.watchMyGroupCountForEvent(eventId),
+      stream: _stream,
       builder: (context, snap) {
         final count = snap.data ?? 0;
         final hasGroups = count > 0;
@@ -550,7 +565,7 @@ class _GroupBar extends StatelessWidget {
                 const BorderRadius.vertical(bottom: Radius.circular(12)),
             onTap: () => Get.toNamed(
               AppRoutes.groupManagement,
-              arguments: {'eventId': eventId},
+              arguments: {'eventId': widget.eventId},
             ),
             child: Ink(
               decoration: BoxDecoration(

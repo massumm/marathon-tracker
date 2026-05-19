@@ -25,6 +25,8 @@ class _EventFormScreenState extends State<EventFormScreen> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _dateCtrl;
   late final TextEditingController _timeCtrl;
+  late final TextEditingController _cutoffCtrl; // display only, e.g. "5h 00m"
+  int _cutoffMinutes = 0;
   late final TextEditingController _locationCtrl;
   late final TextEditingController _regStartCtrl;
   late final TextEditingController _regEndCtrl;
@@ -48,6 +50,9 @@ class _EventFormScreenState extends State<EventFormScreen> {
     _nameCtrl = TextEditingController(text: e?.name ?? '');
     _dateCtrl = TextEditingController(text: e?.date ?? '');
     _timeCtrl = TextEditingController(text: e?.startTime ?? '');
+    _cutoffMinutes = e?.cutoffMinutes ?? 0;
+    _cutoffCtrl = TextEditingController(
+        text: _cutoffMinutes > 0 ? _fmtCutoff(_cutoffMinutes) : '');
     _locationCtrl = TextEditingController(text: e?.location ?? '');
     _regStartCtrl = TextEditingController(text: e?.registrationStartDate ?? '');
     _regEndCtrl = TextEditingController(text: e?.registrationEndDate ?? '');
@@ -70,11 +75,79 @@ class _EventFormScreenState extends State<EventFormScreen> {
     }
   }
 
+  String _fmtCutoff(int minutes) {
+    final h = minutes ~/ 60;
+    final m = minutes % 60;
+    return h > 0 ? '${h}h ${m.toString().padLeft(2, '0')}m' : '${m}m';
+  }
+
+  Future<void> _pickCutoff() async {
+    int h = _cutoffMinutes ~/ 60;
+    int m = _cutoffMinutes % 60;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(builder: (ctx, setD) {
+        return AlertDialog(
+          title: const Text('Cutoff Duration',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+          content: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _SpinBox(
+                label: 'Hours',
+                value: h,
+                min: 0,
+                max: 23,
+                onChanged: (v) => setD(() => h = v),
+              ),
+              const SizedBox(width: 16),
+              _SpinBox(
+                label: 'Minutes',
+                value: m,
+                min: 0,
+                max: 59,
+                step: 5,
+                onChanged: (v) => setD(() => m = v),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  _cutoffMinutes = 0;
+                  _cutoffCtrl.text = '';
+                });
+                Navigator.pop(ctx);
+              },
+              child: const Text('No Cutoff'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final total = h * 60 + m;
+                setState(() {
+                  _cutoffMinutes = total;
+                  _cutoffCtrl.text = total > 0 ? _fmtCutoff(total) : '';
+                });
+                Navigator.pop(ctx);
+              },
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  foregroundColor: Colors.white),
+              child: const Text('Set'),
+            ),
+          ],
+        );
+      }),
+    );
+  }
+
   @override
   void dispose() {
     _nameCtrl.dispose();
     _dateCtrl.dispose();
     _timeCtrl.dispose();
+    _cutoffCtrl.dispose();
     _locationCtrl.dispose();
     _regStartCtrl.dispose();
     _regEndCtrl.dispose();
@@ -245,6 +318,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
         'name': _nameCtrl.text.trim(),
         'date': _dateCtrl.text.trim(),
         'startTime': _timeCtrl.text.trim(),
+        'cutoffMinutes': _cutoffMinutes,
         'location': _locationCtrl.text.trim(),
         'bannerUrl': bannerUrl,
         'createdAt':
@@ -474,6 +548,24 @@ class _EventFormScreenState extends State<EventFormScreen> {
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 14),
+                _buildField(
+                  controller: _cutoffCtrl,
+                  label: 'Cutoff Time',
+                  hint: 'e.g. 5h 00m (optional)',
+                  icon: Icons.timer_outlined,
+                  readOnly: true,
+                  onTap: _pickCutoff,
+                  suffixIcon: _cutoffMinutes > 0
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, size: 18),
+                          onPressed: () => setState(() {
+                            _cutoffMinutes = 0;
+                            _cutoffCtrl.clear();
+                          }),
+                        )
+                      : null,
                 ),
                 const SizedBox(height: 14),
                 _buildField(
@@ -915,21 +1007,24 @@ class _EventFormScreenState extends State<EventFormScreen> {
     String? Function(String?)? validator,
     bool readOnly = false,
     VoidCallback? onTap,
+    Widget? suffixIcon,
   }) {
     return TextFormField(
       controller: controller,
       validator: validator,
       readOnly: readOnly,
       onTap: onTap,
-      decoration: _inputDeco(label, hint, icon),
+      decoration: _inputDeco(label, hint, icon, suffixIcon: suffixIcon),
     );
   }
 
-  InputDecoration _inputDeco(String label, String hint, IconData icon) {
+  InputDecoration _inputDeco(String label, String hint, IconData icon,
+      {Widget? suffixIcon}) {
     return InputDecoration(
       labelText: label,
       hintText: hint,
       prefixIcon: Icon(icon, size: 20, color: AppTheme.textSecondary),
+      suffixIcon: suffixIcon,
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -937,6 +1032,60 @@ class _EventFormScreenState extends State<EventFormScreen> {
       ),
       filled: true,
       fillColor: Colors.white,
+    );
+  }
+}
+
+// ── Simple integer spin-box ───────────────────────────────────────────────────
+
+class _SpinBox extends StatelessWidget {
+  final String label;
+  final int value;
+  final int min;
+  final int max;
+  final int step;
+  final ValueChanged<int> onChanged;
+
+  const _SpinBox({
+    required this.label,
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.onChanged,
+    this.step = 1,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(label,
+            style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+        const SizedBox(height: 6),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.remove_circle_outline),
+              onPressed: value - step >= min ? () => onChanged(value - step) : null,
+            ),
+            SizedBox(
+              width: 40,
+              child: Text(
+                value.toString().padLeft(2, '0'),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    fontSize: 22, fontWeight: FontWeight.w700),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.add_circle_outline),
+              onPressed: value + step <= max ? () => onChanged(value + step) : null,
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 
@@ -21,14 +22,51 @@ class KmlMapScreen extends StatefulWidget {
   State<KmlMapScreen> createState() => _KmlMapScreenState();
 }
 
-class _KmlMapScreenState extends State<KmlMapScreen> {
+class _KmlMapScreenState extends State<KmlMapScreen>
+    with WidgetsBindingObserver {
   late final KmlMapController _ctrl;
   bool _leaderOpen = false;
+  bool _countdownActive = false;
 
   @override
   void initState() {
     super.initState();
     _ctrl = Get.find<KmlMapController>();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    debugPrint('[LIFECYCLE] state=$state countdownActive=$_countdownActive isTracking=${_ctrl.isTracking.value}');
+    if (state != AppLifecycleState.resumed) return;
+
+    // If tracking is already running (started in background), dismiss the
+    // overlay and snap the camera to the current position immediately so the
+    // accumulated background route is visible right away.
+    if (_ctrl.isTracking.value) {
+      if (_countdownActive) setState(() => _countdownActive = false);
+      final pos = _ctrl.currentPosition.value;
+      if (pos != null && !_ctrl.isUserPanned.value) {
+        _ctrl.mapController?.animateCamera(CameraUpdate.newLatLng(pos));
+      }
+      return;
+    }
+
+    if (!_countdownActive) return;
+    final eventStart = _ctrl.eventStartTime;
+    final now = DateTime.now();
+    debugPrint('[LIFECYCLE] eventStart=$eventStart now=$now timePassed=${eventStart != null && !now.isBefore(eventStart)}');
+    if (eventStart != null && !now.isBefore(eventStart)) {
+      debugPrint('[LIFECYCLE] time passed — calling startTracking from resume');
+      setState(() => _countdownActive = false);
+      _ctrl.startTracking();
+    }
   }
 
   Future<void> _takePhoto() async {
@@ -53,6 +91,111 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
   }
 
   Future<void> _onStartTap() async {
+    final eventStart = _ctrl.eventStartTime;
+    if (eventStart != null && DateTime.now().isBefore(eventStart)) {
+      final minsLeft = eventStart.difference(DateTime.now()).inMinutes;
+      if (minsLeft > 5) {
+        if (!mounted) return;
+        final h = eventStart.hour.toString().padLeft(2, '0');
+        final m = eventStart.minute.toString().padLeft(2, '0');
+        showModalBottomSheet(
+          context: context,
+          backgroundColor: Colors.white,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          builder: (_) => Padding(
+            padding: const EdgeInsets.fromLTRB(28, 28, 28, 36),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary.withValues(alpha: 0.10),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.schedule_rounded,
+                      color: AppTheme.primary, size: 32),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Not Yet!',
+                  style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.textPrimary),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Event starts at $h:$m',
+                  style: const TextStyle(
+                      fontSize: 15, color: AppTheme.textSecondary),
+                ),
+                const SizedBox(height: 28),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(_),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
+                    ),
+                    child: const Text('Got it',
+                        style: TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+        return;
+      }
+      // Within 5 minutes — show countdown overlay.
+      final ready = await _checkLocationReady();
+      if (!ready || !mounted) return;
+      setState(() => _countdownActive = true);
+      await _ctrl.beginCountdown(eventStart);
+      return;
+    }
+    await _doLocationChecksAndStart();
+  }
+
+  /// Returns true when GPS is on and permission is granted.
+  /// Shows the appropriate dialog on failure.
+  Future<bool> _checkLocationReady() async {
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      if (mounted) _showLocationOffDialog();
+      return false;
+    }
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      if (mounted) {
+        _showPermissionDeniedDialog(
+            forever: permission == LocationPermission.deniedForever);
+      }
+      return false;
+    }
+    if (Platform.isIOS && permission != LocationPermission.always) {
+      if (!mounted) return false;
+      final proceed = await _showIosAlwaysLocationDialog();
+      if (!proceed) return false;
+    }
+    return true;
+  }
+
+  Future<void> _doLocationChecksAndStart() async {
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       if (!mounted) return;
@@ -72,7 +215,6 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
       return;
     }
 
-    // On iOS, warn if permission is only "While Using" — background tracking won't work.
     if (Platform.isIOS && permission != LocationPermission.always) {
       if (!mounted) return;
       final proceed = await _showIosAlwaysLocationDialog();
@@ -480,6 +622,26 @@ class _KmlMapScreenState extends State<KmlMapScreen> {
             ),
           ),
         ),
+
+      // ── Pre-event countdown overlay ───────────────────────────────────────
+      if (_countdownActive &&
+          !_ctrl.isTracking.value &&
+          _ctrl.eventStartTime != null)
+        Positioned.fill(
+          child: _CountdownOverlay(
+            eventStart: _ctrl.eventStartTime!,
+            routeLabel: _ctrl.routeLabel,
+            onCancel: () {
+              _ctrl.cancelCountdown();
+              setState(() => _countdownActive = false);
+            },
+            onExpire: () async {
+              debugPrint('[OVERLAY] onExpire fired — calling startTracking');
+              setState(() => _countdownActive = false);
+              await _ctrl.startTracking();
+            },
+          ),
+        ),
     ]);
   }
 }
@@ -702,6 +864,217 @@ class _LiveLeaderboard extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Pre-event countdown overlay ───────────────────────────────────────────────
+
+class _CountdownOverlay extends StatefulWidget {
+  final DateTime eventStart;
+  final String routeLabel;
+  final VoidCallback onCancel;
+  final Future<void> Function() onExpire;
+
+  const _CountdownOverlay({
+    required this.eventStart,
+    required this.routeLabel,
+    required this.onCancel,
+    required this.onExpire,
+  });
+
+  @override
+  State<_CountdownOverlay> createState() => _CountdownOverlayState();
+}
+
+class _CountdownOverlayState extends State<_CountdownOverlay>
+    with SingleTickerProviderStateMixin {
+  Timer? _ticker;
+  late Duration _remaining;
+  bool _expired = false;
+  late AnimationController _pulse;
+  late Animation<double> _pulseAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat(reverse: true);
+    _pulseAnim = Tween<double>(begin: 1.0, end: 1.10)
+        .animate(CurvedAnimation(parent: _pulse, curve: Curves.easeInOut));
+
+    final rem = widget.eventStart.difference(DateTime.now());
+    debugPrint('[OVERLAY] initState: remaining=${rem.inSeconds}s eventStart=${widget.eventStart}');
+    if (rem.inSeconds <= 0) {
+      debugPrint('[OVERLAY] already expired on init — firing onExpire via postFrameCallback');
+      _remaining = Duration.zero;
+      _expired = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) widget.onExpire();
+      });
+      return;
+    }
+
+    _remaining = rem;
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      final r = widget.eventStart.difference(DateTime.now());
+      if (!mounted) {
+        debugPrint('[OVERLAY] ticker fired but widget unmounted');
+        return;
+      }
+      if (r.inSeconds <= 0) {
+        debugPrint('[OVERLAY] ticker reached zero — firing onExpire');
+        _ticker?.cancel();
+        setState(() {
+          _remaining = Duration.zero;
+          _expired = true;
+        });
+        widget.onExpire();
+      } else {
+        setState(() => _remaining = r);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  String _pad(int n) => n.toString().padLeft(2, '0');
+
+  @override
+  Widget build(BuildContext context) {
+    final h = _remaining.inHours;
+    final m = _remaining.inMinutes.remainder(60);
+    final s = _remaining.inSeconds.remainder(60);
+    final showHours = _remaining.inHours > 0;
+    final timeStr = showHours
+        ? '${_pad(h)}:${_pad(m)}:${_pad(s)}'
+        : '${_pad(m)}:${_pad(s)}';
+
+    return BackdropFilter(
+      filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.black.withValues(alpha: 0.80),
+              Colors.black.withValues(alpha: 0.92),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'event_starts_in'.tr,
+                style: const TextStyle(
+                  color: Colors.white60,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 2.0,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Text(
+                  widget.routeLabel,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(height: 52),
+              ScaleTransition(
+                scale: _pulseAnim,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Outer glow ring
+                    Container(
+                      width: 230,
+                      height: 230,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            AppTheme.primary.withValues(alpha: 0.18),
+                            Colors.transparent,
+                          ],
+                        ),
+                        border: Border.all(
+                          color: AppTheme.primary.withValues(alpha: 0.55),
+                          width: 2.5,
+                        ),
+                      ),
+                    ),
+                    // Inner ring
+                    Container(
+                      width: 190,
+                      height: 190,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppTheme.primary.withValues(alpha: 0.25),
+                          width: 1.5,
+                        ),
+                      ),
+                    ),
+                    // Countdown digits
+                    if (_expired)
+                      Text(
+                        'auto_starting'.tr,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.5,
+                        ),
+                      )
+                    else
+                      Text(
+                        timeStr,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: showHours ? 48 : 62,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: showHours ? 3 : 5,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 56),
+              TextButton(
+                onPressed: widget.onCancel,
+                child: Text(
+                  'cancel'.tr,
+                  style: const TextStyle(
+                    color: Colors.white38,
+                    fontSize: 15,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -11,6 +11,7 @@ import 'package:firebase_database/firebase_database.dart';
 
 import 'app/bindings/home_binding.dart';
 import 'services/deep_link_service.dart';
+import 'services/event_notification_service.dart';
 import 'services/notification_service.dart';
 import 'services/offline_storage_service.dart';
 import 'app/bindings/initial_binding.dart';
@@ -44,6 +45,7 @@ void main() async {
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   // Don't await — getToken() is a network call that blocks the splash screen
   NotificationService.instance.init();
+  await EventNotificationService.instance.init();
   DeepLinkService.instance.init();
   OfflineStorageService.instance.init();
   WakelockPlus.enable();

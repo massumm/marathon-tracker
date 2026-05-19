@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import '../controllers/map_controller.dart';
 import '../controllers/my_page_controller.dart';
 import '../core/theme.dart';
+import '../services/event_notification_service.dart';
 
 class SettingsScreen extends GetView<MyPageController> {
   const SettingsScreen({super.key});
@@ -39,6 +41,9 @@ class SettingsScreen extends GetView<MyPageController> {
             titleColor: Colors.red,
             onTap: () => _deleteAccount(context),
           ),
+          const Divider(height: 1),
+          _sectionHeader('notification_settings'.tr),
+          const _NotificationToggleWidget(),
           const Divider(height: 1),
           _sectionHeader('version'.tr),
           FutureBuilder<PackageInfo>(
@@ -327,5 +332,55 @@ class SettingsScreen extends GetView<MyPageController> {
         ),
       ],
     ));
+  }
+}
+
+class _NotificationToggleWidget extends StatefulWidget {
+  const _NotificationToggleWidget();
+
+  @override
+  State<_NotificationToggleWidget> createState() =>
+      _NotificationToggleWidgetState();
+}
+
+class _NotificationToggleWidgetState
+    extends State<_NotificationToggleWidget> {
+  late bool _enabled;
+
+  @override
+  void initState() {
+    super.initState();
+    _enabled = EventNotificationService.instance.isEnabled;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SwitchListTile(
+      secondary: const Icon(Icons.notifications_outlined,
+          color: AppTheme.textSecondary),
+      title: Text(
+        'event_notifications'.tr,
+        style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+            color: AppTheme.textPrimary),
+      ),
+      subtitle: Text(
+        'event_notifications_subtitle'.tr,
+        style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+      ),
+      value: _enabled,
+      activeThumbColor: AppTheme.primary,
+      onChanged: (val) async {
+        setState(() => _enabled = val);
+        await EventNotificationService.instance.setEnabled(val);
+        // Re-schedule or cancel based on current events list
+        try {
+          final ctrl = Get.find<MapController>();
+          await EventNotificationService.instance
+              .scheduleForEvents(ctrl.events.toList());
+        } catch (_) {}
+      },
+    );
   }
 }

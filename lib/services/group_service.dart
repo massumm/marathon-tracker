@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 
@@ -220,6 +222,7 @@ class GroupService {
     await Future.wait([
       _db.ref('group_members/$groupId/$targetUid').remove(),
       _db.ref('groups/$groupId/memberCount').set(count < 0 ? 0 : count),
+      _db.ref('user_groups/$targetUid/$groupId').remove(),
     ]);
   }
 
@@ -302,24 +305,72 @@ class GroupService {
   // ── Streams ───────────────────────────────────────────────────────────────
 
   /// Only returns groups for [eventId] that the current user is a member of.
+  /// Reactive to both membership changes (user_groups) AND group data changes
+  /// Reactively watches both membership (user_groups/$uid) and each group's
+  /// data (groups/$id). Uses the snapshot Firebase already pushes — no extra
+  /// get() round-trips — so every admin-panel change appears immediately.
   Stream<List<GroupModel>> watchMyGroupsForEvent(String eventId) {
     final uid = _uid;
     if (uid == null) return const Stream.empty();
-    return _db.ref('user_groups/$uid').onValue.asyncMap((event) async {
-      final data = event.snapshot.value;
-      if (data == null) return <GroupModel>[];
-      final groupIds =
-          (data as Map<dynamic, dynamic>).keys.cast<String>().toList();
-      final snaps = await Future.wait(
-          groupIds.map((id) => _db.ref('groups/$id').get()));
-      return snaps
-          .where((s) => s.exists)
-          .map((s) =>
-              GroupModel.fromMap(s.key!, s.value as Map<dynamic, dynamic>))
+
+    final controller = StreamController<List<GroupModel>>();
+    StreamSubscription? membershipSub;
+    // Map from groupId → its live subscription, so we can add/remove cleanly.
+    final groupSubs = <String, StreamSubscription>{};
+    // Latest known data for each group, populated by onValue snapshots.
+    final groupCache = <String, GroupModel?>{};
+
+    void emitCurrent() {
+      if (controller.isClosed) return;
+      controller.add(groupCache.values
+          .whereType<GroupModel>()
           .where((g) => g.eventId == eventId)
           .toList()
-        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt)));
+    }
+
+    void watchGroupData(Set<String> ids) {
+      // Remove listeners for groups the user left.
+      final removed = groupSubs.keys.toSet().difference(ids);
+      for (final id in removed) {
+        groupSubs.remove(id)?.cancel();
+        groupCache.remove(id);
+      }
+      // Add listeners for newly joined groups.
+      final added = ids.difference(groupSubs.keys.toSet());
+      for (final id in added) {
+        groupSubs[id] = _db.ref('groups/$id').onValue.listen((e) {
+          if (!e.snapshot.exists) {
+            groupCache.remove(id);
+          } else {
+            groupCache[id] = GroupModel.fromMap(
+                e.snapshot.key!, e.snapshot.value as Map<dynamic, dynamic>);
+          }
+          emitCurrent();
+        });
+      }
+      // Emit immediately when groups are removed (no new onValue to trigger it).
+      if (added.isEmpty) emitCurrent();
+    }
+
+    membershipSub = _db.ref('user_groups/$uid').onValue.listen((e) {
+      final data = e.snapshot.value;
+      if (data == null) {
+        watchGroupData({});
+      } else {
+        watchGroupData(
+            (data as Map<dynamic, dynamic>).keys.cast<String>().toSet());
+      }
     });
+
+    controller.onCancel = () {
+      membershipSub?.cancel();
+      for (final s in groupSubs.values) { s.cancel(); }
+      groupSubs.clear();
+      groupCache.clear();
+    };
+
+    return controller.stream;
   }
 
   Stream<List<GroupMemberModel>> watchGroupMembers(String groupId) {

@@ -10,14 +10,246 @@ import '../../widgets/user_avatar.dart';
 
 /// Shell-embedded leaderboard for the Organizer role.
 /// No Scaffold/AppBar — the OrganizerShell owns the top bar.
-class OrganizerLiveLeaderboardScreen extends StatelessWidget {
+class OrganizerLiveLeaderboardScreen extends StatefulWidget {
   final EventModel event;
   const OrganizerLiveLeaderboardScreen({super.key, required this.event});
 
   @override
+  State<OrganizerLiveLeaderboardScreen> createState() =>
+      _OrganizerLiveLeaderboardScreenState();
+}
+
+class _OrganizerLiveLeaderboardScreenState
+    extends State<OrganizerLiveLeaderboardScreen>
+    with SingleTickerProviderStateMixin {
+  bool _counting = false;
+  bool _ended = false;
+  Duration _remaining = Duration.zero;
+  Duration _cutoffRemaining = Duration.zero;
+  Timer? _ticker;
+  late AnimationController _pulse;
+  late Animation<double> _pulseAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat(reverse: true);
+    _pulseAnim = Tween<double>(begin: 1.0, end: 1.08)
+        .animate(CurvedAnimation(parent: _pulse, curve: Curves.easeInOut));
+
+    final event = widget.event;
+    if (event.startTime.isNotEmpty) {
+      final rem = event.eventDateTime.difference(DateTime.now());
+      if (rem.inSeconds > 0) {
+        _counting = true;
+        _remaining = rem;
+      }
+    }
+    if (event.hasCutoff) {
+      final cr = event.cutoffDateTime.difference(DateTime.now());
+      if (cr.inSeconds <= 0) {
+        _ended = true;
+      } else {
+        _cutoffRemaining = cr;
+      }
+    }
+
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() {
+        if (_counting) {
+          final r = widget.event.eventDateTime.difference(DateTime.now());
+          if (r.inSeconds <= 0) {
+            _counting = false;
+            _remaining = Duration.zero;
+          } else {
+            _remaining = r;
+          }
+        }
+        if (widget.event.hasCutoff && !_ended) {
+          final cr = widget.event.cutoffDateTime.difference(DateTime.now());
+          if (cr.inSeconds <= 0) {
+            _ended = true;
+            _cutoffRemaining = Duration.zero;
+          } else {
+            _cutoffRemaining = cr;
+          }
+        }
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  String _fmtDuration(Duration d) {
+    final h = d.inHours;
+    final m = d.inMinutes.remainder(60);
+    final s = d.inSeconds.remainder(60);
+    String pad(int n) => n.toString().padLeft(2, '0');
+    return h > 0 ? '${pad(h)}:${pad(m)}:${pad(s)}' : '${pad(m)}:${pad(s)}';
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_ended) return _buildEnded();
+    if (_counting) return _buildCountdown();
+    return _buildLeaderboard();
+  }
+
+  Widget _buildEnded() {
+    return Column(
+      children: [
+        Container(
+          color: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.flag_rounded, size: 20, color: Colors.grey),
+              const SizedBox(width: 8),
+              Text(
+                'Cutoff reached — Final Standings · ${widget.event.name}',
+                style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textSecondary),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+        Expanded(child: _buildLeaderboard()),
+      ],
+    );
+  }
+
+  Widget _buildCountdown() {
+    final h = _remaining.inHours;
+    final m = _remaining.inMinutes.remainder(60);
+    final s = _remaining.inSeconds.remainder(60);
+    String pad(int n) => n.toString().padLeft(2, '0');
+    final showHours = _remaining.inHours > 0;
+    final timeStr =
+        showHours ? '${pad(h)}:${pad(m)}:${pad(s)}' : '${pad(m)}:${pad(s)}';
+
+    final eventDate = widget.event.date;
+    final eventTime = widget.event.startTime;
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.red.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(20),
+              border:
+                  Border.all(color: Colors.red.withValues(alpha: 0.35)),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.schedule_outlined, size: 12, color: Colors.red),
+                SizedBox(width: 5),
+                Text(
+                  'NOT STARTED YET',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.red,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            widget.event.name,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.textPrimary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '$eventDate at $eventTime',
+            style: const TextStyle(
+              fontSize: 13,
+              color: AppTheme.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 40),
+          ScaleTransition(
+            scale: _pulseAnim,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Container(
+                  width: 200,
+                  height: 200,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        AppTheme.primary.withValues(alpha: 0.10),
+                        Colors.transparent,
+                      ],
+                    ),
+                    border: Border.all(
+                      color: AppTheme.primary.withValues(alpha: 0.45),
+                      width: 2,
+                    ),
+                  ),
+                ),
+                Container(
+                  width: 164,
+                  height: 164,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppTheme.primary.withValues(alpha: 0.20),
+                      width: 1.5,
+                    ),
+                  ),
+                ),
+                Text(
+                  timeStr,
+                  style: TextStyle(
+                    fontSize: showHours ? 40 : 52,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.textPrimary,
+                    letterSpacing: showHours ? 2 : 4,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'Live leaderboard will activate automatically',
+            style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLeaderboard() {
     return StreamBuilder<List<RunnerData>>(
-      stream: AdminService.instance.watchLiveRunnersForEvent(event.id),
+      stream: AdminService.instance.watchLiveRunnersForEvent(widget.event.id),
       builder: (_, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -38,7 +270,7 @@ class OrganizerLiveLeaderboardScreen extends StatelessWidget {
                         TextStyle(fontSize: 16, color: AppTheme.textSecondary)),
                 const SizedBox(height: 8),
                 Text(
-                  'Waiting for participants in "${event.name}"...',
+                  'Waiting for participants in "${widget.event.name}"...',
                   style: const TextStyle(
                       fontSize: 13, color: AppTheme.textSecondary),
                 ),
@@ -47,9 +279,15 @@ class OrganizerLiveLeaderboardScreen extends StatelessWidget {
           );
         }
 
+        final cutoffStr = (!_ended && widget.event.hasCutoff)
+            ? _fmtDuration(_cutoffRemaining)
+            : null;
         return Column(
           children: [
-            _LiveBanner(eventName: event.name, count: runners.length),
+            _LiveBanner(
+                eventName: widget.event.name,
+                count: runners.length,
+                cutoffRemaining: cutoffStr),
             Expanded(
               child: ListView.builder(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -68,7 +306,9 @@ class OrganizerLiveLeaderboardScreen extends StatelessWidget {
 class _LiveBanner extends StatelessWidget {
   final String eventName;
   final int count;
-  const _LiveBanner({required this.eventName, required this.count});
+  final String? cutoffRemaining;
+  const _LiveBanner(
+      {required this.eventName, required this.count, this.cutoffRemaining});
 
   @override
   Widget build(BuildContext context) {
@@ -103,12 +343,23 @@ class _LiveBanner extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          Text(
-            '$count running',
-            style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.textSecondary),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '$count running',
+                style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textSecondary),
+              ),
+              if (cutoffRemaining != null)
+                Text(
+                  'cutoff $cutoffRemaining',
+                  style: const TextStyle(
+                      fontSize: 10, color: AppTheme.textSecondary),
+                ),
+            ],
           ),
         ],
       ),
@@ -188,7 +439,6 @@ class _RunnerRowState extends State<_RunnerRow> {
       ),
       child: Row(
         children: [
-          // Rank
           SizedBox(
             width: 28,
             child: Text(
@@ -202,7 +452,6 @@ class _RunnerRowState extends State<_RunnerRow> {
             ),
           ),
           const SizedBox(width: 6),
-          // Online / offline dot
           Container(
             width: 8,
             height: 8,
@@ -214,7 +463,6 @@ class _RunnerRowState extends State<_RunnerRow> {
           const SizedBox(width: 8),
           UserAvatar(label: label, photoUrl: runner.photoUrl, size: 38),
           const SizedBox(width: 10),
-          // Name + status line
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -242,7 +490,6 @@ class _RunnerRowState extends State<_RunnerRow> {
             ),
           ),
           const SizedBox(width: 8),
-          // Distance + elapsed time
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [

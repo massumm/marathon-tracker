@@ -35,21 +35,23 @@ class EventModel {
   final String id;
   final String name;
   final String date;
-  final String startTime; // 'HH:mm', e.g. '08:00' — empty for legacy events
+  final String startTime;    // 'HH:mm', e.g. '08:00' — empty for legacy events
+  final int cutoffMinutes;   // 0 = no cutoff; e.g. 300 = 5 h from startTime
   final String location;
   final String bannerUrl;
   final int createdAt;
   final Map<String, RaceCategory> categories;
   final String organizerUid;
-  final String registrationStartDate; // 'yyyy-MM-dd', empty if no registration
-  final String registrationEndDate;   // 'yyyy-MM-dd', empty if no registration
-  final String registrationUrl;       // target URL, empty if no registration
+  final String registrationStartDate;
+  final String registrationEndDate;
+  final String registrationUrl;
 
   EventModel({
     required this.id,
     required this.name,
     required this.date,
     this.startTime = '',
+    this.cutoffMinutes = 0,
     required this.location,
     required this.bannerUrl,
     required this.createdAt,
@@ -59,6 +61,12 @@ class EventModel {
     this.registrationEndDate = '',
     this.registrationUrl = '',
   });
+
+  bool get hasCutoff => cutoffMinutes > 0 && startTime.isNotEmpty;
+
+  /// Wall-clock time when the event closes: eventDateTime + cutoffMinutes.
+  DateTime get cutoffDateTime =>
+      eventDateTime.add(Duration(minutes: cutoffMinutes));
 
   /// Combines [date] and [startTime] into a full DateTime.
   /// Falls back to end-of-day (23:59) when no time is set.
@@ -166,6 +174,7 @@ class EventModel {
       name: map['name'] as String? ?? '',
       date: map['date'] as String? ?? '',
       startTime: map['startTime'] as String? ?? '',
+      cutoffMinutes: (map['cutoffMinutes'] as num?)?.toInt() ?? 0,
       location: map['location'] as String? ?? '',
       bannerUrl: map['bannerUrl'] as String? ?? '',
       createdAt: (map['createdAt'] as num?)?.toInt() ?? 0,
@@ -181,6 +190,7 @@ class EventModel {
         'name': name,
         'date': date,
         'startTime': startTime,
+        'cutoffMinutes': cutoffMinutes,
         'location': location,
         'bannerUrl': bannerUrl,
         'createdAt': createdAt,
