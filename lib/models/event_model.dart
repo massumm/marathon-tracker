@@ -45,6 +45,8 @@ class EventModel {
   final String registrationStartDate;
   final String registrationEndDate;
   final String registrationUrl;
+  final int chipTimeMinutes; // minutes after startTime within which runners may start
+  final int graceTimeMinutes; // minutes after finish line before auto-stop (0 = immediate)
 
   EventModel({
     required this.id,
@@ -60,6 +62,8 @@ class EventModel {
     this.registrationStartDate = '',
     this.registrationEndDate = '',
     this.registrationUrl = '',
+    this.chipTimeMinutes = 10,
+    this.graceTimeMinutes = 10,
   });
 
   bool get hasCutoff => cutoffMinutes > 0 && startTime.isNotEmpty;
@@ -183,6 +187,8 @@ class EventModel {
       registrationStartDate: map['registrationStartDate'] as String? ?? '',
       registrationEndDate: map['registrationEndDate'] as String? ?? '',
       registrationUrl: map['registrationUrl'] as String? ?? '',
+      chipTimeMinutes: (map['chipTimeMinutes'] as num?)?.toInt() ?? 10,
+      graceTimeMinutes: (map['graceTimeMinutes'] as num?)?.toInt() ?? 10,
     );
   }
 
@@ -198,6 +204,8 @@ class EventModel {
         'registrationStartDate': registrationStartDate,
         'registrationEndDate': registrationEndDate,
         'registrationUrl': registrationUrl,
+        'chipTimeMinutes': chipTimeMinutes,
+        'graceTimeMinutes': graceTimeMinutes,
         'categories': {
           for (final e in categories.entries) e.key: e.value.toMap()
         },

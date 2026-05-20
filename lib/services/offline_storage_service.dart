@@ -14,16 +14,24 @@ class OfflineStorageService {
 
   late Directory _root;
   final isOnline = false.obs;
+  final pendingRunCount = 0.obs;
 
   Future<void> init() async {
     final docs = await getApplicationDocumentsDirectory();
     _root = Directory('${docs.path}/offline_routes');
     await _root.create(recursive: true);
 
+    // Seed observable from disk
+    final existing = await _loadPendingRuns();
+    pendingRunCount.value = existing.length;
+
     FirebaseDatabase.instance.ref('.info/connected').onValue.listen((e) {
       final connected = e.snapshot.value as bool? ?? false;
       isOnline.value = connected;
-      if (connected) _syncPending();
+      if (connected) {
+        _syncPending();
+        syncPendingRuns();
+      }
     });
   }
 
@@ -104,6 +112,106 @@ class OfflineStorageService {
   File _cacheFile(String storagePath) {
     final safe = storagePath.replaceAll('/', '__');
     return File('${_root.path}/content_cache/$safe.json');
+  }
+
+  // ── Pending runs queue ────────────────────────────────────────────────────
+
+  /// Adds a run to the pending queue. Deduplicates by runId.
+  Future<void> enqueuePendingRun({
+    required String runId,
+    required String uid,
+    required String fileName,
+    required double distanceKm,
+    required int seconds,
+    required String eventId,
+    required String displayName,
+    required String photoUrl,
+  }) async {
+    final runs = await _loadPendingRuns();
+    if (runs.any((r) => r['runId'] == runId)) return;
+    runs.add({
+      'runId': runId,
+      'uid': uid,
+      'fileName': fileName,
+      'distanceKm': distanceKm,
+      'seconds': seconds,
+      'eventId': eventId,
+      'displayName': displayName,
+      'photoUrl': photoUrl,
+    });
+    await _writePendingRuns(runs);
+    pendingRunCount.value = runs.length;
+  }
+
+  Future<List<Map<String, dynamic>>> _loadPendingRuns() async {
+    final file = File('${_root.path}/pending_runs.json');
+    if (!await file.exists()) return [];
+    try {
+      final list = jsonDecode(await file.readAsString()) as List;
+      return list.cast<Map<String, dynamic>>();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<void> _writePendingRuns(List<Map<String, dynamic>> runs) =>
+      File('${_root.path}/pending_runs.json')
+          .writeAsString(jsonEncode(runs));
+
+  /// Syncs all pending runs: uploads Storage + writes RTDB stats.
+  /// Leaves failed entries in the queue for the next connectivity event.
+  Future<void> syncPendingRuns() async {
+    final runs = await _loadPendingRuns();
+    if (runs.isEmpty) return;
+
+    final remaining = <Map<String, dynamic>>[];
+    for (final run in List<Map<String, dynamic>>.from(runs)) {
+      try {
+        final uid = run['uid'] as String;
+        final fileName = run['fileName'] as String;
+        final distanceKm = (run['distanceKm'] as num).toDouble();
+        final seconds = run['seconds'] as int;
+        final eventId = run['eventId'] as String? ?? '';
+        final displayName = run['displayName'] as String? ?? '';
+        final photoUrl = run['photoUrl'] as String? ?? '';
+
+        // 1. Upload route JSON to Firebase Storage
+        final file = File('${_root.path}/data/$uid/$fileName');
+        if (await file.exists()) {
+          final jsonBody = await file.readAsString();
+          final ref = fs.FirebaseStorage.instance
+              .ref('${AppConfig.routesStoragePath}/$uid/$fileName');
+          await ref.putString(jsonBody,
+              metadata:
+                  fs.SettableMetadata(contentType: 'application/json'));
+        }
+
+        // 2. Update global user stats via RTDB
+        final db = FirebaseDatabase.instance;
+        await db.ref('user_stats/$uid').update({
+          'totalDistanceKm': ServerValue.increment(distanceKm),
+          'totalRuns': ServerValue.increment(1),
+          'totalSeconds': ServerValue.increment(seconds),
+        });
+
+        // 3. Event-scoped stats (if applicable)
+        if (eventId.isNotEmpty) {
+          await db.ref('event_stats/$eventId/$uid').update({
+            'distanceKm': distanceKm,
+            'seconds': seconds,
+            'displayName': displayName,
+            'photoUrl': photoUrl,
+            'updatedAt': ServerValue.timestamp,
+          });
+        }
+        // Success — do not re-add to remaining
+      } catch (_) {
+        remaining.add(run);
+      }
+    }
+
+    await _writePendingRuns(remaining);
+    pendingRunCount.value = remaining.length;
   }
 
   // ── Pending sync ──────────────────────────────────────────────────────────

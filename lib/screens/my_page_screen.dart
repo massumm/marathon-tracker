@@ -49,7 +49,9 @@ class MyPageBody extends StatelessWidget {
   Widget build(BuildContext context) {
     return Obx(() => ListView(
           controller: scrollController,
-          padding: const EdgeInsets.only(bottom: 32),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).padding.bottom + 8,
+          ),
           children: [
             // ── Profile header ───────────────────────────────────────
             _ProfileHeader(controller: controller),
@@ -118,7 +120,7 @@ class MyPageBody extends StatelessWidget {
             ),
 
             // ── Footer ───────────────────────────────────────────────
-            const SizedBox(height: 32),
+        
             const _AppFooter(),
           ],
         ));

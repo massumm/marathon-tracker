@@ -36,8 +36,7 @@ class MyPageController extends GetxController {
     if (displayNameObs.value.isNotEmpty) return displayNameObs.value;
     final raw = user?.displayName ?? '';
     if (raw.isNotEmpty) return raw;
-    final email = user?.email ?? '';
-    return email.isNotEmpty ? email.split('@').first : 'Runner';
+    return 'Runner';
   }
 
   @override
@@ -49,6 +48,11 @@ class MyPageController extends GetxController {
     _statsSub = UserStatsService.instance.watchMyStats().listen((s) {
       myStats.value = s;
       if (s != null && s.age > 0) ageObs.value = s.age;
+      // Seed displayNameObs from the DB if Firebase Auth hasn't synced yet
+      // (e.g. right after signup before updateProfile propagates).
+      if (displayNameObs.value.isEmpty && (s?.displayName.isNotEmpty ?? false)) {
+        displayNameObs.value = s!.displayName;
+      }
     });
     _groupsSub = GroupService.instance.watchAllMyGroups().listen((list) {
       myGroups.value = list;

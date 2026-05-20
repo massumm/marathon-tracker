@@ -16,14 +16,17 @@ class UserStatsService {
   }) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
-    await _db.ref('user_stats/${user.uid}').update({
-      'displayName': displayName ??
-          user.displayName ??
-          user.email?.split('@').first ??
-          'Runner',
+    final resolvedName = displayName ?? user.displayName;
+    final data = <String, dynamic>{
       'email': user.email ?? '',
       'photoUrl': photoUrl ?? user.photoURL ?? '',
-    });
+    };
+    // Only write displayName when we have a real value — never fall back to
+    // the email prefix, which would silently overwrite the stored username.
+    if (resolvedName != null && resolvedName.isNotEmpty) {
+      data['displayName'] = resolvedName;
+    }
+    await _db.ref('user_stats/${user.uid}').update(data);
   }
 
   Future<void> updateAge(int age) async {
@@ -164,8 +167,7 @@ class UserStatsService {
     await ref.set({
       'distanceKm': distanceKm,
       'seconds': seconds,
-      'displayName':
-          user.displayName ?? user.email?.split('@').first ?? 'Runner',
+      'displayName': user.displayName ?? 'Runner',
       'photoUrl': user.photoURL ?? '',
       'completedAt': ServerValue.timestamp,
     });
@@ -192,12 +194,13 @@ class UserStatsService {
         final uid = e.key as String;
         final m = e.value as Map<dynamic, dynamic>;
         final userStats = statsMap[uid];
-        final storedName = m['displayName'] as String? ?? '';
-        final resolvedName = storedName.isNotEmpty
-            ? storedName
-            : (userStats is Map
-                ? (userStats['displayName'] as String? ?? '')
-                : '');
+        final profileName = userStats is Map
+            ? (userStats['displayName'] as String? ?? '')
+            : '';
+        final runName = m['displayName'] as String? ?? '';
+        // Prefer user_stats (authoritative, always up-to-date) over the name
+        // snapshot embedded in the run record (may be stale or an email prefix).
+        final resolvedName = profileName.isNotEmpty ? profileName : runName;
         final resolvedEmail =
             userStats is Map ? (userStats['email'] as String? ?? '') : '';
         final storedPhoto = m['photoUrl'] as String? ?? '';

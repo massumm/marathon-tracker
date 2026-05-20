@@ -1,42 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:liquid_glass_bar/liquid_glass_bar.dart';
 
 import '../app/routes/app_routes.dart';
 import '../controllers/home_controller.dart';
 import '../controllers/kml_map_controller.dart';
 import '../core/theme.dart';
-import '../services/offline_storage_service.dart';
 import 'map_screen.dart';
 import 'my_page_screen.dart';
-
-class _OfflineBanner extends StatelessWidget {
-  const _OfflineBanner();
-
-  @override
-  Widget build(BuildContext context) {
-    return Obx(() {
-      final online = OfflineStorageService.instance.isOnline.value;
-      return AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        height: online ? 0 : 28,
-        color: const Color(0xFF424242),
-        child: online
-            ? null
-            : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.wifi_off, size: 12, color: Colors.white70),
-                  const SizedBox(width: 6),
-                  Text(
-                    'offline_banner'.tr,
-                    style: const TextStyle(fontSize: 11, color: Colors.white70),
-                  ),
-                ],
-              ),
-      );
-    });
-  }
-}
 
 class _RunningBanner extends StatelessWidget {
   const _RunningBanner();
@@ -91,9 +62,9 @@ class HomeScreen extends GetView<HomeController> {
   @override
   Widget build(BuildContext context) {
     return Obx(() => Scaffold(
+          extendBody: true,
           body: Column(
             children: [
-              const _OfflineBanner(),
               const _RunningBanner(),
               Expanded(
                 child: IndexedStack(
@@ -106,18 +77,28 @@ class HomeScreen extends GetView<HomeController> {
               ),
             ],
           ),
-          bottomNavigationBar: BottomNavigationBar(
+          bottomNavigationBar: LiquidGlassBar(
             currentIndex: controller.tabIndex.value,
             onTap: controller.changeTab,
+            style: LiquidGlassBarStyle(
+              activeColor: AppTheme.primary,
+              inactiveColor: Colors.grey.shade500,
+              borderRadius: 32,
+              height: 60,
+              iconSize: 24,
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 10),
+            ),
             items: [
-              BottomNavigationBarItem(
-                icon: const Icon(Icons.map_outlined),
-                activeIcon: const Icon(Icons.map),
+              LiquidGlassBarItem(
+                iconData: controller.tabIndex.value == 0
+                    ? Icons.map
+                    : Icons.map_outlined,
                 label: 'nav_map'.tr,
               ),
-              BottomNavigationBarItem(
-                icon: const Icon(Icons.person_outline),
-                activeIcon: const Icon(Icons.person),
+              LiquidGlassBarItem(
+                iconData: controller.tabIndex.value == 1
+                    ? Icons.person
+                    : Icons.person_outline,
                 label: 'nav_my_page'.tr,
               ),
             ],

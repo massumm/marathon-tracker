@@ -65,6 +65,7 @@ class KmlMapController extends GetxController {
 
   // ── KML ───────────────────────────────────────────────────────────────────
   final kmlLoaded = false.obs;
+  final kmlLoadError = false.obs;
   Set<Polyline> kmlPolylines = {};
   Set<Marker> kmlMarkers = {};
   LatLng initialLocation =
@@ -110,10 +111,16 @@ class KmlMapController extends GetxController {
   String currentEventId = '';
   DateTime? eventStartTime;
   DateTime? cutoffDateTime;
+  DateTime? chipDeadline;
+  DateTime? categoryCutoffDeadline;
   CameraPosition? lastCameraPosition;
   Timer? _countdownTimer;
   Timer? _cutoffTimer;
+  Timer? _graceTimer;
+  Timer? _categoryCutoffTimer;
   bool _countdownCancelled = false;
+  int _graceTimeMinutes = 10;
+  int? _categoryCutoffMinutes;
   LatLng? finishPosition;
   bool _finishAlertShown = false;
   bool _hasLeftFinishZone = false;
@@ -145,6 +152,14 @@ class KmlMapController extends GetxController {
       cutoffDateTime = (eventStartTime != null && cutMins > 0)
           ? eventStartTime!.add(Duration(minutes: cutMins))
           : null;
+      final chipMins = args['chipTimeMinutes'] as int? ?? 10;
+      chipDeadline = eventStartTime?.add(Duration(minutes: chipMins));
+      _graceTimeMinutes = args['graceTimeMinutes'] as int? ?? 10;
+      _categoryCutoffMinutes =
+          _parseCutoffMinutes(args['categoryCutoff'] as String? ?? '');
+      categoryCutoffDeadline = eventStartTime != null && _categoryCutoffMinutes != null
+          ? eventStartTime!.add(Duration(minutes: _categoryCutoffMinutes!))
+          : null;
     } else if (args is String) {
       kmlFilePath = args;
       kmlDirectUrl = null;
@@ -152,8 +167,24 @@ class KmlMapController extends GetxController {
       currentEventId = '';
       eventStartTime = null;
       cutoffDateTime = null;
+      chipDeadline = null;
+      categoryCutoffDeadline = null;
+      _graceTimeMinutes = 10;
+      _categoryCutoffMinutes = null;
     }
     _loadKml();
+  }
+
+  /// Parses "HH:MM" or "HH:MM suffix" cutoff strings into total minutes.
+  /// Returns null when the string can't be parsed or totals zero.
+  int? _parseCutoffMinutes(String s) {
+    final parts = s.trim().split(':');
+    if (parts.length < 2) return null;
+    final h = int.tryParse(parts[0].trim());
+    final m = int.tryParse(parts[1].trim().split(' ').first);
+    if (h == null || m == null) return null;
+    final total = h * 60 + m;
+    return total > 0 ? total : null;
   }
 
   Future<void> _loadFriendsAndSubscribe() async {
@@ -170,6 +201,8 @@ class KmlMapController extends GetxController {
     _timer?.cancel();
     _countdownTimer?.cancel();
     _cutoffTimer?.cancel();
+    _graceTimer?.cancel();
+    _categoryCutoffTimer?.cancel();
     _positionSub?.cancel();
     _runnersSub?.cancel();
     _iconCache.clear();
@@ -494,23 +527,63 @@ class KmlMapController extends GetxController {
   // ── KML loading ───────────────────────────────────────────────────────────
 
   Future<void> _loadKml() async {
+    kmlLoadError.value = false;
+
+    // 1. Serve from local cache immediately so the map works offline.
+    final cached = await OfflineStorageService.instance
+        .getCachedContent(kmlFilePath);
+    if (cached != null) {
+      _applyKmlContent(cached);
+      // Refresh cache in background — don't block startup.
+      _fetchAndCacheKml(forceApply: false);
+      return;
+    }
+
+    // 2. No cache — must fetch from network.
+    final ok = await _fetchAndCacheKml(forceApply: true);
+    if (!ok && !kmlLoaded.value) {
+      kmlLoadError.value = true;
+    }
+  }
+
+  /// Fetches the KML from the network (10 s timeout), caches it locally.
+  /// [forceApply] updates the map polylines on success.
+  /// Returns true when the download succeeded.
+  Future<bool> _fetchAndCacheKml({required bool forceApply}) async {
     try {
-      final url = await FirebaseService.instance.getDownloadUrl(kmlFilePath);
-      final response = await http.get(Uri.parse(url));
-      if (response.statusCode == 200) {
-        final parsed = KmlService.instance
-            .parse(response.body, polylineColor: AppTheme.primary);
-        if (parsed.polylines.isNotEmpty) {
-          kmlPolylines = parsed.polylines;
-          kmlMarkers = parsed.markers;
-          finishPosition = parsed.finishPosition;
-          initialLocation = parsed.polylines.first.points.first;
-          kmlLoaded.value = true;
-          mapController?.animateCamera(CameraUpdate.newLatLng(initialLocation));
-        }
+      final String rawUrl;
+      if (kmlDirectUrl != null && kmlDirectUrl!.isNotEmpty) {
+        rawUrl = kmlDirectUrl!;
+      } else {
+        rawUrl = await FirebaseService.instance
+            .getDownloadUrl(kmlFilePath)
+            .timeout(const Duration(seconds: 10));
       }
+      final response = await http
+          .get(Uri.parse(rawUrl))
+          .timeout(const Duration(seconds: 10));
+      if (response.statusCode != 200) return false;
+      await OfflineStorageService.instance
+          .cacheContent(kmlFilePath, response.body);
+      if (forceApply) _applyKmlContent(response.body);
+      return true;
     } catch (e) {
-      debugPrint('KML load error: $e');
+      debugPrint('KML fetch error: $e');
+      return false;
+    }
+  }
+
+  void _applyKmlContent(String kmlBody) {
+    final parsed =
+        KmlService.instance.parse(kmlBody, polylineColor: AppTheme.primary);
+    if (parsed.polylines.isNotEmpty) {
+      kmlPolylines = parsed.polylines;
+      kmlMarkers = parsed.markers;
+      finishPosition = parsed.finishPosition;
+      initialLocation = parsed.polylines.first.points.first;
+      kmlLoaded.value = true;
+      kmlLoadError.value = false;
+      mapController?.animateCamera(CameraUpdate.newLatLng(initialLocation));
     }
   }
 
@@ -572,37 +645,39 @@ class KmlMapController extends GetxController {
     );
     lastCameraPosition = cam;
     _programmaticCamera = true;
-    mapController
-        ?.animateCamera(CameraUpdate.newCameraPosition(cam))
-        .then((_) => _programmaticCamera = false)
-        .catchError((_) => _programmaticCamera = false);
+    try {
+      mapController
+          ?.animateCamera(CameraUpdate.newCameraPosition(cam))
+          .then((_) => _programmaticCamera = false)
+          .catchError((_) => _programmaticCamera = false);
+    } catch (_) {
+      _programmaticCamera = false;
+    }
   }
 
   void saveCamera(CameraPosition pos) {
     lastCameraPosition = pos;
   }
 
-  void _showFinishDialog() {
-    Get.dialog(
-      AlertDialog(
-        title: Text('finish_line_title'.tr),
-        content: Text('finish_line_body'.tr),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Get.back();
-              stopTracking();
-            },
-            child: Text('stop_run'.tr),
-          ),
-          TextButton(
-            onPressed: Get.back,
-            child: Text('continue_run'.tr),
-          ),
-        ],
-      ),
-      barrierDismissible: false,
+  void _onFinishLineReached() {
+    _graceTimer?.cancel();
+    final grace = _graceTimeMinutes;
+    if (grace <= 0) {
+      stopTracking();
+      return;
+    }
+    Get.snackbar(
+      'finish_line_title'.tr,
+      'finish_grace_body'.tr.replaceAll('@min', '$grace'),
+      duration: const Duration(seconds: 5),
+      backgroundColor: AppTheme.trackingGreen.withValues(alpha: 0.95),
+      colorText: Colors.white,
+      snackPosition: SnackPosition.TOP,
+      margin: const EdgeInsets.all(12),
+      borderRadius: 14,
+      icon: const Icon(Icons.flag_rounded, color: Colors.white),
     );
+    _graceTimer = Timer(Duration(minutes: grace), () => stopTracking());
   }
 
   Future<void> toggleSharing() async {
@@ -699,7 +774,7 @@ class KmlMapController extends GetxController {
           if (dist > _finishArmRadiusM) _hasLeftFinishZone = true;
         } else if (dist <= _finishRadiusM) {
           _finishAlertShown = true;
-          _showFinishDialog();
+          _onFinishLineReached();
         }
       }
       if (_lbTickCount % 4 == 0) _rebuildLeaderboard();
@@ -750,6 +825,16 @@ class KmlMapController extends GetxController {
       }
     }
 
+    // Arm category cutoff timer — auto-stop when per-category time limit expires.
+    _categoryCutoffTimer?.cancel();
+    final catMins = _categoryCutoffMinutes;
+    if (catMins != null) {
+      _categoryCutoffTimer = Timer(
+        Duration(minutes: catMins),
+        () => stopTracking(),
+      );
+    }
+
     // Ask the user to exempt the app from battery optimisation.
     // This is critical on Samsung/Xiaomi/OnePlus — without it the OS can
     // suspend our network connection and throttle the Dart event loop even
@@ -775,7 +860,7 @@ class KmlMapController extends GetxController {
       final path = points.map((p) => '${p.latitude},${p.longitude}').join('|');
       final uri = Uri.parse('https://roads.googleapis.com/v1/snapToRoads'
           '?path=$path&interpolate=true&key=${AppConfig.googleMapsApiKey}');
-      final resp = await http.get(uri);
+      final resp = await http.get(uri).timeout(const Duration(seconds: 8));
       if (resp.statusCode != 200) return [];
       final json = jsonDecode(resp.body) as Map<String, dynamic>;
       final snappedList = json['snappedPoints'] as List<dynamic>?;
@@ -793,6 +878,10 @@ class KmlMapController extends GetxController {
   }
 
   Future<void> stopTracking() async {
+    _graceTimer?.cancel();
+    _graceTimer = null;
+    _categoryCutoffTimer?.cancel();
+    _categoryCutoffTimer = null;
     isSaving.value = true;
     _positionSub?.cancel();
     _positionSub = null;
@@ -801,7 +890,8 @@ class KmlMapController extends GetxController {
     isTracking.value = false;
     _rebuildLeaderboard();
 
-    await LiveTrackingService.instance.stopBroadcasting();
+    await LiveTrackingService.instance.stopBroadcasting()
+        .timeout(const Duration(seconds: 5), onTimeout: () {});
     isLive.value = false;
 
     // Flush remaining raw buffer — fall back to raw points if snap fails offline
@@ -856,35 +946,62 @@ class KmlMapController extends GetxController {
 
     final jsonBody = jsonEncode(data);
     final uid = FirebaseAuth.instance.currentUser?.uid ?? 'unknown';
+    final user = FirebaseAuth.instance.currentUser;
+    final displayName =
+        user?.displayName ?? user?.email?.split('@').first ?? 'Runner';
+    final photoUrl = user?.photoURL ?? '';
+    final runId = startTime.millisecondsSinceEpoch.toString();
 
     // 1. Always save locally first — data is never lost
     await OfflineStorageService.instance
         .saveRouteLocally(uid, fileName, jsonBody);
 
-    // 2. Try uploading to Firebase Storage; queue for sync if offline
-    try {
-      await FirebaseService.instance.saveTrackedRoute(fileName, jsonBody);
-    } catch (_) {
-      await OfflineStorageService.instance.markPending(uid, fileName);
-      Get.snackbar('', 'run_saved_offline'.tr,
-          snackPosition: SnackPosition.BOTTOM,
-          duration: const Duration(seconds: 4),
-          backgroundColor: const Color(0xFF333333),
-          colorText: Colors.white,
-          margin: const EdgeInsets.all(12));
-    }
+    final isOnline = OfflineStorageService.instance.isOnline.value;
 
-    // 3. Save stats with local backup — survives process death while offline
-    final runId = startTime.millisecondsSinceEpoch.toString();
-    await UserStatsService.instance.addRunStats(
-      totalDistance,
-      elapsedSeconds.value,
-      runId: runId,
-      eventId: currentEventId,
-    );
-    if (currentEventId.isNotEmpty) {
-      await UserStatsService.instance.addEventRunStats(
-          currentEventId, totalDistance, elapsedSeconds.value);
+    if (!isOnline) {
+      // 2a. Offline — enqueue everything; sync triggers automatically when online
+      await OfflineStorageService.instance.enqueuePendingRun(
+        runId: runId,
+        uid: uid,
+        fileName: fileName,
+        distanceKm: totalDistance,
+        seconds: elapsedSeconds.value,
+        eventId: currentEventId,
+        displayName: displayName,
+        photoUrl: photoUrl,
+      );
+      Get.snackbar(
+        'run_saved'.tr,
+        'run_saved_offline'.tr,
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 4),
+        backgroundColor: const Color(0xFF333333),
+        colorText: Colors.white,
+        margin: const EdgeInsets.all(12),
+      );
+    } else {
+      // 2b. Online — upload Storage, fall back to queue on failure
+      try {
+        await FirebaseService.instance.saveTrackedRoute(fileName, jsonBody);
+      } catch (_) {
+        await OfflineStorageService.instance.enqueuePendingRun(
+          runId: runId,
+          uid: uid,
+          fileName: fileName,
+          distanceKm: totalDistance,
+          seconds: elapsedSeconds.value,
+          eventId: currentEventId,
+          displayName: displayName,
+          photoUrl: photoUrl,
+        );
+      }
+      // 3. Stats via RTDB (Firebase persistence queues if briefly offline)
+      await UserStatsService.instance.addRunStats(
+        totalDistance,
+        elapsedSeconds.value,
+        runId: runId,
+        eventId: currentEventId,
+      );
     }
     isSaving.value = false;
     await FlutterForegroundTask.stopService();

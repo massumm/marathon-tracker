@@ -58,6 +58,7 @@ dependencies:
   flutter_foreground_task: ^8.14.0
   shared_preferences: ^2.3.2
   timezone: ^0.9.4
+  liquid_glass_bar: ^0.1.1
   
 
 
@@ -80,17 +81,20 @@ flutter_launcher_icons:
   web:
     generate: true
     image_path: "assets/icon/icon.png"
-    background_color: "#FF6B35"
-    theme_color: "#FF6B35"
+    background_color: "#FA8B4D"
+    theme_color: "#FA8B4D"
   image_path: "assets/icon/icon.png"
   min_sdk_android: 21
 
 flutter_native_splash:
-  color: "#FF6B35"
+  color: "#FA8B4D"
   image: assets/icon/icon.png
+  android_gravity: center
+  ios_content_mode: center
   android_12:
-    color: "#FF6B35"
+    color: "#FA8B4D"
     image: assets/icon/icon.png
+    icon_background_color: "#FA8B4D"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

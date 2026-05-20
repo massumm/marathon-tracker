@@ -37,14 +37,7 @@ class _MapScreenState extends State<MapScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('events_title'.tr),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.person_outline),
-            tooltip: 'nav_my_page'.tr,
-            onPressed: () => Get.find<HomeController>().changeTab(1),
-          ),
-        ],
+        title: Text('events_title'.tr)
       ),
       body: Column(
         children: [
@@ -124,7 +117,10 @@ class _MapScreenState extends State<MapScreen> {
               return RefreshIndicator(
                 onRefresh: _ctrl.fetchEvents,
                 child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  padding: EdgeInsets.only(
+                    top: 8,
+                    bottom: MediaQuery.of(context).padding.bottom + 8,
+                  ),
                   itemCount: filtered.length,
                   itemBuilder: (_, i) => _EventCard(event: filtered[i]),
                 ),

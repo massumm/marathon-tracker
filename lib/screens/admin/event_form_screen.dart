@@ -25,8 +25,10 @@ class _EventFormScreenState extends State<EventFormScreen> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _dateCtrl;
   late final TextEditingController _timeCtrl;
-  late final TextEditingController _cutoffCtrl; // display only, e.g. "5h 00m"
-  int _cutoffMinutes = 0;
+  late final TextEditingController _chipTimeCtrl; // display only, e.g. "10 min"
+  int _chipTimeMinutes = 10;
+  late final TextEditingController _graceTimeCtrl; // display only, e.g. "10 min"
+  int _graceTimeMinutes = 10;
   late final TextEditingController _locationCtrl;
   late final TextEditingController _regStartCtrl;
   late final TextEditingController _regEndCtrl;
@@ -50,13 +52,14 @@ class _EventFormScreenState extends State<EventFormScreen> {
     _nameCtrl = TextEditingController(text: e?.name ?? '');
     _dateCtrl = TextEditingController(text: e?.date ?? '');
     _timeCtrl = TextEditingController(text: e?.startTime ?? '');
-    _cutoffMinutes = e?.cutoffMinutes ?? 0;
-    _cutoffCtrl = TextEditingController(
-        text: _cutoffMinutes > 0 ? _fmtCutoff(_cutoffMinutes) : '');
     _locationCtrl = TextEditingController(text: e?.location ?? '');
     _regStartCtrl = TextEditingController(text: e?.registrationStartDate ?? '');
     _regEndCtrl = TextEditingController(text: e?.registrationEndDate ?? '');
     _regUrlCtrl = TextEditingController(text: e?.registrationUrl ?? '');
+    _chipTimeMinutes = e?.chipTimeMinutes ?? 10;
+    _chipTimeCtrl = TextEditingController(text: '$_chipTimeMinutes min');
+    _graceTimeMinutes = e?.graceTimeMinutes ?? 10;
+    _graceTimeCtrl = TextEditingController(text: '$_graceTimeMinutes min');
     _tmpEventId =
         widget.existing?.id ?? DateTime.now().millisecondsSinceEpoch.toString();
     _bannerUrl = e?.bannerUrl ?? '';
@@ -75,59 +78,64 @@ class _EventFormScreenState extends State<EventFormScreen> {
     }
   }
 
-  String _fmtCutoff(int minutes) {
-    final h = minutes ~/ 60;
-    final m = minutes % 60;
-    return h > 0 ? '${h}h ${m.toString().padLeft(2, '0')}m' : '${m}m';
-  }
-
-  Future<void> _pickCutoff() async {
-    int h = _cutoffMinutes ~/ 60;
-    int m = _cutoffMinutes % 60;
+  Future<void> _pickChipTime() async {
+    int mins = _chipTimeMinutes;
     await showDialog<void>(
       context: context,
       builder: (ctx) => StatefulBuilder(builder: (ctx, setD) {
         return AlertDialog(
-          title: const Text('Cutoff Duration',
+          title: const Text('Chip Time Window',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-          content: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _SpinBox(
-                label: 'Hours',
-                value: h,
-                min: 0,
-                max: 23,
-                onChanged: (v) => setD(() => h = v),
-              ),
-              const SizedBox(width: 16),
-              _SpinBox(
-                label: 'Minutes',
-                value: m,
-                min: 0,
-                max: 59,
-                step: 5,
-                onChanged: (v) => setD(() => m = v),
-              ),
-            ],
+          content: _SpinBox(
+            label: 'Minutes after start',
+            value: mins,
+            min: 0,
+            max: 120,
+            step: 5,
+            onChanged: (v) => setD(() => mins = v),
           ),
           actions: [
-            TextButton(
+            ElevatedButton(
               onPressed: () {
                 setState(() {
-                  _cutoffMinutes = 0;
-                  _cutoffCtrl.text = '';
+                  _chipTimeMinutes = mins;
+                  _chipTimeCtrl.text = '$_chipTimeMinutes min';
                 });
                 Navigator.pop(ctx);
               },
-              child: const Text('No Cutoff'),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  foregroundColor: Colors.white),
+              child: const Text('Set'),
             ),
+          ],
+        );
+      }),
+    );
+  }
+
+  Future<void> _pickGraceTime() async {
+    int mins = _graceTimeMinutes;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(builder: (ctx, setD) {
+        return AlertDialog(
+          title: const Text('Grace Time',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+          content: _SpinBox(
+            label: 'Minutes after finish',
+            value: mins,
+            min: 0,
+            max: 60,
+            step: 5,
+            onChanged: (v) => setD(() => mins = v),
+          ),
+          actions: [
             ElevatedButton(
               onPressed: () {
-                final total = h * 60 + m;
                 setState(() {
-                  _cutoffMinutes = total;
-                  _cutoffCtrl.text = total > 0 ? _fmtCutoff(total) : '';
+                  _graceTimeMinutes = mins;
+                  _graceTimeCtrl.text = '$_graceTimeMinutes min';
                 });
                 Navigator.pop(ctx);
               },
@@ -147,11 +155,12 @@ class _EventFormScreenState extends State<EventFormScreen> {
     _nameCtrl.dispose();
     _dateCtrl.dispose();
     _timeCtrl.dispose();
-    _cutoffCtrl.dispose();
     _locationCtrl.dispose();
     _regStartCtrl.dispose();
     _regEndCtrl.dispose();
     _regUrlCtrl.dispose();
+    _chipTimeCtrl.dispose();
+    _graceTimeCtrl.dispose();
     for (final c in _categories) {
       c.labelCtrl.dispose();
       c.cutoffCtrl.dispose();
@@ -318,7 +327,8 @@ class _EventFormScreenState extends State<EventFormScreen> {
         'name': _nameCtrl.text.trim(),
         'date': _dateCtrl.text.trim(),
         'startTime': _timeCtrl.text.trim(),
-        'cutoffMinutes': _cutoffMinutes,
+        'chipTimeMinutes': _chipTimeMinutes,
+        'graceTimeMinutes': _graceTimeMinutes,
         'location': _locationCtrl.text.trim(),
         'bannerUrl': bannerUrl,
         'createdAt':
@@ -551,21 +561,21 @@ class _EventFormScreenState extends State<EventFormScreen> {
                 ),
                 const SizedBox(height: 14),
                 _buildField(
-                  controller: _cutoffCtrl,
-                  label: 'Cutoff Time',
-                  hint: 'e.g. 5h 00m (optional)',
-                  icon: Icons.timer_outlined,
+                  controller: _chipTimeCtrl,
+                  label: 'Chip Time',
+                  hint: 'e.g. 10 min',
+                  icon: Icons.timer_rounded,
                   readOnly: true,
-                  onTap: _pickCutoff,
-                  suffixIcon: _cutoffMinutes > 0
-                      ? IconButton(
-                          icon: const Icon(Icons.clear, size: 18),
-                          onPressed: () => setState(() {
-                            _cutoffMinutes = 0;
-                            _cutoffCtrl.clear();
-                          }),
-                        )
-                      : null,
+                  onTap: _pickChipTime,
+                ),
+                const SizedBox(height: 14),
+                _buildField(
+                  controller: _graceTimeCtrl,
+                  label: 'Grace Time',
+                  hint: 'e.g. 10 min',
+                  icon: Icons.timer_off_outlined,
+                  readOnly: true,
+                  onTap: _pickGraceTime,
                 ),
                 const SizedBox(height: 14),
                 _buildField(

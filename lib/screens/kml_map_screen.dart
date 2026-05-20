@@ -38,6 +38,7 @@ class _KmlMapScreenState extends State<KmlMapScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _ctrl.mapController = null;
     super.dispose();
   }
 
@@ -104,7 +105,7 @@ class _KmlMapScreenState extends State<KmlMapScreen>
           shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
-          builder: (_) => Padding(
+          builder: (ctx) => Padding(
             padding: const EdgeInsets.fromLTRB(28, 28, 28, 36),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -137,7 +138,7 @@ class _KmlMapScreenState extends State<KmlMapScreen>
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () => Navigator.pop(_),
+                    onPressed: () => Navigator.pop(ctx),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primary,
                       foregroundColor: Colors.white,
@@ -162,6 +163,133 @@ class _KmlMapScreenState extends State<KmlMapScreen>
       if (!ready || !mounted) return;
       setState(() => _countdownActive = true);
       await _ctrl.beginCountdown(eventStart);
+      return;
+    }
+    // Category cutoff gate: event is over, no new starters allowed
+    final cutoffDeadline = _ctrl.categoryCutoffDeadline;
+    if (cutoffDeadline != null && DateTime.now().isAfter(cutoffDeadline)) {
+      if (!mounted) return;
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: Colors.white,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (ctx) => Padding(
+          padding: const EdgeInsets.fromLTRB(28, 28, 28, 36),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: Colors.grey.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.flag_rounded,
+                    color: Colors.grey, size: 32),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Event Ended',
+                style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.textPrimary),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'The cut-off time for this category has passed.\nRegistration is now closed.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 15, color: AppTheme.textSecondary),
+              ),
+              const SizedBox(height: 28),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.grey.shade700,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: const Text('OK',
+                      style: TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w700)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+      return;
+    }
+
+    // Chip time gate: reject start if past the chip window
+    final deadline = _ctrl.chipDeadline;
+    if (deadline != null && DateTime.now().isAfter(deadline)) {
+      if (!mounted) return;
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: Colors.white,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (ctx) => Padding(
+          padding: const EdgeInsets.fromLTRB(28, 28, 28, 36),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.10),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.timer_off_rounded,
+                    color: Colors.red, size: 32),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Time\'s Up!',
+                style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.textPrimary),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'The chip time window has closed.\nYou can no longer start this event.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 15, color: AppTheme.textSecondary),
+              ),
+              const SizedBox(height: 28),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: const Text('OK',
+                      style: TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w700)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
       return;
     }
     await _doLocationChecksAndStart();
@@ -388,6 +516,53 @@ class _KmlMapScreenState extends State<KmlMapScreen>
 
   Widget _buildBody(
       BuildContext context, List<LeaderboardEntry> lb, int? myRank) {
+    if (_ctrl.kmlLoadError.value) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.wifi_off_rounded,
+                  size: 56, color: Colors.grey.shade400),
+              const SizedBox(height: 16),
+              const Text(
+                'No internet connection',
+                style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.textPrimary),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'The route map could not be loaded.\nConnect to the internet and try again.',
+                textAlign: TextAlign.center,
+                style:
+                    TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () {
+                  _ctrl.kmlLoadError.value = false;
+                  _ctrl.kmlLoaded.value = false;
+                  _ctrl.prepareRoute(Get.arguments);
+                },
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+                label: const Text('Try Again'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     if (!_ctrl.kmlLoaded.value) {
       return const Center(child: CircularProgressIndicator());
     }

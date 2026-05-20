@@ -14,6 +14,7 @@ import 'services/deep_link_service.dart';
 import 'services/event_notification_service.dart';
 import 'services/notification_service.dart';
 import 'services/offline_storage_service.dart';
+import 'widgets/offline_banner.dart';
 import 'app/bindings/initial_binding.dart';
 import 'app/bindings/kml_map_binding.dart';
 import 'app/routes/app_routes.dart';
@@ -104,6 +105,13 @@ class MapApp extends StatelessWidget {
       fallbackLocale: const Locale('ja', 'JP'),
       initialBinding: InitialBinding(),
       initialRoute: AppRoutes.login,
+      builder: (ctx, child) => Stack(
+        clipBehavior: Clip.hardEdge,
+        children: [
+          child!,
+          const OfflineBanner(),
+        ],
+      ),
       getPages: [
         GetPage(
           name: AppRoutes.login,

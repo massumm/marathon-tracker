@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  static const Color primary = Color(0xFFFF6B35);
-  static const Color primaryDark = Color(0xFFE05520);
+  static const Color primary = Color(0xFFFA8B4D);
+  static const Color primaryDark = Color(0xFFD96A2A);
   static const Color secondary = Color(0xFF00B4D8);
   static const Color background = Color(0xFFF5F6FA);
   static const Color surface = Colors.white;
@@ -14,7 +14,7 @@ class AppTheme {
   static ThemeData get theme => ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFFF6B35),
+          seedColor: const Color(0xFFFA8B4D),
           primary: primary,
           onPrimary: Colors.white,
           secondary: secondary,
@@ -22,7 +22,7 @@ class AppTheme {
         ),
         scaffoldBackgroundColor: background,
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFFFF6B35),
+          backgroundColor: Color(0xFFFA8B4D),
           foregroundColor: Colors.white,
           elevation: 0,
           centerTitle: true,

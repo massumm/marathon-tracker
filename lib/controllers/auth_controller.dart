@@ -74,8 +74,11 @@ class AuthController extends GetxController {
     try {
       // Store before creation so authStateChanges listener picks it up.
       _pendingUsername = username.trim();
-      await _auth.createUserWithEmailAndPassword(
+      final cred = await _auth.createUserWithEmailAndPassword(
           email: email.trim(), password: password);
+      // Persist displayName in Firebase Auth so future sign-ins resolve it
+      // correctly without falling back to the email prefix.
+      await cred.user?.updateProfile(displayName: username.trim());
     } catch (e) {
       _pendingUsername = null;
       rethrow;
