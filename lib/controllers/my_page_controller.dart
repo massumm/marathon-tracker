@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../controllers/auth_controller.dart';
 import '../core/config.dart';
+import '../core/image_utils.dart';
 import '../models/group_model.dart';
 import '../models/user_stats.dart';
 import '../services/firebase_service.dart';
@@ -102,20 +103,16 @@ class MyPageController extends GetxController {
 
   Future<void> uploadProfileImage() async {
     final picker = ImagePicker();
-    final picked = await picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 512,
-      maxHeight: 512,
-      imageQuality: 80,
-    );
+    final picked = await picker.pickImage(source: ImageSource.gallery);
     if (picked == null) return;
 
     isUploading.value = true;
     try {
       final u = user;
       if (u == null) return;
-      final bytes = await picked.readAsBytes();
-      if (bytes.length > 3 * 1024 * 1024) {
+      final raw = await picked.readAsBytes();
+      final bytes = await compressImageUnder1MB(raw);
+      if (bytes == null) {
         Get.snackbar('', 'image_too_large'.tr,
             snackPosition: SnackPosition.BOTTOM,
             backgroundColor: Colors.red.shade600,
@@ -123,10 +120,8 @@ class MyPageController extends GetxController {
             margin: const EdgeInsets.all(12));
         return;
       }
-      final ref = fs.FirebaseStorage.instance
-          .ref('profile_images/${u.uid}.jpg');
-      await ref.putData(
-          bytes, fs.SettableMetadata(contentType: 'image/jpeg'));
+      final ref = fs.FirebaseStorage.instance.ref('profile_images/${u.uid}.jpg');
+      await ref.putData(bytes, fs.SettableMetadata(contentType: 'image/jpeg'));
       final url = await ref.getDownloadURL();
       await u.updatePhotoURL(url);
       await FriendsService.instance.registerProfile();

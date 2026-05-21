@@ -24,11 +24,26 @@ class _MapScreenState extends State<MapScreen> {
   final _ctrl = Get.find<MapController>();
   String _filter = 'all';
 
+  bool _isLive(EventModel e) {
+    if (e.isFinished) return false;
+    if (!e.isToday) return false;
+    final dt = e.eventDateTime;
+    if (dt.year == 0) return false;
+    return dt.isBefore(DateTime.now());
+  }
+
+  int _sortPriority(EventModel e) {
+    if (_isLive(e)) return 0;
+    if (!e.isFinished) return 1;
+    return 2;
+  }
+
   List<EventModel> get _filtered {
-    final events = _ctrl.events.toList();
-    if (_filter == 'live') return events.where((e) => e.isToday).toList();
+    final events = _ctrl.events.toList()
+      ..sort((a, b) => _sortPriority(a).compareTo(_sortPriority(b)));
+    if (_filter == 'live') return events.where(_isLive).toList();
     if (_filter == 'upcoming') {
-      return events.where((e) => !e.isToday && !e.isFinished).toList();
+      return events.where((e) => !e.isFinished && !_isLive(e)).toList();
     }
     return events;
   }
@@ -208,12 +223,14 @@ class _EventCardState extends State<_EventCard> {
     if (eventDt.year == 0) return null;
     final diff = eventDt.difference(DateTime.now());
     if (diff.isNegative) return 'finished';
-    // Show hours for anything under 48 h so that "tomorrow at 23:59 with no
-    // start time set" shows the real gap (e.g. 32h 59m) instead of "1 day".
     if (diff.inDays >= 2) return '${diff.inDays} days remaining';
     final h = diff.inHours;
+    if (h == 0) {
+      // Floor gives 0 when <60 s remain — always show at least 1 min.
+      final m = diff.inMinutes < 1 ? 1 : diff.inMinutes;
+      return '$m min remaining';
+    }
     final m = diff.inMinutes % 60;
-    if (h == 0) return '$m min remaining';
     return '${h}h ${m}m remaining';
   }
 
@@ -232,6 +249,7 @@ class _EventCardState extends State<_EventCard> {
   Widget build(BuildContext context) {
     final countdown = _countdown();
     final finished = _isFinished;
+    final isLive = countdown == 'finished' && !finished;
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       clipBehavior: Clip.antiAlias,
@@ -240,65 +258,19 @@ class _EventCardState extends State<_EventCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _BannerWithOverlay(event: widget.event, finished: finished),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-              child: Row(
-                children: [
-                  if (finished) ...[
-                    const Icon(Icons.flag, size: 13, color: Colors.grey),
-                    const SizedBox(width: 4),
-                    Text(
-                      'event_finished'.tr,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ] else if (countdown != null && countdown != 'finished') ...[
-                    const Icon(Icons.timer_outlined,
-                        size: 13, color: Colors.redAccent),
-                    const SizedBox(width: 4),
-                    Text(
-                      countdown,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.redAccent,
-                      ),
-                    ),
-                  ],
-                  const Spacer(),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      'categories_label'.tr.replaceAll(
-                          '@count', '${widget.event.categories.length}'),
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.primary,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  const Icon(Icons.chevron_right,
-                      color: AppTheme.textSecondary, size: 18),
-                ],
-              ),
+            _BannerWithOverlay(
+              event: widget.event,
+              finished: finished,
+              isLive: isLive,
+              countdown: (countdown != null && countdown != 'finished')
+                  ? countdown
+                  : null,
             ),
-            if (widget.event.hasRegistration) ...[
+            if (!finished && widget.event.hasRegistration) ...[
               const Divider(height: 1, thickness: 1),
               _RegistrationBar(event: widget.event),
             ],
-            const Divider(height: 1, thickness: 1),
-            _GroupBar(eventId: widget.event.id),
+            _GroupBar(eventId: widget.event.id, finished: finished),
           ],
         ),
       ),
@@ -401,7 +373,14 @@ class _EventCardState extends State<_EventCard> {
 class _BannerWithOverlay extends StatelessWidget {
   final EventModel event;
   final bool finished;
-  const _BannerWithOverlay({required this.event, this.finished = false});
+  final bool isLive;
+  final String? countdown;
+  const _BannerWithOverlay({
+    required this.event,
+    this.finished = false,
+    this.isLive = false,
+    this.countdown,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -433,6 +412,37 @@ class _BannerWithOverlay extends StatelessWidget {
             ),
           ),
           if (finished) Container(color: Colors.black.withValues(alpha: 0.45)),
+          // ── LIVE badge — top left ──────────────────────────────────────
+          if (isLive)
+            Positioned(
+              top: 10,
+              left: 10,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: AppTheme.trackingGreen,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.circle, size: 7, color: Colors.white),
+                    SizedBox(width: 5),
+                    Text(
+                      'LIVE',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          // ── Status badge — top right ───────────────────────────────────
           if (finished)
             Positioned(
               top: 10,
@@ -441,21 +451,52 @@ class _BannerWithOverlay extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.65),
+                  color: Colors.black.withValues(alpha: 0.55),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: Colors.white24),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.flag, size: 13, color: Colors.white70),
+                    const Icon(Icons.flag, size: 12, color: Colors.white70),
                     const SizedBox(width: 5),
                     Text(
                       'event_finished'.tr,
                       style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white70),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else if (countdown != null)
+            Positioned(
+              top: 10,
+              right: 10,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.55),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.white24),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.timer_outlined,
+                        size: 12, color: Colors.white70),
+                    const SizedBox(width: 5),
+                    Text(
+                      countdown!,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white70,
+                      ),
                     ),
                   ],
                 ),
@@ -532,7 +573,8 @@ class _BannerWithOverlay extends StatelessWidget {
 
 class _GroupBar extends StatefulWidget {
   final String eventId;
-  const _GroupBar({required this.eventId});
+  final bool finished;
+  const _GroupBar({required this.eventId, this.finished = false});
   @override
   State<_GroupBar> createState() => _GroupBarState();
 }
@@ -554,7 +596,14 @@ class _GroupBarState extends State<_GroupBar> {
         final count = snap.data ?? 0;
         final hasGroups = count > 0;
 
-        return Material(
+        // Finished event with no joined groups — nothing to show.
+        if (widget.finished && !hasGroups) return const SizedBox.shrink();
+
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Divider(height: 1, thickness: 1),
+            Material(
           color: Colors.transparent,
           child: InkWell(
             borderRadius:
@@ -568,7 +617,7 @@ class _GroupBarState extends State<_GroupBar> {
                 gradient: LinearGradient(
                   colors: hasGroups
                       ? [const Color(0xFFFF6B35), const Color(0xFFE03E10)]
-                      : [const Color(0xFF7C4DFF), const Color(0xFF512DA8)],
+                      : [const Color.fromRGBO(218, 61, 32, 32),const Color.fromRGBO(218, 61, 32, 32)],
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
                 ),
@@ -657,7 +706,7 @@ class _GroupBarState extends State<_GroupBar> {
                           style: const TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w800,
-                            color: Color(0xFF7C4DFF),
+                            color: Color.fromARGB(255, 0, 0, 0),
                           ),
                         ),
                       ),
@@ -669,6 +718,8 @@ class _GroupBarState extends State<_GroupBar> {
               ),
             ),
           ),
+            ),
+          ],
         );
       },
     );
@@ -690,8 +741,8 @@ class _RegistrationBar extends StatelessWidget {
     Color iconColor;
     if (isOpen) {
       label = 'register_now'.tr;
-      textColor = Colors.white;
-      iconColor = Colors.white;
+      textColor = const Color.fromARGB(218, 255, 0, 0);
+      iconColor = const Color.fromARGB(255, 207, 65, 65);
     } else {
       final startParts = event.registrationStartDate.split('-');
       bool beforeStart = false;
@@ -710,8 +761,8 @@ class _RegistrationBar extends StatelessWidget {
               .tr
               .replaceAll('@date', event.registrationStartDate)
           : 'registration_closed'.tr;
-      textColor = Colors.grey.shade500;
-      iconColor = Colors.grey.shade400;
+      textColor = const Color.fromARGB(255, 116, 64, 64);
+      iconColor = const Color.fromARGB(255, 208, 119, 119);
     }
 
     return Material(
@@ -720,14 +771,14 @@ class _RegistrationBar extends StatelessWidget {
         onTap: isOpen ? () => _launch(context, event.registrationUrl) : null,
         child: Ink(
           decoration: BoxDecoration(
-            gradient: isOpen
-                ? const LinearGradient(
-                    colors: [Color(0xFF1565C0), Color(0xFF0D47A1)],
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                  )
-                : null,
-            color: isOpen ? null : Colors.grey.shade50,
+            // gradient: isOpen
+            //     ? const LinearGradient(
+            //         colors: [Color.fromARGB(255, 249, 222, 111),Color.fromARGB(255, 249, 222, 111)],
+            //         begin: Alignment.centerLeft,
+            //         end: Alignment.centerRight,
+            //       )
+            //     : null,
+            color: isOpen ? Color.fromARGB(255, 249, 222, 111) : const Color.fromARGB(255, 245, 190, 104),
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -753,7 +804,7 @@ class _RegistrationBar extends StatelessWidget {
                 ),
                 if (isOpen)
                   Icon(Icons.open_in_new_rounded,
-                      size: 14, color: Colors.white.withValues(alpha: 0.8)),
+                      size: 14, color: const Color.fromARGB(255, 245, 2, 2).withValues(alpha: 0.8)),
               ],
             ),
           ),

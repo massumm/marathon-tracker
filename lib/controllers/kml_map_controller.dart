@@ -956,7 +956,7 @@ class KmlMapController extends GetxController {
     await OfflineStorageService.instance
         .saveRouteLocally(uid, fileName, jsonBody);
 
-    final isOnline = OfflineStorageService.instance.isOnline.value;
+    final isOnline = OfflineStorageService.instance.isOnline.value == true;
 
     if (!isOnline) {
       // 2a. Offline — enqueue everything; sync triggers automatically when online

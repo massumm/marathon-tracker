@@ -9,6 +9,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../controllers/kml_map_controller.dart';
+import '../core/image_utils.dart';
 import '../core/theme.dart';
 import '../services/firebase_service.dart';
 import '../widgets/user_avatar.dart';
@@ -72,15 +73,11 @@ class _KmlMapScreenState extends State<KmlMapScreen>
 
   Future<void> _takePhoto() async {
     final picker = ImagePicker();
-    final photo = await picker.pickImage(
-      source: ImageSource.camera,
-      imageQuality: 70,
-      maxWidth: 1920,
-      maxHeight: 1080,
-    );
+    final photo = await picker.pickImage(source: ImageSource.camera);
     if (photo == null) return;
-    final bytes = await photo.readAsBytes();
-    if (bytes.length > 3 * 1024 * 1024) {
+    final raw = await photo.readAsBytes();
+    final bytes = await compressImageUnder1MB(raw);
+    if (bytes == null) {
       Get.snackbar('', 'image_too_large'.tr,
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red.shade600,
@@ -746,10 +743,17 @@ class _KmlMapScreenState extends State<KmlMapScreen>
         left: 0,
         right: 0,
         child: Center(
-          child: _TrackingButton(
-            isTracking: isTracking,
-            onTap:
-                isTracking ? () => _ctrl.stopTracking() : () => _onStartTap(),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (!isTracking) _EventStartLabel(eventStart: _ctrl.eventStartTime),
+              if (!isTracking) const SizedBox(height: 10),
+              _TrackingButton(
+                isTracking: isTracking,
+                onTap:
+                    isTracking ? () => _ctrl.stopTracking() : () => _onStartTap(),
+              ),
+            ],
           ),
         ),
       ),
@@ -818,6 +822,65 @@ class _KmlMapScreenState extends State<KmlMapScreen>
           ),
         ),
     ]);
+  }
+}
+
+// ── Event start time label ────────────────────────────────────────────────────
+
+class _EventStartLabel extends StatelessWidget {
+  final DateTime? eventStart;
+  const _EventStartLabel({this.eventStart});
+
+  @override
+  Widget build(BuildContext context) {
+    final dt = eventStart;
+    if (dt == null || dt.year == 0) return const SizedBox.shrink();
+
+    final now = DateTime.now();
+    final isToday = dt.year == now.year && dt.month == now.month && dt.day == now.day;
+    final isFuture = dt.isAfter(now);
+    if (!isFuture) return const SizedBox.shrink();
+
+    final hh = dt.hour.toString().padLeft(2, '0');
+    final mm = dt.minute.toString().padLeft(2, '0');
+    final timeStr = '$hh:$mm';
+
+    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final dateStr = '${dt.day} ${months[dt.month - 1]}';
+
+    final label = isToday
+        ? 'starts_today_at'.tr.replaceAll('@time', timeStr)
+        : 'starts_on'.tr.replaceAll('@date', dateStr).replaceAll('@time', timeStr);
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.42),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.schedule_rounded, size: 14, color: Colors.white70),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

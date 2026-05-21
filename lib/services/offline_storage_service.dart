@@ -13,7 +13,7 @@ class OfflineStorageService {
   static final instance = OfflineStorageService._();
 
   late Directory _root;
-  final isOnline = false.obs;
+  final isOnline = Rxn<bool>();
   final pendingRunCount = 0.obs;
 
   Future<void> init() async {
