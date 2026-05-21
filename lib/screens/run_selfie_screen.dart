@@ -93,10 +93,15 @@ class _RunSelfieScreenState extends State<RunSelfieScreen> {
           '${tmp.path}/runmate_${DateTime.now().millisecondsSinceEpoch}.png';
       await File(path).writeAsBytes(bytes);
 
+      final previewBox = _previewKey.currentContext?.findRenderObject() as RenderBox?;
+      final shareRect = previewBox != null
+          ? previewBox.localToGlobal(Offset.zero) & previewBox.size
+          : Rect.fromLTWH(0, 0, 100, 100);
       await Share.shareXFiles(
         [XFile(path)],
         text:
             '🏃 Just finished a run on RunMate!\n${widget.route.distance}  ·  ${widget.route.time}  ·  ${widget.route.pace}\n\n#RunMate #Running #Marathon #Run\nhttps://runmate.app',
+        sharePositionOrigin: shareRect,
       );
     } catch (e) {
       debugPrint('Share error: $e');

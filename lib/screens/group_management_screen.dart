@@ -354,23 +354,30 @@ class GroupQrSheet extends StatelessWidget {
           const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,
-            child: ElevatedButton.icon(
-              icon: const Icon(Icons.link_rounded, size: 18),
-              label: Text('share_join_link'.tr),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 13),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+            child: Builder(
+              builder: (btnCtx) => ElevatedButton.icon(
+                icon: const Icon(Icons.link_rounded, size: 18),
+                label: Text('share_join_link'.tr),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () {
+                  final link =
+                      'https://runmate-252e5.web.app/join.html?id=${group.id}&name=${Uri.encodeComponent(group.name)}';
+                  final box = btnCtx.findRenderObject() as RenderBox?;
+                  final rect = box != null
+                      ? box.localToGlobal(Offset.zero) & box.size
+                      : Rect.fromLTWH(0, 0, 100, 100);
+                  Share.share(
+                    '${'share_join_link_text'.tr.replaceAll('@name', group.name)}\n$link',
+                    sharePositionOrigin: rect,
+                  );
+                },
               ),
-              onPressed: () {
-                final link =
-                    'https://runmate-252e5.web.app/join.html?id=${group.id}&name=${Uri.encodeComponent(group.name)}';
-                Share.share(
-                  '${'share_join_link_text'.tr.replaceAll('@name', group.name)}\n$link',
-                );
-              },
             ),
           ),
           const SizedBox(height: 8),

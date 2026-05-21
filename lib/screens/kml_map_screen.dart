@@ -7,6 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../controllers/kml_map_controller.dart';
 import '../core/image_utils.dart';
@@ -72,6 +73,45 @@ class _KmlMapScreenState extends State<KmlMapScreen>
   }
 
   Future<void> _takePhoto() async {
+    if (Platform.isIOS) {
+      // Only check status — never call .request() here.
+      // image_picker handles the native permission prompt for undetermined state.
+      // We only intercept when the user has permanently denied camera access.
+      final status = await Permission.camera.status;
+      if (status.isPermanentlyDenied) {
+        if (!mounted) return;
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            icon: const Icon(Icons.camera_alt_outlined, color: AppTheme.primary, size: 40),
+            title: Text('camera_permission_denied'.tr,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            content: Text('camera_permission_msg'.tr,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 14)),
+            actionsAlignment: MainAxisAlignment.center,
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('cancel'.tr)),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  openAppSettings();
+                },
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primary,
+                    foregroundColor: Colors.white),
+                child: Text('open_settings'.tr),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+    }
     final picker = ImagePicker();
     final photo = await picker.pickImage(source: ImageSource.camera);
     if (photo == null) return;

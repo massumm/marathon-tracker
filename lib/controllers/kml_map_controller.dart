@@ -746,17 +746,18 @@ class KmlMapController extends GetxController {
       _updateSelfMarker(latLng);
       _lbTickCount++;
 
-      // Record every point that passes the OS distanceFilter — the filter
-      // already rejects updates shorter than 2 m so no extra guard is needed.
+      // Only record the point if the runner moved at least 5 m from the last
+      // recorded point. Android's distanceFilter is advisory and GPS drift can
+      // still fire sub-5 m updates when the device is stationary.
+      const minRecordMetres = 5.0;
       if (trackingPoints.isNotEmpty) {
         final prev = trackingPoints.last;
-        _cachedDistanceKm += Geolocator.distanceBetween(
-              prev.latitude,
-              prev.longitude,
-              latLng.latitude,
-              latLng.longitude,
-            ) /
-            1000;
+        final moved = Geolocator.distanceBetween(
+          prev.latitude, prev.longitude,
+          latLng.latitude, latLng.longitude,
+        );
+        if (moved < minRecordMetres) return;
+        _cachedDistanceKm += moved / 1000;
       }
       trackingPoints.add(latLng);
       _rawBuffer.add(latLng);
