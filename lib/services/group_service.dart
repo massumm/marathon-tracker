@@ -19,8 +19,8 @@ class GroupService {
 
   // ── Create ────────────────────────────────────────────────────────────────
 
-  /// Returns the new groupId, or null if the user already owns 3 groups in [eventId].
-  Future<String?> createGroup(String eventId, String name) async {
+  /// Returns the new [GroupModel], or null if the user already owns 3 groups in [eventId].
+  Future<GroupModel?> createGroup(String eventId, String name) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return null;
 
@@ -73,7 +73,7 @@ class GroupService {
       _db.ref('user_groups/${user.uid}/$groupId').set(true),
     ]);
 
-    return groupId;
+    return group;
   }
 
   // ── Join ──────────────────────────────────────────────────────────────────

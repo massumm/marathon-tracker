@@ -159,7 +159,7 @@ class MapApp extends StatelessWidget {
           name: AppRoutes.groupManagement,
           page: () => const GroupManagementScreen(),
           binding: BindingsBuilder(() {
-            Get.lazyPut(() => GroupController());
+            Get.put(GroupController());
           }),
         ),
         GetPage(

@@ -46,7 +46,10 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
                     ? null
                     : () async {
                         Get.back();
-                        await _ctrl.createGroup(nameCtrl.text);
+                        final group = await _ctrl.createGroup(nameCtrl.text);
+                        if (group != null) {
+                          GroupQrSheet.show(group);
+                        }
                       },
                 style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primary,

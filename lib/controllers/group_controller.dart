@@ -38,20 +38,21 @@ class GroupController extends GetxController {
     super.onClose();
   }
 
-  Future<void> createGroup(String name) async {
-    if (name.trim().isEmpty) return;
+  Future<GroupModel?> createGroup(String name) async {
+    if (name.trim().isEmpty) return null;
     isLoading.value = true;
-    final groupId =
+    final group =
         await GroupService.instance.createGroup(eventId, name.trim());
     isLoading.value = false;
 
-    if (groupId == null) {
+    if (group == null) {
       Get.snackbar(
         'group_limit_title'.tr,
         'group_limit_body'.tr,
         snackPosition: SnackPosition.BOTTOM,
       );
     }
+    return group;
   }
 
   Future<void> joinByQr(String groupId) async {

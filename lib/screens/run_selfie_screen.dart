@@ -37,11 +37,33 @@ class _RunSelfieScreenState extends State<RunSelfieScreen> {
     final status = await Permission.camera.request();
     if (!status.isGranted) {
       if (mounted) {
-        Get.snackbar(
-          'camera_permission_denied'.tr,
-          'camera_permission_msg'.tr,
-          snackPosition: SnackPosition.BOTTOM,
-        );
+        if (status.isPermanentlyDenied) {
+          Get.dialog(
+            AlertDialog(
+              title: Text('camera_permission_denied'.tr),
+              content: Text('camera_permission_settings_msg'.tr),
+              actions: [
+                TextButton(
+                  onPressed: () => Get.back(),
+                  child: Text('cancel'.tr),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    Get.back();
+                    await openAppSettings();
+                  },
+                  child: Text('open_settings'.tr),
+                ),
+              ],
+            ),
+          );
+        } else {
+          Get.snackbar(
+            'camera_permission_denied'.tr,
+            'camera_permission_msg'.tr,
+            snackPosition: SnackPosition.BOTTOM,
+          );
+        }
       }
       return;
     }
