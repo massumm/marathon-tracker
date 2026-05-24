@@ -4,7 +4,6 @@ import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../app/routes/app_routes.dart';
 import '../services/friends_service.dart';
-import '../services/live_tracking_service.dart';
 import '../services/user_stats_service.dart';
 
 class AuthController extends GetxController {

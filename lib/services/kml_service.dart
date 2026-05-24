@@ -22,11 +22,17 @@ class KmlService {
 
     // ── Step 1: Parse <Style> id → hue ──────────────────────────────────────
     final styleHues = <String, double>{};
-    for (final style in document.findAllElements('Style')) {
+    for (final style in document.findAllElements('*').where((e) => e.name.local == 'Style')) {
       final id = style.getAttribute('id') ?? '';
       if (id.isEmpty) continue;
-      final colorText =
-          style.findAllElements('color').firstOrNull?.innerText.trim();
+      xml.XmlElement? colorEl;
+      for (final child in style.children) {
+        if (child is xml.XmlElement && child.name.local == 'color') {
+          colorEl = child;
+          break;
+        }
+      }
+      final colorText = colorEl?.innerText.trim();
       if (colorText != null && colorText.isNotEmpty) {
         styleHues[id] = _kmlColorToHue(colorText);
       }
@@ -34,13 +40,20 @@ class KmlService {
 
     // ── Step 2: Resolve <StyleMap> aliases (id → normal style id) ───────────
     final styleMapResolution = <String, String>{};
-    for (final styleMap in document.findAllElements('StyleMap')) {
+    for (final styleMap in document.findAllElements('*').where((e) => e.name.local == 'StyleMap')) {
       final id = styleMap.getAttribute('id') ?? '';
       if (id.isEmpty) continue;
-      for (final pair in styleMap.findAllElements('Pair')) {
-        if ((pair.getElement('key')?.innerText ?? '') != 'normal') continue;
-        final url =
-            pair.getElement('styleUrl')?.innerText.trim() ?? '';
+      for (final pair in styleMap.findAllElements('*').where((e) => e.name.local == 'Pair')) {
+        xml.XmlElement? keyEl;
+        xml.XmlElement? styleUrlEl;
+        for (final child in pair.children) {
+          if (child is xml.XmlElement) {
+            if (child.name.local == 'key') keyEl = child;
+            if (child.name.local == 'styleUrl') styleUrlEl = child;
+          }
+        }
+        if ((keyEl?.innerText ?? '') != 'normal') continue;
+        final url = styleUrlEl?.innerText.trim() ?? '';
         final targetId = url.startsWith('#') ? url.substring(1) : url;
         styleMapResolution[id] = targetId;
       }
@@ -59,22 +72,36 @@ class KmlService {
 
     // ── Step 3: Parse <Point> markers ────────────────────────────────────────
     final Set<Marker> markers = {};
-    for (final placemark in document.findAllElements('Placemark')) {
-      final pointEl = placemark.findAllElements('Point').firstOrNull;
+    for (final placemark in document.findAllElements('*').where((e) => e.name.local == 'Placemark')) {
+      xml.XmlElement? pointEl;
+      xml.XmlElement? nameEl;
+      xml.XmlElement? descEl;
+      xml.XmlElement? styleUrlEl;
+
+      for (final child in placemark.children) {
+        if (child is xml.XmlElement) {
+          if (child.name.local == 'Point') pointEl = child;
+          if (child.name.local == 'name') nameEl = child;
+          if (child.name.local == 'description') descEl = child;
+          if (child.name.local == 'styleUrl') styleUrlEl = child;
+        }
+      }
+
       if (pointEl == null) continue; // skip lines
 
-      final name =
-          placemark.getElement('name')?.innerText.trim() ?? '';
-      final description =
-          placemark.getElement('description')?.innerText.trim() ?? '';
-      final styleUrl =
-          placemark.getElement('styleUrl')?.innerText.trim() ?? '';
+      final name = nameEl?.innerText.trim() ?? '';
+      final description = descEl?.innerText.trim() ?? '';
+      final styleUrl = styleUrlEl?.innerText.trim() ?? '';
 
-      final coordText = pointEl
-          .findAllElements('coordinates')
-          .firstOrNull
-          ?.innerText
-          .trim();
+      xml.XmlElement? coordEl;
+      for (final child in pointEl.children) {
+        if (child is xml.XmlElement && child.name.local == 'coordinates') {
+          coordEl = child;
+          break;
+        }
+      }
+
+      final coordText = coordEl?.innerText.trim();
       if (coordText == null) continue;
       final parts = coordText.split(',');
       if (parts.length < 2) continue;
@@ -99,7 +126,7 @@ class KmlService {
     // ── Step 4: Parse polylines ───────────────────────────────────────────────
     final Set<Polyline> polylines = {};
     int polylineId = 0;
-    for (final element in document.findAllElements('coordinates')) {
+    for (final element in document.findAllElements('*').where((e) => e.name.local == 'coordinates')) {
       final coords =
           element.innerText.trim().split(RegExp(r'\s+'));
       final points = <LatLng>[];
@@ -121,13 +148,25 @@ class KmlService {
       }
     }
 
-    // Identify finish marker by name keyword
+    // Identify finish: prefer explicit marker, fall back to last polyline point
     LatLng? finishPosition;
     for (final m in markers) {
       final id = m.markerId.value.toLowerCase();
       if (id.contains('finish') || id.contains('goal') || id.contains('end')) {
         finishPosition = m.position;
         break;
+      }
+    }
+    // Fallback: use last point of the longest polyline
+    if (finishPosition == null && polylines.isNotEmpty) {
+      Polyline? longest;
+      for (final p in polylines) {
+        if (longest == null || p.points.length > longest.points.length) {
+          longest = p;
+        }
+      }
+      if (longest != null && longest.points.isNotEmpty) {
+        finishPosition = longest.points.last;
       }
     }
 

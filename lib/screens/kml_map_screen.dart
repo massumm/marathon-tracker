@@ -154,7 +154,7 @@ class _KmlMapScreenState extends State<KmlMapScreen>
                     color: AppTheme.primary.withValues(alpha: 0.10),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.schedule_rounded,
+                  child: const Icon(Icons.schedule_rounded,
                       color: AppTheme.primary, size: 32),
                 ),
                 const SizedBox(height: 16),
@@ -292,18 +292,18 @@ class _KmlMapScreenState extends State<KmlMapScreen>
                     color: Colors.red, size: 32),
               ),
               const SizedBox(height: 16),
-              const Text(
-                'Time\'s Up!',
-                style: TextStyle(
+              Text(
+                'start_window_closed_title'.tr,
+                style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.textPrimary),
               ),
               const SizedBox(height: 8),
-              const Text(
-                'The chip time window has closed.\nYou can no longer start this event.',
+              Text(
+                'start_window_closed_body'.tr,
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 15, color: AppTheme.textSecondary),
+                style: const TextStyle(fontSize: 15, color: AppTheme.textSecondary),
               ),
               const SizedBox(height: 28),
               SizedBox(

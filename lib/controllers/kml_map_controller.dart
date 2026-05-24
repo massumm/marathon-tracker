@@ -99,6 +99,7 @@ class KmlMapController extends GetxController {
   int _lbTickCount = 0;
   final runnerMarkers = <String, Marker>{}.obs;
   StreamSubscription<List<RunnerData>>? _runnersSub;
+  StreamSubscription? _chipTimeSub;
   // icon cache keyed by '{uid}_{photoUrl}'
   final _iconCache = <String, BitmapDescriptor>{};
 
@@ -154,6 +155,17 @@ class KmlMapController extends GetxController {
           : null;
       final chipMins = args['chipTimeMinutes'] as int? ?? 10;
       chipDeadline = eventStartTime?.add(Duration(minutes: chipMins));
+      if (currentEventId.isNotEmpty && eventStartTime != null) {
+        _chipTimeSub = FirebaseDatabase.instance
+            .ref('events/$currentEventId/chipTimeMinutes')
+            .onValue
+            .listen((event) {
+          final mins = (event.snapshot.value as num?)?.toInt();
+          if (mins != null) {
+            chipDeadline = eventStartTime!.add(Duration(minutes: mins));
+          }
+        });
+      }
       _graceTimeMinutes = args['graceTimeMinutes'] as int? ?? 10;
       _categoryCutoffMinutes =
           _parseCutoffMinutes(args['categoryCutoff'] as String? ?? '');
@@ -205,6 +217,7 @@ class KmlMapController extends GetxController {
     _categoryCutoffTimer?.cancel();
     _positionSub?.cancel();
     _runnersSub?.cancel();
+    _chipTimeSub?.cancel();
     _iconCache.clear();
     if (isLive.value) LiveTrackingService.instance.stopBroadcasting();
     if (isTracking.value) FlutterForegroundTask.stopService();
@@ -407,13 +420,13 @@ class KmlMapController extends GetxController {
 
     // White border ring.
     canvas.drawCircle(
-        Offset(cx, circleCy), circleRadius, Paint()..color = Colors.white);
+        const Offset(cx, circleCy), circleRadius, Paint()..color = Colors.white);
 
     // Clip to avatar area.
     canvas.save();
     canvas.clipPath(Path()
       ..addOval(
-          Rect.fromCircle(center: Offset(cx, circleCy), radius: innerRadius)));
+          Rect.fromCircle(center: const Offset(cx, circleCy), radius: innerRadius)));
 
     bool drewPhoto = false;
     if (photoUrl.isNotEmpty) {
@@ -428,7 +441,7 @@ class KmlMapController extends GetxController {
               : img.height.toDouble();
           final src = Rect.fromLTWH((img.width - minSide) / 2,
               (img.height - minSide) / 2, minSide, minSide);
-          final dst = Rect.fromLTWH(cx - innerRadius, circleCy - innerRadius,
+          const dst = Rect.fromLTWH(cx - innerRadius, circleCy - innerRadius,
               innerRadius * 2, innerRadius * 2);
           canvas.drawImageRect(img, src, dst, Paint());
           drewPhoto = true;
@@ -438,7 +451,7 @@ class KmlMapController extends GetxController {
 
     if (!drewPhoto) {
       canvas.drawCircle(
-          Offset(cx, circleCy), innerRadius, Paint()..color = AppTheme.primary);
+          const Offset(cx, circleCy), innerRadius, Paint()..color = AppTheme.primary);
       final initial =
           displayName.isNotEmpty ? displayName[0].toUpperCase() : 'M';
       final tp = TextPainter(textDirection: TextDirection.ltr)

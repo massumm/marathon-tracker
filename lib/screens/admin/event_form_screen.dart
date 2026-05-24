@@ -1113,7 +1113,5 @@ class _CategoryEntry {
     required this.cutoffCtrl,
     this.existingKmlPath = '',
     this.existingKmlUrl = '',
-    this.pickedFileName = '',
-    this.pickedBytes,
   });
 }

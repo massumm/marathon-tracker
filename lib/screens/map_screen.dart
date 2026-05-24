@@ -137,7 +137,7 @@ class _MapScreenState extends State<MapScreen> {
                     bottom: MediaQuery.of(context).padding.bottom + 8,
                   ),
                   itemCount: filtered.length,
-                  itemBuilder: (_, i) => _EventCard(event: filtered[i]),
+                  itemBuilder: (_, i) => _EventCard(key: ValueKey(filtered[i].id), event: filtered[i]),
                 ),
               );
             }),
@@ -195,7 +195,7 @@ class _FilterTab extends StatelessWidget {
 
 class _EventCard extends StatefulWidget {
   final EventModel event;
-  const _EventCard({required this.event});
+  const _EventCard({super.key, required this.event});
 
   @override
   State<_EventCard> createState() => _EventCardState();
@@ -363,6 +363,7 @@ class _EventCardState extends State<_EventCard> {
         'eventDateTime': widget.event.eventDateTime.millisecondsSinceEpoch,
         'hasStartTime': widget.event.startTime.isNotEmpty,
         'cutoffMinutes': widget.event.cutoffMinutes,
+        'chipTimeMinutes': widget.event.chipTimeMinutes,
       },
     );
   }
@@ -589,6 +590,14 @@ class _GroupBarState extends State<_GroupBar> {
   }
 
   @override
+  void didUpdateWidget(_GroupBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.eventId != widget.eventId) {
+      _stream = GroupService.instance.watchMyGroupCountForEvent(widget.eventId);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return StreamBuilder<int>(
       stream: _stream,
@@ -778,7 +787,7 @@ class _RegistrationBar extends StatelessWidget {
             //         end: Alignment.centerRight,
             //       )
             //     : null,
-            color: isOpen ? Color.fromARGB(255, 249, 222, 111) : const Color.fromARGB(255, 245, 190, 104),
+            color: isOpen ? const Color.fromARGB(255, 249, 222, 111) : const Color.fromARGB(255, 245, 190, 104),
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),

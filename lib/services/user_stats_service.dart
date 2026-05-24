@@ -57,6 +57,10 @@ class UserStatsService {
       'totalSeconds': ServerValue.increment(seconds),
     });
 
+    if (eventId.isNotEmpty) {
+      await addEventRunStats(eventId, distanceKm, seconds);
+    }
+
     // await OfflineStorageService.instance.markStatConfirmed(runId);
   }
 

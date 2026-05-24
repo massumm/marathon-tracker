@@ -440,6 +440,37 @@ class _RequestTile extends StatelessWidget {
     required this.onDecline,
   });
 
+  void _showConfirmDecline(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('reject_request'.tr,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+        content: Text('reject_confirm'.tr,
+            style: const TextStyle(fontSize: 14)),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('cancel'.tr),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              onDecline();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('reject'.tr),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListTile(
@@ -464,7 +495,7 @@ class _RequestTile extends StatelessWidget {
             icon: const Icon(Icons.cancel_outlined,
                 color: Colors.redAccent, size: 24),
             tooltip: 'reject'.tr,
-            onPressed: onDecline,
+            onPressed: () => _showConfirmDecline(context),
           ),
         ],
       ),

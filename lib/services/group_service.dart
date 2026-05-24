@@ -155,9 +155,9 @@ class GroupService {
 
     final requestData = requestSnap.value as Map<dynamic, dynamic>;
     final countSnap = await _db.ref('groups/$groupId/memberCount').get();
-    final count = countSnap.value as int? ?? 0;
+    final count = (countSnap.value is int) ? countSnap.value as int : 0;
     final nameSnap = await _db.ref('groups/$groupId/name').get();
-    final groupName = nameSnap.value as String? ?? '';
+    final groupName = (nameSnap.value is String) ? nameSnap.value as String : '';
 
     await Future.wait([
       _db.ref('group_members/$groupId/$uid').set(requestData),
@@ -173,7 +173,7 @@ class GroupService {
 
   Future<void> declineJoinRequest(String groupId, String uid) async {
     final nameSnap = await _db.ref('groups/$groupId/name').get();
-    final groupName = nameSnap.value as String? ?? '';
+    final groupName = (nameSnap.value is String) ? nameSnap.value as String : '';
 
     await Future.wait([
       _db.ref('group_join_requests/$groupId/$uid').remove(),

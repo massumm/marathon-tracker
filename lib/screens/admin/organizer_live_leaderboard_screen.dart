@@ -24,8 +24,8 @@ class _OrganizerLiveLeaderboardScreenState
     with SingleTickerProviderStateMixin {
   bool _counting = false;
   bool _ended = false;
-  Duration _remaining = Duration.zero;
-  Duration _cutoffRemaining = Duration.zero;
+  late ValueNotifier<Duration> _remaining;
+  late ValueNotifier<Duration> _cutoffRemaining;
   Timer? _ticker;
   late AnimationController _pulse;
   late Animation<double> _pulseAnim;
@@ -33,6 +33,9 @@ class _OrganizerLiveLeaderboardScreenState
   @override
   void initState() {
     super.initState();
+    _remaining = ValueNotifier(Duration.zero);
+    _cutoffRemaining = ValueNotifier(Duration.zero);
+
     _pulse = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1400),
@@ -45,7 +48,7 @@ class _OrganizerLiveLeaderboardScreenState
       final rem = event.eventDateTime.difference(DateTime.now());
       if (rem.inSeconds > 0) {
         _counting = true;
-        _remaining = rem;
+        _remaining.value = rem;
       }
     }
     if (event.hasCutoff) {
@@ -53,32 +56,30 @@ class _OrganizerLiveLeaderboardScreenState
       if (cr.inSeconds <= 0) {
         _ended = true;
       } else {
-        _cutoffRemaining = cr;
+        _cutoffRemaining.value = cr;
       }
     }
 
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
-      setState(() {
-        if (_counting) {
-          final r = widget.event.eventDateTime.difference(DateTime.now());
-          if (r.inSeconds <= 0) {
-            _counting = false;
-            _remaining = Duration.zero;
-          } else {
-            _remaining = r;
-          }
+      if (_counting) {
+        final r = widget.event.eventDateTime.difference(DateTime.now());
+        if (r.inSeconds <= 0) {
+          _counting = false;
+          _remaining.value = Duration.zero;
+        } else {
+          _remaining.value = r;
         }
-        if (widget.event.hasCutoff && !_ended) {
-          final cr = widget.event.cutoffDateTime.difference(DateTime.now());
-          if (cr.inSeconds <= 0) {
-            _ended = true;
-            _cutoffRemaining = Duration.zero;
-          } else {
-            _cutoffRemaining = cr;
-          }
+      }
+      if (widget.event.hasCutoff && !_ended) {
+        final cr = widget.event.cutoffDateTime.difference(DateTime.now());
+        if (cr.inSeconds <= 0) {
+          _ended = true;
+          _cutoffRemaining.value = Duration.zero;
+        } else {
+          _cutoffRemaining.value = cr;
         }
-      });
+      }
     });
   }
 
@@ -86,6 +87,8 @@ class _OrganizerLiveLeaderboardScreenState
   void dispose() {
     _ticker?.cancel();
     _pulse.dispose();
+    _remaining.dispose();
+    _cutoffRemaining.dispose();
     super.dispose();
   }
 
@@ -132,13 +135,16 @@ class _OrganizerLiveLeaderboardScreenState
   }
 
   Widget _buildCountdown() {
-    final h = _remaining.inHours;
-    final m = _remaining.inMinutes.remainder(60);
-    final s = _remaining.inSeconds.remainder(60);
-    String pad(int n) => n.toString().padLeft(2, '0');
-    final showHours = _remaining.inHours > 0;
-    final timeStr =
-        showHours ? '${pad(h)}:${pad(m)}:${pad(s)}' : '${pad(m)}:${pad(s)}';
+    return ValueListenableBuilder<Duration>(
+      valueListenable: _remaining,
+      builder: (_, remaining, __) {
+        final h = remaining.inHours;
+        final m = remaining.inMinutes.remainder(60);
+        final s = remaining.inSeconds.remainder(60);
+        String pad(int n) => n.toString().padLeft(2, '0');
+        final showHours = remaining.inHours > 0;
+        final timeStr =
+            showHours ? '${pad(h)}:${pad(m)}:${pad(s)}' : '${pad(m)}:${pad(s)}';
 
     final eventDate = widget.event.date;
     final eventTime = widget.event.startTime;
@@ -245,6 +251,8 @@ class _OrganizerLiveLeaderboardScreenState
         ],
       ),
     );
+      },
+    );
   }
 
   Widget _buildLeaderboard() {
@@ -279,15 +287,20 @@ class _OrganizerLiveLeaderboardScreenState
           );
         }
 
-        final cutoffStr = (!_ended && widget.event.hasCutoff)
-            ? _fmtDuration(_cutoffRemaining)
-            : null;
         return Column(
           children: [
-            _LiveBanner(
-                eventName: widget.event.name,
-                count: runners.length,
-                cutoffRemaining: cutoffStr),
+            ValueListenableBuilder<Duration>(
+              valueListenable: _cutoffRemaining,
+              builder: (_, cutoff, __) {
+                final cutoffDisplay = (!_ended && widget.event.hasCutoff)
+                    ? _fmtDuration(cutoff)
+                    : null;
+                return _LiveBanner(
+                    eventName: widget.event.name,
+                    count: runners.length,
+                    cutoffRemaining: cutoffDisplay);
+              },
+            ),
             Expanded(
               child: ListView.builder(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
