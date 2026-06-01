@@ -31,12 +31,12 @@ class OrganizerEventLeaderboardScreen extends StatelessWidget {
                   border: Border.all(
                       color: AppTheme.trackingGreen.withValues(alpha: 0.4)),
                 ),
-                child: Row(
+                child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(Icons.emoji_events_outlined,
                         size: 13, color: AppTheme.trackingGreen),
-                    const SizedBox(width: 5),
+                    SizedBox(width: 5),
                     Text(
                       'Results',
                       style: TextStyle(

@@ -6,7 +6,6 @@ import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../app/routes/app_routes.dart';
-import '../controllers/home_controller.dart';
 import '../controllers/kml_map_controller.dart';
 import '../controllers/map_controller.dart';
 import '../core/theme.dart';

@@ -34,39 +34,6 @@ class _RunSelfieScreenState extends State<RunSelfieScreen> {
   }
 
   Future<void> _initCamera() async {
-    final status = await Permission.camera.request();
-    if (!status.isGranted) {
-      if (mounted) {
-        if (status.isPermanentlyDenied) {
-          Get.dialog(
-            AlertDialog(
-              title: Text('camera_permission_denied'.tr),
-              content: Text('camera_permission_settings_msg'.tr),
-              actions: [
-                TextButton(
-                  onPressed: () => Get.back(),
-                  child: Text('cancel'.tr),
-                ),
-                TextButton(
-                  onPressed: () async {
-                    Get.back();
-                    await openAppSettings();
-                  },
-                  child: Text('open_settings'.tr),
-                ),
-              ],
-            ),
-          );
-        } else {
-          Get.snackbar(
-            'camera_permission_denied'.tr,
-            'camera_permission_msg'.tr,
-            snackPosition: SnackPosition.BOTTOM,
-          );
-        }
-      }
-      return;
-    }
     try {
       final cameras = await availableCameras();
       final front = cameras.firstWhereOrNull(
@@ -80,8 +47,29 @@ class _RunSelfieScreenState extends State<RunSelfieScreen> {
       );
       await _controller!.initialize();
       if (mounted) setState(() => _cameraReady = true);
-    } catch (e) {
-      debugPrint('Camera init error: $e');
+    } on CameraException catch (e) {
+      debugPrint('Camera init error: ${e.code} ${e.description}');
+      if (mounted) {
+        Get.dialog(
+          AlertDialog(
+            title: Text('camera_permission_denied'.tr),
+            content: Text('camera_permission_settings_msg'.tr),
+            actions: [
+              TextButton(
+                onPressed: () => Get.back(),
+                child: Text('cancel'.tr),
+              ),
+              TextButton(
+                onPressed: () async {
+                  Get.back();
+                  await openAppSettings();
+                },
+                child: Text('open_settings'.tr),
+              ),
+            ],
+          ),
+        );
+      }
     }
   }
 
@@ -118,7 +106,7 @@ class _RunSelfieScreenState extends State<RunSelfieScreen> {
       final previewBox = _previewKey.currentContext?.findRenderObject() as RenderBox?;
       final shareRect = previewBox != null
           ? previewBox.localToGlobal(Offset.zero) & previewBox.size
-          : Rect.fromLTWH(0, 0, 100, 100);
+          : const Rect.fromLTWH(0, 0, 100, 100);
       await Share.shareXFiles(
         [XFile(path)],
         text:
@@ -287,12 +275,12 @@ class _StatsOverlay extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
+          const Row(
             children: [
-              const Icon(Icons.directions_run,
+              Icon(Icons.directions_run,
                   color: AppTheme.primary, size: 16),
-              const SizedBox(width: 6),
-              const Text(
+              SizedBox(width: 6),
+              Text(
                 'RunMate',
                 style: TextStyle(
                   color: Colors.white,

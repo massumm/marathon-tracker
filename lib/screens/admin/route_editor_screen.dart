@@ -221,12 +221,12 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
     const cx = sz / 2.0;
 
     // soft shadow
-    c.drawCircle(Offset(cx + 0.5, cx + 0.5), cx - 1,
+    c.drawCircle(const Offset(cx + 0.5, cx + 0.5), cx - 1,
         Paint()..color = Colors.black26);
     // white ring
-    c.drawCircle(Offset(cx, cx), cx - 1, Paint()..color = Colors.white);
+    c.drawCircle(const Offset(cx, cx), cx - 1, Paint()..color = Colors.white);
     // blue core
-    c.drawCircle(Offset(cx, cx), cx - 3.5,
+    c.drawCircle(const Offset(cx, cx), cx - 3.5,
         Paint()..color = const Color(0xFF4285F4));
 
     final img = await recorder.endRecording().toImage(sz, sz);
@@ -243,13 +243,13 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
     final c = Canvas(recorder);
 
     // drop shadow
-    c.drawCircle(Offset(cx + 1.5, cx + 1.5), r,
+    c.drawCircle(const Offset(cx + 1.5, cx + 1.5), r,
         Paint()..color = Colors.black.withValues(alpha: 0.28));
     // filled circle
-    c.drawCircle(Offset(cx, cx), r, Paint()..color = type.color);
+    c.drawCircle(const Offset(cx, cx), r, Paint()..color = type.color);
     // white border
     c.drawCircle(
-        Offset(cx, cx),
+        const Offset(cx, cx),
         r,
         Paint()
           ..color = Colors.white

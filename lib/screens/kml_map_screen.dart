@@ -1,12 +1,13 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui';
 
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../controllers/kml_map_controller.dart';
@@ -73,59 +74,23 @@ class _KmlMapScreenState extends State<KmlMapScreen>
   }
 
   Future<void> _takePhoto() async {
-    if (Platform.isIOS) {
-      // Only check status — never call .request() here.
-      // image_picker handles the native permission prompt for undetermined state.
-      // We only intercept when the user has permanently denied camera access.
-      final status = await Permission.camera.status;
-      if (status.isPermanentlyDenied) {
-        if (!mounted) return;
-        showDialog(
-          context: context,
-          builder: (_) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            icon: const Icon(Icons.camera_alt_outlined, color: AppTheme.primary, size: 40),
-            title: Text('camera_permission_denied'.tr,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-            content: Text('camera_permission_msg'.tr,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 14)),
-            actionsAlignment: MainAxisAlignment.center,
-            actions: [
-              TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text('cancel'.tr)),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  openAppSettings();
-                },
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primary,
-                    foregroundColor: Colors.white),
-                child: Text('open_settings'.tr),
-              ),
-            ],
-          ),
-        );
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const _CameraScreen()),
+    ).then((bytes) async {
+      if (bytes == null) return;
+      final compressed = await compressImageUnder1MB(bytes as Uint8List);
+      if (compressed == null) {
+        Get.snackbar('', 'image_too_large'.tr,
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.red.shade600,
+            colorText: Colors.white,
+            margin: const EdgeInsets.all(12));
         return;
       }
-    }
-    final picker = ImagePicker();
-    final photo = await picker.pickImage(source: ImageSource.camera);
-    if (photo == null) return;
-    final raw = await photo.readAsBytes();
-    final bytes = await compressImageUnder1MB(raw);
-    if (bytes == null) {
-      Get.snackbar('', 'image_too_large'.tr,
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red.shade600,
-          colorText: Colors.white,
-          margin: const EdgeInsets.all(12));
-      return;
-    }
-    await FirebaseService.instance.saveRunPhoto(_ctrl.runStartMs, bytes);
+      await FirebaseService.instance.saveRunPhoto(_ctrl.runStartMs, compressed);
+    });
   }
 
   Future<void> _onStartTap() async {
@@ -1251,9 +1216,10 @@ class _CountdownOverlayState extends State<_CountdownOverlay>
           ),
         ),
         child: SafeArea(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
               Text(
                 'event_starts_in'.tr,
                 style: const TextStyle(
@@ -1339,7 +1305,32 @@ class _CountdownOverlayState extends State<_CountdownOverlay>
                   ],
                 ),
               ),
-              const SizedBox(height: 56),
+              const SizedBox(height: 48),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.18),
+                    border: Border.all(
+                      color: Colors.orange.withValues(alpha: 0.6),
+                      width: 1.5,
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'keep_app_alive'.tr,
+                    style: const TextStyle(
+                      color: Colors.orange,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.3,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 36),
               TextButton(
                 onPressed: widget.onCancel,
                 child: Text(
@@ -1352,6 +1343,7 @@ class _CountdownOverlayState extends State<_CountdownOverlay>
                 ),
               ),
             ],
+            ),
           ),
         ),
       ),
@@ -1420,6 +1412,140 @@ class _LeaderRow extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _CameraScreen extends StatefulWidget {
+  const _CameraScreen();
+
+  @override
+  State<_CameraScreen> createState() => _CameraScreenState();
+}
+
+class _CameraScreenState extends State<_CameraScreen> {
+  CameraController? _controller;
+  late Future<void> _initializeControllerFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeControllerFuture = _initCamera();
+  }
+
+  Future<void> _initCamera() async {
+    final cameras = await availableCameras();
+    if (cameras.isEmpty) throw CameraException('noCameraAvailable', 'No cameras found');
+    final frontCamera = cameras.firstWhere(
+      (c) => c.lensDirection == CameraLensDirection.front,
+      orElse: () => cameras.first,
+    );
+    final controller = CameraController(frontCamera, ResolutionPreset.high);
+    await controller.initialize();
+    _controller = controller;
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _capturePhoto() async {
+    try {
+      await _initializeControllerFuture;
+      final image = await _controller!.takePicture();
+      final bytes = await image.readAsBytes();
+      if (mounted) Navigator.pop(context, bytes);
+    } catch (e) {
+      debugPrint('Error taking photo: $e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: FutureBuilder<void>(
+        future: _initializeControllerFuture,
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.camera_alt_outlined, color: Colors.white54, size: 48),
+                  const SizedBox(height: 12),
+                  Text('camera_permission_settings_msg'.tr,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white70, fontSize: 14)),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => openAppSettings(),
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primary, foregroundColor: Colors.white),
+                    child: Text('open_settings'.tr),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text('cancel'.tr, style: const TextStyle(color: Colors.white54)),
+                  ),
+                ],
+              ),
+            );
+          }
+          if (snapshot.connectionState == ConnectionState.done && _controller != null) {
+            return Stack(
+              children: [
+                CameraPreview(_controller!),
+                Positioned(
+                  top: 16,
+                  left: 16,
+                  child: GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.6),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.arrow_back, color: Colors.white),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  bottom: 32,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: GestureDetector(
+                      onTap: _capturePhoto,
+                      child: Container(
+                        width: 72,
+                        height: 72,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.3),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 3),
+                        ),
+                        child: Container(
+                          margin: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }
+          return const Center(child: CircularProgressIndicator());
+        },
       ),
     );
   }

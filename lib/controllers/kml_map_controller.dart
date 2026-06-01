@@ -674,15 +674,10 @@ class KmlMapController extends GetxController {
 
   void _onFinishLineReached() {
     _graceTimer?.cancel();
-    final grace = _graceTimeMinutes;
-    if (grace <= 0) {
-      stopTracking();
-      return;
-    }
     Get.snackbar(
       'finish_line_title'.tr,
-      'finish_grace_body'.tr.replaceAll('@min', '$grace'),
-      duration: const Duration(seconds: 5),
+      'finish_reached'.tr,
+      duration: const Duration(seconds: 3),
       backgroundColor: AppTheme.trackingGreen.withValues(alpha: 0.95),
       colorText: Colors.white,
       snackPosition: SnackPosition.TOP,
@@ -690,7 +685,8 @@ class KmlMapController extends GetxController {
       borderRadius: 14,
       icon: const Icon(Icons.flag_rounded, color: Colors.white),
     );
-    _graceTimer = Timer(Duration(minutes: grace), () => stopTracking());
+    // Stop immediately when finish line is reached
+    Future.delayed(const Duration(milliseconds: 1000), () => stopTracking());
   }
 
   Future<void> toggleSharing() async {

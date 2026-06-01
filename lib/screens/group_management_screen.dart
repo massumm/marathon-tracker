@@ -111,13 +111,14 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showCreateDialog,
-        backgroundColor: AppTheme.primary,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add),
-        label: Text('create_group'.tr),
-      ),
+      floatingActionButton: Obx(() => _ctrl.groups.isEmpty
+          ? const SizedBox.shrink()
+          : FloatingActionButton(
+              onPressed: _showCreateDialog,
+              backgroundColor: AppTheme.primary,
+              foregroundColor: Colors.white,
+              child: const Icon(Icons.add),
+            )),
     );
   }
 
@@ -291,6 +292,20 @@ class _EmptyGroupState extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12))),
           ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: () => Get.toNamed(
+              AppRoutes.qrScanner,
+              arguments: {'mode': 'group'},
+            ),
+            icon: const Icon(Icons.qr_code_2),
+            label: Text('scan_to_join'.tr),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppTheme.primary,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
         ],
       ),
     );
@@ -374,7 +389,7 @@ class GroupQrSheet extends StatelessWidget {
                   final box = btnCtx.findRenderObject() as RenderBox?;
                   final rect = box != null
                       ? box.localToGlobal(Offset.zero) & box.size
-                      : Rect.fromLTWH(0, 0, 100, 100);
+                      : const Rect.fromLTWH(0, 0, 100, 100);
                   Share.share(
                     '${'share_join_link_text'.tr.replaceAll('@name', group.name)}\n$link',
                     sharePositionOrigin: rect,

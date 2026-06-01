@@ -25,12 +25,12 @@ class OfflineStorageService {
     final existing = await _loadPendingRuns();
     pendingRunCount.value = existing.length;
 
-    FirebaseDatabase.instance.ref('.info/connected').onValue.listen((e) {
+    FirebaseDatabase.instance.ref('.info/connected').onValue.listen((e) async {
       final connected = e.snapshot.value as bool? ?? false;
       isOnline.value = connected;
       if (connected) {
-        _syncPending();
-        syncPendingRuns();
+        await _syncPending();
+        await syncPendingRuns();
       }
     });
   }

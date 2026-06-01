@@ -1105,7 +1105,7 @@ class _CategoryEntry {
   final TextEditingController cutoffCtrl;
   String existingKmlPath;
   String existingKmlUrl;
-  String pickedFileName;
+  String pickedFileName = '';
   Uint8List? pickedBytes;
 
   _CategoryEntry({
