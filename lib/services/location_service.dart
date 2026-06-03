@@ -9,6 +9,7 @@ class LocationService {
 
   /// Max acceptable GPS horizontal error in metres.
   static const double _maxAccuracyMetres = 15.0;
+  static const int _distanceFilter = 2;
 
   Future<Position?> getCurrentPosition() async {
     if (!await Geolocator.isLocationServiceEnabled()) return null;
@@ -33,7 +34,7 @@ class LocationService {
       return Geolocator.getPositionStream(
         locationSettings: AndroidSettings(
           accuracy: LocationAccuracy.bestForNavigation,
-          distanceFilter: 5,
+          distanceFilter: _distanceFilter,
           intervalDuration: const Duration(seconds: 2),
           forceLocationManager: false,
           foregroundNotificationConfig: const ForegroundNotificationConfig(
@@ -52,7 +53,7 @@ class LocationService {
       return Geolocator.getPositionStream(
         locationSettings: AppleSettings(
           accuracy: LocationAccuracy.bestForNavigation,
-          distanceFilter: 5,
+          distanceFilter: _distanceFilter,
           activityType: ActivityType.fitness,
           pauseLocationUpdatesAutomatically: false,
           allowBackgroundLocationUpdates: true,

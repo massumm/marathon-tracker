@@ -125,8 +125,26 @@ class KmlMapController extends GetxController {
   LatLng? finishPosition;
   bool _finishAlertShown = false;
   bool _hasLeftFinishZone = false;
-  static const double _finishRadiusM = 50.0;
-  static const double _finishArmRadiusM = 150.0;
+  Timer? _finishAutoStopTimer;
+  final finishCountdown = 60.obs;
+  static const double _finishRadiusM = 40.0;
+  // Arm finish detection after runner covers this much distance — avoids false
+  // triggers when the start position happens to be near the finish line.
+  static const double _finishArmAfterM = 100.0;
+
+  // ── GPS smoothing & jump filter ───────────────────────────────────────────
+  // Ignore sudden GPS jumps impossible at running speed (~30 m in one fix).
+  static const double _maxJumpMetres = 30.0;
+  // Moving-average window: average the last N raw positions before recording.
+  static const int _smoothingWindow = 3;
+  final _smoothingBuffer = <LatLng>[];
+
+  // ── Off-route / cheat detection ───────────────────────────────────────────
+  static const double _offRouteThresholdM = 50.0; // warn if >50m from route
+  static const int _offRouteConsecutiveNeeded = 5; // require 5 consecutive fixes
+  int _offRouteCount = 0;
+  bool _offRouteWarningActive = false;
+  Timer? _offRouteTimer;
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -593,6 +611,13 @@ class KmlMapController extends GetxController {
       kmlPolylines = parsed.polylines;
       kmlMarkers = parsed.markers;
       finishPosition = parsed.finishPosition;
+      if (finishPosition != null) {
+        debugPrint('[KML] ✅ finishPosition set: '
+            '(${finishPosition!.latitude.toStringAsFixed(6)}, '
+            '${finishPosition!.longitude.toStringAsFixed(6)})');
+      } else {
+        debugPrint('[KML] ⚠️ finishPosition is null — KML has no finish/goal/end marker and no polyline last point');
+      }
       initialLocation = parsed.polylines.first.points.first;
       kmlLoaded.value = true;
       kmlLoadError.value = false;
@@ -674,19 +699,95 @@ class KmlMapController extends GetxController {
 
   void _onFinishLineReached() {
     _graceTimer?.cancel();
-    Get.snackbar(
-      'finish_line_title'.tr,
-      'finish_reached'.tr,
-      duration: const Duration(seconds: 3),
-      backgroundColor: AppTheme.trackingGreen.withValues(alpha: 0.95),
-      colorText: Colors.white,
-      snackPosition: SnackPosition.TOP,
-      margin: const EdgeInsets.all(12),
-      borderRadius: 14,
-      icon: const Icon(Icons.flag_rounded, color: Colors.white),
+
+    // Start 60-second countdown — auto-dismiss and save if user doesn't tap.
+    finishCountdown.value = 60;
+    _finishAutoStopTimer?.cancel();
+    _finishAutoStopTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      finishCountdown.value--;
+      if (finishCountdown.value <= 0) {
+        t.cancel();
+        if (Get.isDialogOpen == true) Get.back();
+        stopTracking();
+      }
+    });
+
+    Get.dialog(
+      PopScope(
+        canPop: false,
+        child: Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 36),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    color: AppTheme.trackingGreen.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.flag_rounded,
+                      color: AppTheme.trackingGreen, size: 40),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'finish_line_title'.tr,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'finish_reached'.tr,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      fontSize: 15, color: AppTheme.textSecondary),
+                ),
+                const SizedBox(height: 8),
+                Obx(() => Text(
+                  'Auto-saving in ${finishCountdown.value}s…',
+                  style: const TextStyle(
+                      fontSize: 13, color: AppTheme.textSecondary),
+                )),
+                const SizedBox(height: 28),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      _finishAutoStopTimer?.cancel();
+                      Get.back();
+                      stopTracking();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.trackingGreen,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
+                    ),
+                    child: Text('finish_line_title'.tr,
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      barrierDismissible: false,
     );
-    // Stop immediately when finish line is reached
-    Future.delayed(const Duration(milliseconds: 1000), () => stopTracking());
   }
 
   Future<void> toggleSharing() async {
@@ -705,6 +806,45 @@ class KmlMapController extends GetxController {
     }
   }
 
+  /// Returns the shortest distance in metres from [point] to any vertex of
+  /// the KML route polylines. Fast enough for per-GPS-update use.
+  double _distanceToRoute(LatLng point) {
+    double minDist = double.infinity;
+    for (final polyline in kmlPolylines) {
+      for (final pt in polyline.points) {
+        final d = Geolocator.distanceBetween(
+          point.latitude, point.longitude,
+          pt.latitude, pt.longitude,
+        );
+        if (d < minDist) minDist = d;
+      }
+    }
+    return minDist;
+  }
+
+  void _showOffRouteWarning() {
+    _offRouteTimer?.cancel();
+    // Show immediately, then repeat every 5 s until runner returns to route.
+    void show() => Get.snackbar(
+          'off_route_title'.tr,
+          'off_route_msg'.tr,
+          snackPosition: SnackPosition.TOP,
+          backgroundColor: Colors.orange.shade700,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 4),
+          margin: const EdgeInsets.all(12),
+          borderRadius: 14,
+          icon: const Icon(Icons.warning_amber_rounded, color: Colors.white),
+        );
+    show();
+    _offRouteTimer = Timer.periodic(const Duration(seconds: 5), (_) => show());
+  }
+
+  void _stopOffRouteWarning() {
+    _offRouteTimer?.cancel();
+    _offRouteTimer = null;
+  }
+
   Future<void> startTracking() async {
     debugPrint('[TRACKING] startTracking called. isTracking=${isTracking.value}');
     if (isTracking.value) {
@@ -721,6 +861,12 @@ class KmlMapController extends GetxController {
     isUserPanned.value = false;
     _finishAlertShown = false;
     _hasLeftFinishZone = false;
+    _finishAutoStopTimer?.cancel();
+    finishCountdown.value = 60;
+    _offRouteCount = 0;
+    _offRouteWarningActive = false;
+    _stopOffRouteWarning();
+    _smoothingBuffer.clear();
     elapsedSeconds.value = 0;
     isSharing.value = true;
     _runStartMs = DateTime.now().millisecondsSinceEpoch;
@@ -755,38 +901,84 @@ class KmlMapController extends GetxController {
       _updateSelfMarker(latLng);
       _lbTickCount++;
 
-      // Only record the point if the runner moved at least 5 m from the last
-      // recorded point. Android's distanceFilter is advisory and GPS drift can
-      // still fire sub-5 m updates when the device is stationary.
-      const minRecordMetres = 5.0;
-      if (trackingPoints.isNotEmpty) {
-        final prev = trackingPoints.last;
-        final moved = Geolocator.distanceBetween(
-          prev.latitude, prev.longitude,
-          latLng.latitude, latLng.longitude,
-        );
-        if (moved < minRecordMetres) return;
-        _cachedDistanceKm += moved / 1000;
-      }
-      trackingPoints.add(latLng);
-      _rawBuffer.add(latLng);
-
-      // Finish line detection — arm only after runner leaves the finish zone
-      // (handles loop courses where start == finish)
-      if (!_finishAlertShown && finishPosition != null) {
+      // Finish line detection runs on every GPS update — must not be gated by
+      // the recording filter below, or the alert can silently miss if the runner
+      // slows/stops right at the finish (<5 m movement between fixes).
+      if (finishPosition == null) {
+        debugPrint('[FINISH] ⚠️ finishPosition is NULL — no finish marker in KML');
+      } else if (!_finishAlertShown) {
         final dist = Geolocator.distanceBetween(
           latLng.latitude,
           latLng.longitude,
           finishPosition!.latitude,
           finishPosition!.longitude,
         );
+        final coveredM = _cachedDistanceKm * 1000;
+        debugPrint('[FINISH] dist=${dist.toStringAsFixed(1)}m '
+            'armed=$_hasLeftFinishZone '
+            'covered=${coveredM.toStringAsFixed(1)}m '
+            'triggerRadius=${_finishRadiusM}m '
+            'pos=(${latLng.latitude.toStringAsFixed(6)},${latLng.longitude.toStringAsFixed(6)}) '
+            'finish=(${finishPosition!.latitude.toStringAsFixed(6)},${finishPosition!.longitude.toStringAsFixed(6)})');
         if (!_hasLeftFinishZone) {
-          if (dist > _finishArmRadiusM) _hasLeftFinishZone = true;
+          // Arm after runner has covered enough distance — avoids false trigger
+          // when the start happens to be near the finish (loop or short course).
+          if (coveredM >= _finishArmAfterM) {
+            _hasLeftFinishZone = true;
+            debugPrint('[FINISH] ✅ Armed — runner covered ${coveredM.toStringAsFixed(0)}m');
+          }
         } else if (dist <= _finishRadiusM) {
+          debugPrint('[FINISH] 🏁 TRIGGERED at ${dist.toStringAsFixed(1)}m');
           _finishAlertShown = true;
           _onFinishLineReached();
         }
       }
+
+      // Off-route cheat detection — armed after _finishArmAfterM covered.
+      if (_cachedDistanceKm * 1000 >= _finishArmAfterM && kmlPolylines.isNotEmpty) {
+        final routeDist = _distanceToRoute(latLng);
+        if (routeDist > _offRouteThresholdM) {
+          _offRouteCount++;
+          debugPrint('[ROUTE] off-route ${routeDist.toStringAsFixed(1)}m count=$_offRouteCount');
+          if (_offRouteCount >= _offRouteConsecutiveNeeded && !_offRouteWarningActive) {
+            _offRouteWarningActive = true;
+            _showOffRouteWarning();
+          }
+        } else {
+          _offRouteCount = 0;
+          if (_offRouteWarningActive) {
+            _offRouteWarningActive = false;
+            _stopOffRouteWarning();
+          }
+        }
+      }
+
+      // GPS jump filter — skip impossible jumps (>30 m in one fix at running speed).
+      if (trackingPoints.isNotEmpty) {
+        final prev = trackingPoints.last;
+        final moved = Geolocator.distanceBetween(
+          prev.latitude, prev.longitude,
+          latLng.latitude, latLng.longitude,
+        );
+        if (moved > _maxJumpMetres) {
+          debugPrint('[GPS] jump ${moved.toStringAsFixed(1)}m ignored');
+          return;
+        }
+        // Minimum movement filter — ignore sub-5m updates.
+        if (moved < 5.0) return;
+        _cachedDistanceKm += moved / 1000;
+      }
+
+      // Moving-average smoothing — average last N raw positions to reduce zig-zag.
+      _smoothingBuffer.add(latLng);
+      if (_smoothingBuffer.length > _smoothingWindow) _smoothingBuffer.removeAt(0);
+      final smoothed = LatLng(
+        _smoothingBuffer.map((p) => p.latitude).reduce((a, b) => a + b) / _smoothingBuffer.length,
+        _smoothingBuffer.map((p) => p.longitude).reduce((a, b) => a + b) / _smoothingBuffer.length,
+      );
+
+      trackingPoints.add(smoothed);
+      _rawBuffer.add(smoothed);
       if (_lbTickCount % 4 == 0) _rebuildLeaderboard();
 
       if (isLive.value) {
@@ -888,10 +1080,16 @@ class KmlMapController extends GetxController {
   }
 
   Future<void> stopTracking() async {
+    if (isSaving.value) {
+      debugPrint('[STOP] already saving — skipped duplicate call');
+      return;
+    }
     _graceTimer?.cancel();
     _graceTimer = null;
     _categoryCutoffTimer?.cancel();
     _categoryCutoffTimer = null;
+    _finishAutoStopTimer?.cancel();
+    _stopOffRouteWarning();
     isSaving.value = true;
     _positionSub?.cancel();
     _positionSub = null;
@@ -900,14 +1098,18 @@ class KmlMapController extends GetxController {
     isTracking.value = false;
     _rebuildLeaderboard();
 
+    try {
+    debugPrint('[STOP] stopping broadcast…');
     await LiveTrackingService.instance.stopBroadcasting()
         .timeout(const Duration(seconds: 5), onTimeout: () {});
     isLive.value = false;
+    debugPrint('[STOP] broadcast stopped');
 
     // Flush remaining raw buffer — fall back to raw points if snap fails offline
     if (_rawBuffer.isNotEmpty) {
       try {
-        final snapped = await _snapToRoads(List.from(_rawBuffer));
+        final snapped = await _snapToRoads(List.from(_rawBuffer))
+            .timeout(const Duration(seconds: 10), onTimeout: () => []);
         snappedPoints.addAll(snapped.isNotEmpty ? snapped : _rawBuffer);
       } catch (_) {
         snappedPoints.addAll(_rawBuffer);
@@ -919,6 +1121,7 @@ class KmlMapController extends GetxController {
     final routePoints = snappedPoints.isNotEmpty
         ? snappedPoints.toList()
         : trackingPoints.toList();
+    debugPrint('[STOP] routePoints=${routePoints.length}');
 
     final now = DateTime.now();
     final elapsed = Duration(seconds: elapsedSeconds.value);
@@ -1006,16 +1209,23 @@ class KmlMapController extends GetxController {
         );
       }
       // 3. Stats via RTDB (Firebase persistence queues if briefly offline)
+      debugPrint('[STOP] saving stats…');
       await UserStatsService.instance.addRunStats(
         totalDistance,
         elapsedSeconds.value,
         runId: runId,
         eventId: currentEventId,
       );
+      debugPrint('[STOP] stats saved');
     }
-    isSaving.value = false;
-    await FlutterForegroundTask.stopService();
+    } catch (e) {
+      debugPrint('[STOP] error during save: $e');
+    } finally {
+      isSaving.value = false;
+      debugPrint('[STOP] isSaving=false, navigating home');
+    }
 
+    await FlutterForegroundTask.stopService();
     Get.find<HomeController>()
         .changeTab(2); // MyPage is index 2 (0=Events,1=Friends,2=MyPage)
     Get.offAllNamed(AppRoutes.home);

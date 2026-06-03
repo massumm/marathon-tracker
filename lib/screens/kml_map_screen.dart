@@ -1,14 +1,12 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:ui';
 
-import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../controllers/kml_map_controller.dart';
 import '../core/image_utils.dart';
@@ -75,22 +73,85 @@ class _KmlMapScreenState extends State<KmlMapScreen>
 
   Future<void> _takePhoto() async {
     if (!mounted) return;
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const _CameraScreen()),
-    ).then((bytes) async {
-      if (bytes == null) return;
-      final compressed = await compressImageUnder1MB(bytes as Uint8List);
-      if (compressed == null) {
-        Get.snackbar('', 'image_too_large'.tr,
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Colors.red.shade600,
-            colorText: Colors.white,
-            margin: const EdgeInsets.all(12));
-        return;
-      }
-      await FirebaseService.instance.saveRunPhoto(_ctrl.runStartMs, compressed);
-    });
+
+    // Show a bottom sheet first so the user has a clear back/cancel option
+    // before entering the native camera viewfinder.
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 36),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(
+                color: Colors.black12,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Icon(Icons.camera_alt_rounded, size: 40, color: AppTheme.primary),
+            const SizedBox(height: 12),
+            Text('take_selfie'.tr,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 6),
+            Text('selfie_hint'.tr,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => Navigator.pop(sheetCtx, true),
+                icon: const Icon(Icons.camera_alt),
+                label: Text('open_camera'.tr),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () => Navigator.pop(sheetCtx, false),
+                child: Text('cancel'.tr,
+                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: 15)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    final photo = await ImagePicker().pickImage(
+      source: ImageSource.camera,
+      preferredCameraDevice: CameraDevice.front,
+      imageQuality: 85,
+    );
+    if (photo == null) return;
+    final bytes = await photo.readAsBytes();
+    final compressed = await compressImageUnder1MB(bytes);
+    if (compressed == null) {
+      Get.snackbar('', 'image_too_large'.tr,
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.shade600,
+          colorText: Colors.white,
+          margin: const EdgeInsets.all(12));
+      return;
+    }
+    await FirebaseService.instance.saveRunPhoto(_ctrl.runStartMs, compressed);
   }
 
   Future<void> _onStartTap() async {
@@ -1412,140 +1473,6 @@ class _LeaderRow extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _CameraScreen extends StatefulWidget {
-  const _CameraScreen();
-
-  @override
-  State<_CameraScreen> createState() => _CameraScreenState();
-}
-
-class _CameraScreenState extends State<_CameraScreen> {
-  CameraController? _controller;
-  late Future<void> _initializeControllerFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _initializeControllerFuture = _initCamera();
-  }
-
-  Future<void> _initCamera() async {
-    final cameras = await availableCameras();
-    if (cameras.isEmpty) throw CameraException('noCameraAvailable', 'No cameras found');
-    final frontCamera = cameras.firstWhere(
-      (c) => c.lensDirection == CameraLensDirection.front,
-      orElse: () => cameras.first,
-    );
-    final controller = CameraController(frontCamera, ResolutionPreset.high);
-    await controller.initialize();
-    _controller = controller;
-    if (mounted) setState(() {});
-  }
-
-  @override
-  void dispose() {
-    _controller?.dispose();
-    super.dispose();
-  }
-
-  Future<void> _capturePhoto() async {
-    try {
-      await _initializeControllerFuture;
-      final image = await _controller!.takePicture();
-      final bytes = await image.readAsBytes();
-      if (mounted) Navigator.pop(context, bytes);
-    } catch (e) {
-      debugPrint('Error taking photo: $e');
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: FutureBuilder<void>(
-        future: _initializeControllerFuture,
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.camera_alt_outlined, color: Colors.white54, size: 48),
-                  const SizedBox(height: 12),
-                  Text('camera_permission_settings_msg'.tr,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.white70, fontSize: 14)),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () => openAppSettings(),
-                    style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primary, foregroundColor: Colors.white),
-                    child: Text('open_settings'.tr),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text('cancel'.tr, style: const TextStyle(color: Colors.white54)),
-                  ),
-                ],
-              ),
-            );
-          }
-          if (snapshot.connectionState == ConnectionState.done && _controller != null) {
-            return Stack(
-              children: [
-                CameraPreview(_controller!),
-                Positioned(
-                  top: 16,
-                  left: 16,
-                  child: GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.6),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.arrow_back, color: Colors.white),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  bottom: 32,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: GestureDetector(
-                      onTap: _capturePhoto,
-                      child: Container(
-                        width: 72,
-                        height: 72,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.3),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 3),
-                        ),
-                        child: Container(
-                          margin: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            );
-          }
-          return const Center(child: CircularProgressIndicator());
-        },
       ),
     );
   }
