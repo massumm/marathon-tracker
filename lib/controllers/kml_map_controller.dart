@@ -77,6 +77,7 @@ class KmlMapController extends GetxController {
   final elapsedSeconds = 0.obs;
   final trackingPoints = <LatLng>[].obs;
   final currentPosition = Rxn<LatLng>();
+  final gpsAccuracy = (-1.0).obs; // metres; -1 = no fix yet
 
   Timer? _timer;
   StreamSubscription? _positionSub;
@@ -130,7 +131,7 @@ class KmlMapController extends GetxController {
   static const double _finishRadiusM = 40.0;
   // Arm finish detection after runner covers this much distance — avoids false
   // triggers when the start position happens to be near the finish line.
-  static const double _finishArmAfterM = 100.0;
+  static const double _finishArmAfterM = 70.0;
 
   // ── GPS smoothing & jump filter ───────────────────────────────────────────
   // Ignore sudden GPS jumps impossible at running speed (~30 m in one fix).
@@ -645,9 +646,7 @@ class KmlMapController extends GetxController {
 
   // ── My tracking ───────────────────────────────────────────────────────────
 
-  // Accumulates raw GPS points; snapped to road every 10 points
-  final _rawBuffer = <LatLng>[];
-  final snappedPoints = <LatLng>[].obs;
+  final snappedPoints = <LatLng>[].obs; // kept for screen compat, mirrors trackingPoints
   double _cachedDistanceKm = 0.0;
 
   // Route-projection lookup tables built after KML loads.
@@ -856,7 +855,6 @@ class KmlMapController extends GetxController {
     EventNotificationService.instance.cancelCountdownAutoStart();
     trackingPoints.clear();
     snappedPoints.clear();
-    _rawBuffer.clear();
     _cachedDistanceKm = 0.0;
     isUserPanned.value = false;
     _finishAlertShown = false;
@@ -879,6 +877,7 @@ class KmlMapController extends GetxController {
         .timeout(const Duration(seconds: 5), onTimeout: () => null);
     debugPrint('[TRACKING] getCurrentPosition returned: ${pos?.latitude}, ${pos?.longitude}');
     if (pos != null) {
+      gpsAccuracy.value = pos.accuracy;
       _animateNavCamera(LatLng(pos.latitude, pos.longitude), _lastHeading);
     }
 
@@ -898,6 +897,7 @@ class KmlMapController extends GetxController {
         _animateNavCamera(latLng, position.heading);
       }
       currentPosition.value = latLng;
+      gpsAccuracy.value = position.accuracy;
       _updateSelfMarker(latLng);
       _lbTickCount++;
 
@@ -978,7 +978,7 @@ class KmlMapController extends GetxController {
       );
 
       trackingPoints.add(smoothed);
-      _rawBuffer.add(smoothed);
+      snappedPoints.add(smoothed);
       if (_lbTickCount % 4 == 0) _rebuildLeaderboard();
 
       if (isLive.value) {
@@ -987,18 +987,6 @@ class KmlMapController extends GetxController {
           position.longitude,
           currentDistanceKm,
         );
-      }
-
-      // Snap buffer to roads every 10 points (Roads API limit: 100/call)
-      if (_rawBuffer.length >= 10) {
-        final snapped = await _snapToRoads(List.from(_rawBuffer));
-        if (snapped.isNotEmpty) {
-          snappedPoints.addAll(snapped);
-        } else {
-          // API unavailable — fall back to raw
-          snappedPoints.addAll(_rawBuffer);
-        }
-        _rawBuffer.clear();
       }
     });
 
@@ -1027,14 +1015,17 @@ class KmlMapController extends GetxController {
       }
     }
 
-    // Arm category cutoff timer — auto-stop when per-category time limit expires.
+    // Arm category cutoff timer — fires at the absolute deadline, not N minutes
+    // from now, so latecomers don't get extra time beyond the event cutoff.
     _categoryCutoffTimer?.cancel();
-    final catMins = _categoryCutoffMinutes;
-    if (catMins != null) {
-      _categoryCutoffTimer = Timer(
-        Duration(minutes: catMins),
-        () => stopTracking(),
-      );
+    final catCutoff = categoryCutoffDeadline;
+    if (catCutoff != null) {
+      final delay = catCutoff.difference(DateTime.now());
+      if (delay.inSeconds <= 0) {
+        stopTracking();
+      } else {
+        _categoryCutoffTimer = Timer(delay, () => stopTracking());
+      }
     }
 
     // Ask the user to exempt the app from battery optimisation.
@@ -1054,30 +1045,6 @@ class KmlMapController extends GetxController {
     );
   }
 
-  /// Calls the Google Roads Snap-to-Roads API.
-  /// Returns snapped points, or empty list on failure.
-  Future<List<LatLng>> _snapToRoads(List<LatLng> points) async {
-    if (points.isEmpty) return [];
-    try {
-      final path = points.map((p) => '${p.latitude},${p.longitude}').join('|');
-      final uri = Uri.parse('https://roads.googleapis.com/v1/snapToRoads'
-          '?path=$path&interpolate=true&key=${AppConfig.googleMapsApiKey}');
-      final resp = await http.get(uri).timeout(const Duration(seconds: 8));
-      if (resp.statusCode != 200) return [];
-      final json = jsonDecode(resp.body) as Map<String, dynamic>;
-      final snappedList = json['snappedPoints'] as List<dynamic>?;
-      if (snappedList == null) return [];
-      return snappedList.map((sp) {
-        final loc = sp['location'] as Map<String, dynamic>;
-        return LatLng(
-          (loc['latitude'] as num).toDouble(),
-          (loc['longitude'] as num).toDouble(),
-        );
-      }).toList();
-    } catch (_) {
-      return [];
-    }
-  }
 
   Future<void> stopTracking() async {
     if (isSaving.value) {
@@ -1105,22 +1072,7 @@ class KmlMapController extends GetxController {
     isLive.value = false;
     debugPrint('[STOP] broadcast stopped');
 
-    // Flush remaining raw buffer — fall back to raw points if snap fails offline
-    if (_rawBuffer.isNotEmpty) {
-      try {
-        final snapped = await _snapToRoads(List.from(_rawBuffer))
-            .timeout(const Duration(seconds: 10), onTimeout: () => []);
-        snappedPoints.addAll(snapped.isNotEmpty ? snapped : _rawBuffer);
-      } catch (_) {
-        snappedPoints.addAll(_rawBuffer);
-      }
-      _rawBuffer.clear();
-    }
-
-    // Use snapped points for saved route; fall back to raw if snapping produced nothing
-    final routePoints = snappedPoints.isNotEmpty
-        ? snappedPoints.toList()
-        : trackingPoints.toList();
+    final routePoints = trackingPoints.toList();
     debugPrint('[STOP] routePoints=${routePoints.length}');
 
     final now = DateTime.now();

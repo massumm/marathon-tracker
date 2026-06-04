@@ -9,7 +9,7 @@ class LocationService {
 
   /// Max acceptable GPS horizontal error in metres.
   static const double _maxAccuracyMetres = 15.0;
-  static const int _distanceFilter = 2;
+  static const int _distanceFilter = 3;
 
   Future<Position?> getCurrentPosition() async {
     if (!await Geolocator.isLocationServiceEnabled()) return null;
@@ -64,7 +64,7 @@ class LocationService {
     return Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.bestForNavigation,
-        distanceFilter: 2,
+        distanceFilter: _distanceFilter,
       ),
     ).where((p) => p.accuracy <= _maxAccuracyMetres);
   }

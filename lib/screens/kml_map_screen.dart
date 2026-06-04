@@ -631,8 +631,8 @@ class _KmlMapScreenState extends State<KmlMapScreen>
     }
 
     final isTracking = _ctrl.isTracking.value;
-    final isSharing = _ctrl.isSharing.value;
     final isSaving = _ctrl.isSaving.value;
+    final gpsAccuracy = _ctrl.gpsAccuracy.value;
     final elapsedSecs = _ctrl.elapsedSeconds.value;
     final snapped = _ctrl.snappedPoints.toList();
     final raw = _ctrl.trackingPoints.toList();
@@ -709,6 +709,14 @@ class _KmlMapScreenState extends State<KmlMapScreen>
           ),
         ),
 
+      // ── GPS signal indicator (pre-run only — moves to bottom-left during tracking) ──
+      if (!isTracking)
+        Positioned(
+          top: topPad + 8,
+          right: 12,
+          child: _GpsSignalBadge(accuracy: gpsAccuracy),
+        ),
+
       // ── Camera + recenter buttons (visible during tracking) ──────────────
       if (isTracking)
         Positioned(
@@ -748,16 +756,10 @@ class _KmlMapScreenState extends State<KmlMapScreen>
           mainAxisSize: MainAxisSize.min,
           children: [
             if (isTracking) ...[
-              FloatingActionButton.small(
-                heroTag: 'share',
-                backgroundColor: isSharing ? AppTheme.primary : Colors.white,
-                foregroundColor: isSharing ? Colors.white : AppTheme.primary,
-                elevation: 3,
-                tooltip: isSharing ? 'unshare'.tr : 'share'.tr,
-                onPressed: () => _ctrl.toggleSharing(),
-                child: Icon(isSharing
-                    ? Icons.wifi_tethering
-                    : Icons.wifi_tethering_off),
+              SizedBox(
+                width: 40,
+                height: 40,
+                child: Center(child: _GpsSignalBadge(accuracy: gpsAccuracy)),
               ),
               const SizedBox(height: 8),
             ],
@@ -834,8 +836,11 @@ class _KmlMapScreenState extends State<KmlMapScreen>
             duration: const Duration(milliseconds: 280),
             curve: Curves.easeInOut,
             height: _leaderOpen ? (60 + lb.length * 56.0).clamp(120, 340) : 0,
-            child: ClipRRect(
-              child: _LiveLeaderboard(
+            child: ClipRect(
+              child: OverflowBox(
+                maxHeight: double.infinity,
+                alignment: Alignment.topCenter,
+                child: _LiveLeaderboard(
                 entries: lb,
                 onClose: () => setState(() => _leaderOpen = false),
                 onTapRunner: (e) {
@@ -850,6 +855,7 @@ class _KmlMapScreenState extends State<KmlMapScreen>
             ),
           ),
         ),
+      ),
 
       // ── Saving overlay ────────────────────────────────────────────────────
       if (isSaving)
@@ -1473,6 +1479,64 @@ class _LeaderRow extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── GPS Signal Badge ──────────────────────────────────────────────────────────
+
+class _GpsSignalBadge extends StatelessWidget {
+  final double accuracy; // metres; -1 = no fix
+
+  const _GpsSignalBadge({required this.accuracy});
+
+  int get _bars {
+    if (accuracy < 0) return 0;
+    if (accuracy <= 5) return 4;
+    if (accuracy <= 8) return 3;
+    if (accuracy <= 12) return 2;
+    return 1;
+  }
+
+  Color get _color {
+    if (accuracy < 0) return Colors.grey;
+    if (accuracy <= 5) return const Color(0xFF22C55E);
+    if (accuracy <= 8) return const Color(0xFF84CC16);
+    if (accuracy <= 12) return const Color(0xFFF59E0B);
+    return const Color(0xFFEF4444);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bars = _bars;
+    final color = _color;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 4)],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: List.generate(4, (i) {
+              final height = 6.0 + i * 3.0;
+              return Container(
+                width: 4,
+                height: height,
+                margin: const EdgeInsets.only(right: 2),
+                decoration: BoxDecoration(
+                  color: i < bars ? color : Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(1),
+                ),
+              );
+            }),
+          ),
+        ],
       ),
     );
   }

@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Delete Account – RunMate</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #f7f8fa;
+      color: #1a1a2e;
+      line-height: 1.7;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: linear-gradient(135deg, #FA8B4D 0%, #e06b2a 100%);
+      color: #fff;
+      padding: 40px 24px 36px;
+      text-align: center;
+    }
+
+    header .logo {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 64px;
+      height: 64px;
+      background: rgba(255,255,255,0.20);
+      border-radius: 18px;
+      margin-bottom: 16px;
+    }
+
+    header .logo svg { width: 36px; height: 36px; fill: #fff; }
+    header h1 { font-size: 1.8rem; font-weight: 800; letter-spacing: -0.5px; }
+    header p { margin-top: 6px; font-size: 0.95rem; opacity: 0.85; }
+
+    main {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 36px 24px 60px;
+      flex: 1;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 28px 32px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+
+    h2 {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #1a1a2e;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    h2 .icon {
+      width: 34px; height: 34px;
+      border-radius: 9px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    h2 .icon svg { width: 18px; height: 18px; }
+
+    .icon-red   { background: #fee2e2; }
+    .icon-red svg { fill: #dc2626; }
+    .icon-blue  { background: #dbeafe; }
+    .icon-blue svg { fill: #2563eb; }
+    .icon-warn  { background: #fef9c3; }
+    .icon-warn svg { fill: #ca8a04; }
+
+    p { font-size: 0.95rem; color: #3d3d4e; margin-bottom: 10px; }
+    p:last-child { margin-bottom: 0; }
+
+    ol, ul {
+      margin: 8px 0 12px 20px;
+      font-size: 0.94rem;
+      color: #3d3d4e;
+    }
+
+    ol li, ul li { margin-bottom: 6px; padding-left: 4px; }
+    ul li::marker { color: #FA8B4D; }
+
+    .warn-box {
+      background: #fff7ed;
+      border: 1.5px solid #fdba74;
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 20px;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+
+    .warn-box svg { width: 22px; height: 22px; fill: #ea580c; flex-shrink: 0; margin-top: 2px; }
+
+    .warn-box p { color: #7c2d12; font-size: 0.93rem; margin: 0; }
+
+    .method {
+      border: 1.5px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 18px 20px;
+      margin-bottom: 14px;
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .method-num {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: #FA8B4D;
+      color: #fff;
+      font-weight: 800;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .method h3 { font-size: 0.95rem; font-weight: 700; color: #1a1a2e; margin-bottom: 4px; }
+    .method p  { font-size: 0.88rem; color: #6b7280; margin: 0; }
+
+    .data-list {
+      background: #f7f8fa;
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-top: 12px;
+    }
+
+    .data-list p { font-size: 0.88rem; font-weight: 700; color: #374151; margin-bottom: 8px; }
+
+    .data-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.87rem;
+      padding: 5px 0;
+      border-bottom: 1px solid #e5e7eb;
+      color: #4b5563;
+    }
+
+    .data-row:last-child { border-bottom: none; }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .badge-del  { background: #fee2e2; color: #991b1b; }
+    .badge-keep { background: #f0fdf4; color: #166534; }
+
+    .email-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #1a1a2e;
+      color: #fff;
+      padding: 13px 24px;
+      border-radius: 12px;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-top: 16px;
+      transition: opacity 0.15s;
+    }
+
+    .email-btn:hover { opacity: 0.85; }
+    .email-btn svg { width: 18px; height: 18px; fill: #FA8B4D; }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 0.82rem;
+      color: #9ca3af;
+    }
+
+    @media (max-width: 520px) {
+      .card { padding: 20px 18px; }
+      header h1 { font-size: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <svg viewBox="0 0 24 24"><path d="M13.49 5.48c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm-3.6 13.9l1-4.4 2.1 2v6h2v-7.5l-2.1-2 .6-3c1.3 1.5 3.3 2.5 5.5 2.5v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1l-5.2 2.2v4.7h2v-3.4l1.8-.7-1.6 8.1-4.9-1-.4 2 7 1.4z"/></svg>
+  </div>
+  <h1>Delete Account</h1>
+  <p>RunMate &nbsp;·&nbsp; XOR Geek</p>
+</header>
+
+<main>
+
+  <div class="warn-box">
+    <svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+    <p><strong>This action is permanent.</strong> Deleting your account removes all your personal data, run history, and stats from RunMate. This cannot be undone.</p>
+  </div>
+
+  <!-- How to delete -->
+  <div class="card">
+    <h2>
+      <span class="icon icon-red">
+        <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+      </span>
+      How to Delete Your Account
+    </h2>
+    <p>You can delete your account in two ways:</p>
+
+    <div class="method">
+      <div class="method-num">1</div>
+      <div>
+        <h3>From the App (Instant)</h3>
+        <p>Open RunMate → tap your profile → <strong>Settings</strong> → <strong>Delete Account</strong>. Your account and all data will be permanently removed immediately.</p>
+      </div>
+    </div>
+
+    <div class="method">
+      <div class="method-num">2</div>
+      <div>
+        <h3>By Email Request</h3>
+        <p>Send an email to <strong>support@xorgeek.com</strong> from your registered email address with the subject "Delete My Account". We will process your request within <strong>7 days</strong>.</p>
+      </div>
+    </div>
+
+    <a class="email-btn" href="mailto:support@xorgeek.com?subject=Delete%20My%20Account&body=Please%20delete%20my%20RunMate%20account%20and%20all%20associated%20data.%0A%0ARegistered%20email%3A%20">
+      <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+      Email Deletion Request
+    </a>
+  </div>
+
+  <!-- What gets deleted -->
+  <div class="card">
+    <h2>
+      <span class="icon icon-warn">
+        <svg viewBox="0 0 24 24"><path d="M11 17h2v-6h-2v6zm1-15C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zM11 9h2V7h-2v2z"/></svg>
+      </span>
+      What Data Is Deleted vs. Kept
+    </h2>
+
+    <div class="data-list">
+      <p>Data deleted immediately upon account removal:</p>
+      <div class="data-row"><span>Account (email, name, photo)</span><span class="badge badge-del">Deleted</span></div>
+      <div class="data-row"><span>Run history &amp; statistics</span><span class="badge badge-del">Deleted</span></div>
+      <div class="data-row"><span>Run photos</span><span class="badge badge-del">Deleted</span></div>
+      <div class="data-row"><span>Friends list</span><span class="badge badge-del">Deleted</span></div>
+      <div class="data-row"><span>Live location data</span><span class="badge badge-del">Deleted</span></div>
+      <div class="data-row"><span>Push notification token</span><span class="badge badge-del">Deleted</span></div>
+    </div>
+
+    <div class="data-list" style="margin-top:12px;">
+      <p>Data retained after deletion:</p>
+      <div class="data-row"><span>Anonymised aggregate event stats</span><span class="badge badge-keep">Kept (anonymised)</span></div>
+    </div>
+
+    <p style="margin-top:14px;font-size:0.88rem;color:#6b7280;">
+      No personally identifiable information is retained after account deletion.
+    </p>
+  </div>
+
+  <!-- Contact -->
+  <div class="card">
+    <h2>
+      <span class="icon icon-blue">
+        <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+      </span>
+      Questions?
+    </h2>
+    <p>
+      If you have any questions about account deletion or your data, contact us at
+      <a href="mailto:support@xorgeek.com" style="color:#FA8B4D;font-weight:600;">support@xorgeek.com</a>.
+      We respond within 7 days.
+    </p>
+    <p>
+      For full details on how we handle your data, read our
+      <a href="/privacy-policy" style="color:#FA8B4D;font-weight:600;">Privacy Policy</a>.
+    </p>
+  </div>
+
+</main>
+
+<footer>
+  &copy; 2026 XOR Geek · RunMate · com.xor.runmate
+</footer>
+
+</body>
+</html>

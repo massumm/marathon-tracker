@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -124,6 +126,16 @@ class _LoginBodyState extends State<_LoginBody> {
     }
   }
 
+  Future<void> _signInWithApple() async {
+    try {
+      await _auth.signInWithApple();
+    } on FirebaseAuthException catch (e) {
+      _showError(_friendlyError(e.code));
+    } catch (e) {
+      _showError(e.toString());
+    }
+  }
+
   String _friendlyError(String code) => switch (code) {
         'user-not-found' => 'No account found for that email.',
         'wrong-password' => 'Incorrect password.',
@@ -156,6 +168,10 @@ class _LoginBodyState extends State<_LoginBody> {
               _buildDivider(),
               const SizedBox(height: 20),
               _buildGoogleButton(),
+              if (Platform.isIOS) ...[
+                const SizedBox(height: 12),
+                _buildAppleButton(),
+              ],
               const SizedBox(height: 24),
               Text(
                 'By continuing you agree to our Terms of Service.',
@@ -435,6 +451,31 @@ class _LoginBodyState extends State<_LoginBody> {
                 _mode == _AuthMode.signIn
                     ? 'Sign in with Google'
                     : 'Sign up with Google',
+                style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textPrimary)),
+          ]),
+        ),
+      ));
+
+  Widget _buildAppleButton() => Obx(() => SizedBox(
+        height: 50,
+        child: OutlinedButton(
+          onPressed: _auth.isLoading.value ? null : () => _signInWithApple(),
+          style: OutlinedButton.styleFrom(
+            side: const BorderSide(color: Color(0xFFDDE1E7), width: 1.5),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            backgroundColor: Colors.white,
+          ),
+          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            const Icon(Icons.apple, size: 22, color: AppTheme.textPrimary),
+            const SizedBox(width: 10),
+            Text(
+                _mode == _AuthMode.signIn
+                    ? 'Sign in with Apple'
+                    : 'Sign up with Apple',
                 style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,

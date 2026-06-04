@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy – RunMate</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #f7f8fa;
+      color: #1a1a2e;
+      line-height: 1.7;
+    }
+
+    header {
+      background: linear-gradient(135deg, #FA8B4D 0%, #e06b2a 100%);
+      color: #fff;
+      padding: 48px 24px 40px;
+      text-align: center;
+    }
+
+    header .logo {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 64px;
+      height: 64px;
+      background: rgba(255,255,255,0.20);
+      border-radius: 18px;
+      margin-bottom: 16px;
+    }
+
+    header .logo svg { width: 36px; height: 36px; fill: #fff; }
+
+    header h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    header p {
+      margin-top: 6px;
+      font-size: 0.95rem;
+      opacity: 0.85;
+    }
+
+    main {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 32px 36px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+
+    .card:first-child { margin-top: 0; }
+
+    .section-label {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      color: #FA8B4D;
+      margin-bottom: 10px;
+    }
+
+    h2 {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: #1a1a2e;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    h2 .icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      background: #fff4ed;
+      border-radius: 9px;
+      flex-shrink: 0;
+    }
+
+    h2 .icon svg { width: 18px; height: 18px; fill: #FA8B4D; }
+
+    p { margin-bottom: 12px; font-size: 0.96rem; color: #3d3d4e; }
+    p:last-child { margin-bottom: 0; }
+
+    ul {
+      margin: 8px 0 12px 0;
+      padding-left: 20px;
+    }
+
+    ul li {
+      font-size: 0.95rem;
+      color: #3d3d4e;
+      margin-bottom: 6px;
+      padding-left: 4px;
+    }
+
+    ul li::marker { color: #FA8B4D; }
+
+    .highlight-box {
+      background: #fff4ed;
+      border-left: 4px solid #FA8B4D;
+      border-radius: 0 10px 10px 0;
+      padding: 14px 18px;
+      margin: 14px 0;
+      font-size: 0.93rem;
+      color: #5a3010;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+      font-size: 0.9rem;
+    }
+
+    .data-table th {
+      background: #f7f8fa;
+      padding: 10px 14px;
+      text-align: left;
+      font-weight: 700;
+      color: #1a1a2e;
+      font-size: 0.82rem;
+      letter-spacing: 0.3px;
+      border-bottom: 2px solid #eee;
+    }
+
+    .data-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid #f0f0f0;
+      color: #3d3d4e;
+      vertical-align: top;
+    }
+
+    .data-table tr:last-child td { border-bottom: none; }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .badge-yes { background: #dcfce7; color: #166534; }
+    .badge-no  { background: #f0f0f5; color: #6b7280; }
+
+    .contact-box {
+      background: #1a1a2e;
+      color: #fff;
+      border-radius: 14px;
+      padding: 28px 32px;
+      margin-top: 24px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .contact-box .contact-icon {
+      width: 48px;
+      height: 48px;
+      background: rgba(250,139,77,0.20);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .contact-box .contact-icon svg { width: 24px; height: 24px; fill: #FA8B4D; }
+
+    .contact-box h3 { font-size: 1rem; font-weight: 700; margin-bottom: 4px; }
+
+    .contact-box a {
+      color: #FA8B4D;
+      text-decoration: none;
+      font-size: 0.92rem;
+    }
+
+    .contact-box a:hover { text-decoration: underline; }
+
+    footer {
+      text-align: center;
+      padding: 24px;
+      font-size: 0.82rem;
+      color: #9ca3af;
+    }
+
+    @media (max-width: 600px) {
+      header { padding: 36px 20px 32px; }
+      header h1 { font-size: 1.6rem; }
+      .card { padding: 24px 20px; }
+      .contact-box { flex-direction: column; text-align: center; }
+      .data-table { font-size: 0.82rem; }
+      .data-table th, .data-table td { padding: 8px 10px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M13.49 5.48c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm-3.6 13.9l1-4.4 2.1 2v6h2v-7.5l-2.1-2 .6-3c1.3 1.5 3.3 2.5 5.5 2.5v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1l-5.2 2.2v4.7h2v-3.4l1.8-.7-1.6 8.1-4.9-1-.4 2 7 1.4z"/>
+    </svg>
+  </div>
+  <h1>Privacy Policy</h1>
+  <p>RunMate &nbsp;·&nbsp; Effective date: June 4, 2026</p>
+</header>
+
+<main>
+
+  <!-- Intro -->
+  <div class="card">
+    <p>
+      RunMate ("we", "us", or "our") is a marathon and running event companion app developed by
+      <strong>XOR Geek</strong>. This Privacy Policy explains what information we collect, how we
+      use it, and your rights regarding your personal data when you use our mobile application
+      (<strong>com.xor.runmate</strong>).
+    </p>
+    <div class="highlight-box">
+      By using RunMate you agree to the collection and use of information as described in this
+      policy. If you disagree, please uninstall the app and contact us to delete your account.
+    </div>
+  </div>
+
+  <!-- 1. Information We Collect -->
+  <div class="card">
+    <span class="section-label">Section 01</span>
+    <h2>
+      <span class="icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H7l5-8v4h4l-5 8z"/></svg>
+      </span>
+      Information We Collect
+    </h2>
+
+    <p><strong>Account Information</strong></p>
+    <ul>
+      <li>Email address and display name — collected at sign-up via Email/Password, Google Sign-In, or Apple Sign-In.</li>
+      <li>Profile photo — optional, uploaded by you.</li>
+    </ul>
+
+    <p><strong>Location Data</strong></p>
+    <ul>
+      <li>Precise GPS location collected <em>only while a run is active</em> (foreground and background).</li>
+      <li>Used to track your route, calculate distance and pace, and show your position on the live event map.</li>
+      <li>Location is <strong>not</strong> collected when the app is closed or no run is in progress.</li>
+    </ul>
+
+    <p><strong>Fitness &amp; Activity Data</strong></p>
+    <ul>
+      <li>Run distance, pace, elapsed time, and route coordinates recorded per run.</li>
+    </ul>
+
+    <p><strong>Photos</strong></p>
+    <ul>
+      <li>Photos taken in-app during a run (run selfies) stored in Firebase Storage, visible only to you.</li>
+    </ul>
+
+    <p><strong>Device Data</strong></p>
+    <ul>
+      <li>Device notification token for push notifications only.</li>
+      <li>No advertising identifiers or third-party analytics SDKs are used.</li>
+    </ul>
+  </div>
+
+  <!-- 2. How We Use -->
+  <div class="card">
+    <span class="section-label">Section 02</span>
+    <h2>
+      <span class="icon">
+        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+      </span>
+      How We Use Your Information
+    </h2>
+    <ul>
+      <li>Display your live position on the race map during an event.</li>
+      <li>Calculate and save your run statistics (distance, pace, time).</li>
+      <li>Show your position on the live leaderboard to other participants in the same event.</li>
+      <li>Enable the Friends feature and friend-only leaderboards.</li>
+      <li>Send event and race notifications via Firebase Cloud Messaging.</li>
+      <li>Improve app performance and fix bugs (no third-party analytics used).</li>
+    </ul>
+  </div>
+
+  <!-- 3. Data Sharing -->
+  <div class="card">
+    <span class="section-label">Section 03</span>
+    <h2>
+      <span class="icon">
+        <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
+      </span>
+      Data Sharing
+    </h2>
+    <p>We <strong>do not sell</strong> your personal data. Limited sharing occurs only in the following cases:</p>
+    <ul>
+      <li><strong>Other event participants:</strong> Your display name, profile photo, and live location (lat/lng) are visible to other runners in the same event <em>during an active run only</em>. This data is removed from our servers when your run ends.</li>
+      <li><strong>Friends:</strong> Your display name, profile photo, and aggregated run stats are visible to users you have added as friends.</li>
+      <li><strong>Firebase / Google:</strong> Our backend infrastructure. Data is processed per the <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google Privacy Policy</a>.</li>
+    </ul>
+    <p>No data is shared with advertisers, data brokers, or any other third parties.</p>
+  </div>
+
+  <!-- 4. Data Collected Table -->
+  <div class="card">
+    <span class="section-label">Section 04</span>
+    <h2>
+      <span class="icon">
+        <svg viewBox="0 0 24 24"><path d="M20 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h15c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 2v3H5V5h15zm-5 14h-5v-5h5v5zM5 14h4v5H5v-5zm0-2v-3h14v3H5zm10 2h4v5h-4v-5z"/></svg>
+      </span>
+      Data Summary Table
+    </h2>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Data Type</th>
+          <th>Collected</th>
+          <th>Shared</th>
+          <th>Purpose</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Name &amp; Email</td>
+          <td><span class="badge badge-yes">Yes</span></td>
+          <td><span class="badge badge-no">No</span></td>
+          <td>Account management</td>
+        </tr>
+        <tr>
+          <td>Profile Photo</td>
+          <td><span class="badge badge-yes">Yes</span></td>
+          <td><span class="badge badge-yes">Friends only</span></td>
+          <td>App functionality</td>
+        </tr>
+        <tr>
+          <td>Precise Location</td>
+          <td><span class="badge badge-yes">Yes</span></td>
+          <td><span class="badge badge-yes">Event runners</span></td>
+          <td>Live run tracking</td>
+        </tr>
+        <tr>
+          <td>Fitness Info</td>
+          <td><span class="badge badge-yes">Yes</span></td>
+          <td><span class="badge badge-yes">Friends only</span></td>
+          <td>Leaderboard &amp; stats</td>
+        </tr>
+        <tr>
+          <td>Run Photos</td>
+          <td><span class="badge badge-yes">Yes</span></td>
+          <td><span class="badge badge-no">No</span></td>
+          <td>Run memories</td>
+        </tr>
+        <tr>
+          <td>Notification Token</td>
+          <td><span class="badge badge-yes">Yes</span></td>
+          <td><span class="badge badge-no">No</span></td>
+          <td>Push notifications</td>
+        </tr>
+        <tr>
+          <td>Advertising ID</td>
+          <td><span class="badge badge-no">No</span></td>
+          <td><span class="badge badge-no">No</span></td>
+          <td>—</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 5. Data Retention -->
+  <div class="card">
+    <span class="section-label">Section 05</span>
+    <h2>
+      <span class="icon">
+        <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
+      </span>
+      Data Retention
+    </h2>
+    <ul>
+      <li><strong>Account data</strong> is retained until you delete your account.</li>
+      <li><strong>Run history and stats</strong> are retained to maintain your personal records.</li>
+      <li><strong>Live location data</strong> is deleted from our servers the moment your run ends.</li>
+      <li><strong>Run photos</strong> are retained until you delete them or your account.</li>
+      <li>You may request complete data deletion at any time (see Section 8).</li>
+    </ul>
+  </div>
+
+  <!-- 6. Security -->
+  <div class="card">
+    <span class="section-label">Section 06</span>
+    <h2>
+      <span class="icon">
+        <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+      </span>
+      Security
+    </h2>
+    <p>
+      All data is stored on Firebase (Google Cloud infrastructure) with encryption
+      in transit (TLS 1.2+) and at rest. Access to your data is controlled by
+      Firebase Security Rules, ensuring users can only access their own data and
+      publicly shared event data.
+    </p>
+    <p>
+      While we implement industry-standard security measures, no method of
+      electronic transmission or storage is 100% secure. We encourage you to use
+      a strong, unique password for your account.
+    </p>
+  </div>
+
+  <!-- 7. Children -->
+  <div class="card">
+    <span class="section-label">Section 07</span>
+    <h2>
+      <span class="icon">
+        <svg viewBox="0 0 24 24"><path d="M11.5 2C6.81 2 3 5.81 3 10.5S6.81 19 11.5 19h.5v3c4.86-2.34 8-7 8-11.5C20 5.81 16.19 2 11.5 2zm1 14.5h-2v-2h2v2zm0-4h-2c0-3.25 3-3 3-5 0-1.1-.9-2-2-2s-2 .9-2 2h-2c0-2.21 1.79-4 4-4s4 1.79 4 4c0 2.5-3 2.75-3 5z"/></svg>
+      </span>
+      Children's Privacy
+    </h2>
+    <p>
+      RunMate is not directed at children under the age of 13. We do not knowingly
+      collect personal information from children under 13. If you are a parent or
+      guardian and believe your child has provided us with personal information,
+      please contact us immediately and we will delete that information.
+    </p>
+  </div>
+
+  <!-- 8. Your Rights -->
+  <div class="card">
+    <span class="section-label">Section 08</span>
+    <h2>
+      <span class="icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+      </span>
+      Your Rights &amp; Data Deletion
+    </h2>
+    <p>You have the right to:</p>
+    <ul>
+      <li><strong>Access</strong> the personal data we hold about you.</li>
+      <li><strong>Correct</strong> inaccurate data via Settings → Edit Profile.</li>
+      <li><strong>Delete</strong> your account and all associated data via Settings → Delete Account.</li>
+      <li><strong>Object</strong> to certain processing of your data.</li>
+      <li><strong>Withdraw consent</strong> at any time by uninstalling the app.</li>
+    </ul>
+    <div class="highlight-box">
+      To request data deletion or exercise any of your rights, use the in-app
+      <strong>Settings → Delete Account</strong> option, or email us at the address below.
+      We will respond within 30 days.
+    </div>
+  </div>
+
+  <!-- 9. Changes -->
+  <div class="card">
+    <span class="section-label">Section 09</span>
+    <h2>
+      <span class="icon">
+        <svg viewBox="0 0 24 24"><path d="M21 6.5l-4-4-9.5 9.5-2 4.5 4.5-2L21 6.5zm-16 9l-2 4.5 4.5-2-2.5-2.5z"/></svg>
+      </span>
+      Changes to This Policy
+    </h2>
+    <p>
+      We may update this Privacy Policy from time to time. When we do, we will
+      revise the "Effective date" at the top of this page and notify users via
+      in-app notification or email for material changes.
+    </p>
+    <p>
+      Continued use of RunMate after changes are posted constitutes your acceptance
+      of the updated policy.
+    </p>
+  </div>
+
+  <!-- Contact -->
+  <div class="contact-box">
+    <div class="contact-icon">
+      <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+    </div>
+    <div>
+      <h3>Contact Us</h3>
+      <p style="color:#ccc;font-size:0.88rem;margin-top:4px;">
+        Questions about this policy or your data?
+      </p>
+      <a href="mailto:support@xorgeek.com">support@xorgeek.com</a>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  &copy; 2026 XOR Geek · RunMate · com.xor.runmate
+</footer>
+
+</body>
+</html>

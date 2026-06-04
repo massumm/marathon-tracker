@@ -65,8 +65,12 @@ class _OrganizerLiveLeaderboardScreenState
       if (_counting) {
         final r = widget.event.eventDateTime.difference(DateTime.now());
         if (r.inSeconds <= 0) {
-          _counting = false;
-          _remaining.value = Duration.zero;
+          // setState required — _counting is a plain bool, not a ValueNotifier,
+          // so build() won't re-run without it, leaving screen stuck at 00:00.
+          setState(() {
+            _counting = false;
+            _remaining.value = Duration.zero;
+          });
         } else {
           _remaining.value = r;
         }
@@ -74,8 +78,10 @@ class _OrganizerLiveLeaderboardScreenState
       if (widget.event.hasCutoff && !_ended) {
         final cr = widget.event.cutoffDateTime.difference(DateTime.now());
         if (cr.inSeconds <= 0) {
-          _ended = true;
-          _cutoffRemaining.value = Duration.zero;
+          setState(() {
+            _ended = true;
+            _cutoffRemaining.value = Duration.zero;
+          });
         } else {
           _cutoffRemaining.value = cr;
         }

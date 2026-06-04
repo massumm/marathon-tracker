@@ -1,7 +1,12 @@
+import 'dart:convert';
+import 'dart:math';
+
+import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../app/routes/app_routes.dart';
 import '../services/friends_service.dart';
 import '../services/user_stats_service.dart';
@@ -84,6 +89,52 @@ class AuthController extends GetxController {
     } finally {
       isLoading.value = false;
     }
+  }
+
+  Future<void> signInWithApple() async {
+    isLoading.value = true;
+    try {
+      final rawNonce = _generateNonce();
+      final nonce = _sha256(rawNonce);
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+        nonce: nonce,
+      );
+      final oauthCredential = OAuthProvider('apple.com').credential(
+        idToken: appleCredential.identityToken,
+        rawNonce: rawNonce,
+      );
+      final result = await _auth.signInWithCredential(oauthCredential);
+      // Apple only sends name on first sign-in; persist it if present.
+      final given = appleCredential.givenName;
+      final family = appleCredential.familyName;
+      if (given != null || family != null) {
+        final name = [given, family].whereType<String>().join(' ').trim();
+        if (name.isNotEmpty) _pendingUsername = name;
+        await result.user?.updateProfile(displayName: name);
+      }
+    } catch (e) {
+      debugPrint('Apple Sign-In error: $e');
+      rethrow;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  String _generateNonce([int length = 32]) {
+    const chars =
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._';
+    final rng = Random.secure();
+    return List.generate(length, (_) => chars[rng.nextInt(chars.length)])
+        .join();
+  }
+
+  String _sha256(String input) {
+    final bytes = utf8.encode(input);
+    return sha256.convert(bytes).toString();
   }
 
   Future<void> sendPasswordReset(String email) async {
