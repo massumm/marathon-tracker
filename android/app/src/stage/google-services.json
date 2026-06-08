@@ -1,0 +1,63 @@
+{
+  "project_info": {
+    "project_number": "24360852719",
+    "firebase_url": "https://runmate-252e5-default-rtdb.firebaseio.com",
+    "project_id": "runmate-252e5",
+    "storage_bucket": "runmate-252e5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:24360852719:android:37a76adddc9c22f1f14f1a",
+        "android_client_info": {
+          "package_name": "com.xor.runmate"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "24360852719-0daref8aoar1kiqp4mirdv87qocarpgv.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.xor.runmate",
+            "certificate_hash": "6410817c646dbc044509817990a35c1288998357"
+          }
+        },
+        {
+          "client_id": "24360852719-n2uo7qhtvl5gm6806pkp0ct00dvfnjhm.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.xor.runmate",
+            "certificate_hash": "594388d4fa629d28c189cf6f15e8efe29e840192"
+          }
+        },
+        {
+          "client_id": "24360852719-6rmddjuec2l0voomtv86fmpbhjg535nd.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDsx2E0wwBHup586l6AzpvC5ZG0EcbLFAw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "24360852719-6rmddjuec2l0voomtv86fmpbhjg535nd.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "24360852719-u81lom9qolba2lah6sj6jdtkkcejrm8u.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.xor.runmate"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

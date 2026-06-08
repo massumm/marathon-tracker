@@ -1,0 +1,43 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build Admin — Stage",
+            "type": "shell",
+            "command": "flutter build web --target lib/main_admin.dart --base-href /admin/ --output hosting/admin && firebase deploy --only hosting --project runmate-252e5",
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Build Admin — Live",
+            "type": "shell",
+            "command": "flutter build web --target lib/main_admin_live.dart --base-href /admin/ --output hosting/admin && firebase deploy --only hosting --project runmate-live",
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Deploy Hosting — Stage",
+            "type": "shell",
+            "command": "firebase deploy --only hosting --project runmate-252e5",
+            "group": "build",
+            "presentation": { "reveal": "always", "panel": "shared" },
+            "problemMatcher": []
+        },
+        {
+            "label": "Deploy Hosting — Live",
+            "type": "shell",
+            "command": "firebase deploy --only hosting --project runmate-live",
+            "group": "build",
+            "presentation": { "reveal": "always", "panel": "shared" },
+            "problemMatcher": []
+        }
+    ]
+}

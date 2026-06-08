@@ -15,6 +15,12 @@
         "source": "**/*.apk",
         "headers": [{ "key": "Content-Type", "value": "application/vnd.android.package-archive" }]
       }
+    ],
+    "rewrites": [
+      {
+        "source": "/admin/**",
+        "destination": "/admin/index.html"
+      }
     ]
   },
   "database": {
