@@ -34,6 +34,7 @@ class _LoginBodyState extends State<_LoginBody> {
   final _confirmCtrl = TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
+  int? _selectedGender;
 
   @override
   void dispose() {
@@ -64,7 +65,8 @@ class _LoginBodyState extends State<_LoginBody> {
         await _auth.signInWithEmail(_emailCtrl.text, _passwordCtrl.text);
       } else {
         await _auth.signUpWithEmail(
-            _emailCtrl.text, _passwordCtrl.text, _usernameCtrl.text.trim());
+            _emailCtrl.text, _passwordCtrl.text, _usernameCtrl.text.trim(),
+            gender: _selectedGender);
       }
     } on FirebaseAuthException catch (e) {
       _showError(_friendlyError(e.code));
@@ -262,6 +264,40 @@ class _LoginBodyState extends State<_LoginBody> {
                 if (val.length > 30) return 'Maximum 30 characters';
                 return null;
               },
+            ),
+            const SizedBox(height: 14),
+            DropdownButtonFormField<int>(
+              initialValue: _selectedGender,
+              decoration: _inputDeco(
+                label: 'Gender',
+                hint: 'Select gender',
+                icon: Icons.person_outline,
+              ),
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppTheme.textPrimary,
+              ),
+              dropdownColor: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              isDense: true,
+              items: const [
+                DropdownMenuItem(
+                  value: 0,
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 4),
+                    child: Text('Male', style: TextStyle(fontSize: 13)),
+                  ),
+                ),
+                DropdownMenuItem(
+                  value: 1,
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 4),
+                    child: Text('Female', style: TextStyle(fontSize: 13)),
+                  ),
+                ),
+              ],
+              onChanged: (v) => setState(() => _selectedGender = v),
+              validator: (v) => v == null ? 'Please select a gender' : null,
             ),
             const SizedBox(height: 14),
           ],
