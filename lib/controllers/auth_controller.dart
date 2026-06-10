@@ -17,9 +17,10 @@ class AuthController extends GetxController {
 
   final isLoading = false.obs;
 
-  // Username set just before account creation so the authStateChanges listener
-  // can write the correct displayName when it fires.
+  // Set just before account creation so the authStateChanges listener
+  // can write the correct values when it fires.
   String? _pendingUsername;
+  int? _pendingGender;
 
   User? get currentUser => _auth.currentUser;
 
@@ -29,9 +30,12 @@ class AuthController extends GetxController {
     _auth.authStateChanges().listen((user) {
       if (user != null) {
         final username = _pendingUsername;
+        final gender = _pendingGender;
         _pendingUsername = null;
+        _pendingGender = null;
         FriendsService.instance.registerProfile(displayName: username);
         UserStatsService.instance.registerOrUpdate(displayName: username);
+        if (gender != null) UserStatsService.instance.updateGender(gender);
         //LiveTrackingService.instance.cleanupStaleBroadcast();
         //UserStatsService.instance.syncPendingStats();
         Get.offAllNamed(AppRoutes.home);
@@ -73,11 +77,13 @@ class AuthController extends GetxController {
   }
 
   Future<void> signUpWithEmail(
-      String email, String password, String username) async {
+      String email, String password, String username,
+      {int? gender}) async {
     isLoading.value = true;
     try {
       // Store before creation so authStateChanges listener picks it up.
       _pendingUsername = username.trim();
+      _pendingGender = gender;
       final cred = await _auth.createUserWithEmailAndPassword(
           email: email.trim(), password: password);
       // Persist displayName in Firebase Auth so future sign-ins resolve it
@@ -85,6 +91,7 @@ class AuthController extends GetxController {
       await cred.user?.updateProfile(displayName: username.trim());
     } catch (e) {
       _pendingUsername = null;
+      _pendingGender = null;
       rethrow;
     } finally {
       isLoading.value = false;
