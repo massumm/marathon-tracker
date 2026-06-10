@@ -352,6 +352,7 @@ class _EventCardState extends State<_EventCard> {
       );
       return;
     }
+    debugPrint('[MAP_SCREEN] Starting run with categoryId: ${cat.id}, category label: ${cat.label}');
     Get.toNamed(
       AppRoutes.kmlMap,
       arguments: {
@@ -359,6 +360,7 @@ class _EventCardState extends State<_EventCard> {
         'storagePath': cat.kmlPath,
         'label': '${widget.event.name} (${cat.label})',
         'eventId': widget.event.id,
+        'categoryId': cat.id,
         'eventDateTime': widget.event.eventDateTime.millisecondsSinceEpoch,
         'hasStartTime': widget.event.startTime.isNotEmpty,
         'cutoffMinutes': widget.event.cutoffMinutes,

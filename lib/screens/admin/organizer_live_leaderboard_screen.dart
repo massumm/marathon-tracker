@@ -21,7 +21,7 @@ class OrganizerLiveLeaderboardScreen extends StatefulWidget {
 
 class _OrganizerLiveLeaderboardScreenState
     extends State<OrganizerLiveLeaderboardScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   bool _counting = false;
   bool _ended = false;
   late ValueNotifier<Duration> _remaining;
@@ -29,12 +29,30 @@ class _OrganizerLiveLeaderboardScreenState
   Timer? _ticker;
   late AnimationController _pulse;
   late Animation<double> _pulseAnim;
+  late TabController _tabController;
+  StreamSubscription<List<RunnerData>>? _runnersSub;
+  List<RunnerData> _runners = [];
 
   @override
   void initState() {
     super.initState();
+    _runnersSub = AdminService.instance
+        .watchLiveRunnersForEvent(widget.event.id)
+        .listen((runners) {
+      if (mounted) setState(() => _runners = runners);
+    });
     _remaining = ValueNotifier(Duration.zero);
     _cutoffRemaining = ValueNotifier(Duration.zero);
+
+    debugPrint('[LEADERBOARD] Event: ${widget.event.name}, Categories count: ${widget.event.categories.length}');
+    for (final cat in widget.event.categories.entries) {
+      debugPrint('[LEADERBOARD] Category: ${cat.key} - ${cat.value.label}');
+    }
+
+    _tabController = TabController(
+      length: widget.event.categories.length,
+      vsync: this,
+    );
 
     _pulse = AnimationController(
       vsync: this,
@@ -92,9 +110,11 @@ class _OrganizerLiveLeaderboardScreenState
   @override
   void dispose() {
     _ticker?.cancel();
+    _runnersSub?.cancel();
     _pulse.dispose();
     _remaining.dispose();
     _cutoffRemaining.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
@@ -110,7 +130,33 @@ class _OrganizerLiveLeaderboardScreenState
   Widget build(BuildContext context) {
     if (_ended) return _buildEnded();
     if (_counting) return _buildCountdown();
-    return _buildLeaderboard();
+
+    if (widget.event.categories.isEmpty) {
+      return _buildLeaderboard('');
+    }
+
+    final categoryList = widget.event.categories.entries.toList();
+
+    return Column(
+      children: [
+        TabBar(
+          controller: _tabController,
+          isScrollable: categoryList.length > 3,
+          labelColor: AppTheme.primary,
+          unselectedLabelColor: AppTheme.textSecondary,
+          indicatorColor: AppTheme.primary,
+          tabs: categoryList.map((e) => Tab(text: e.value.label)).toList(),
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: categoryList
+                .map((catEntry) => _buildLeaderboard(catEntry.key))
+                .toList(),
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildEnded() {
@@ -135,7 +181,7 @@ class _OrganizerLiveLeaderboardScreenState
             ],
           ),
         ),
-        Expanded(child: _buildLeaderboard()),
+        Expanded(child: _buildLeaderboard('')),
       ],
     );
   }
@@ -261,63 +307,54 @@ class _OrganizerLiveLeaderboardScreenState
     );
   }
 
-  Widget _buildLeaderboard() {
-    return StreamBuilder<List<RunnerData>>(
-      stream: AdminService.instance.watchLiveRunnersForEvent(widget.event.id),
-      builder: (_, snap) {
-        if (snap.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+  Widget _buildLeaderboard(String categoryId) {
+    final runners = categoryId.isEmpty
+        ? _runners
+        : _runners.where((r) => r.categoryId == categoryId).toList();
 
-        final runners = snap.data ?? [];
-
-        if (runners.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.directions_run_outlined,
-                    size: 64, color: Colors.grey.shade300),
-                const SizedBox(height: 16),
-                const Text('No runners yet',
-                    style:
-                        TextStyle(fontSize: 16, color: AppTheme.textSecondary)),
-                const SizedBox(height: 8),
-                Text(
-                  'Waiting for participants in "${widget.event.name}"...',
-                  style: const TextStyle(
-                      fontSize: 13, color: AppTheme.textSecondary),
-                ),
-              ],
-            ),
-          );
-        }
-
-        return Column(
+    if (runners.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            ValueListenableBuilder<Duration>(
-              valueListenable: _cutoffRemaining,
-              builder: (_, cutoff, __) {
-                final cutoffDisplay = (!_ended && widget.event.hasCutoff)
-                    ? _fmtDuration(cutoff)
-                    : null;
-                return _LiveBanner(
-                    eventName: widget.event.name,
-                    count: runners.length,
-                    cutoffRemaining: cutoffDisplay);
-              },
-            ),
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                itemCount: runners.length,
-                itemBuilder: (_, i) =>
-                    _RunnerRow(runner: runners[i], rank: i + 1),
-              ),
+            Icon(Icons.directions_run_outlined,
+                size: 64, color: Colors.grey.shade300),
+            const SizedBox(height: 16),
+            const Text('No runners yet',
+                style: TextStyle(fontSize: 16, color: AppTheme.textSecondary)),
+            const SizedBox(height: 8),
+            Text(
+              'Waiting for participants in "${widget.event.name}"...',
+              style: const TextStyle(
+                  fontSize: 13, color: AppTheme.textSecondary),
             ),
           ],
-        );
-      },
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        ValueListenableBuilder<Duration>(
+          valueListenable: _cutoffRemaining,
+          builder: (_, cutoff, __) {
+            final cutoffDisplay = (!_ended && widget.event.hasCutoff)
+                ? _fmtDuration(cutoff)
+                : null;
+            return _LiveBanner(
+                eventName: widget.event.name,
+                count: runners.length,
+                cutoffRemaining: cutoffDisplay);
+          },
+        ),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            itemCount: runners.length,
+            itemBuilder: (_, i) => _RunnerRow(runner: runners[i], rank: i + 1),
+          ),
+        ),
+      ],
     );
   }
 }

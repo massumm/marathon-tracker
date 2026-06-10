@@ -16,7 +16,7 @@ class LiveTrackingService {
 
   /// Start broadcasting — writes initial data and sets onDisconnect cleanup.
   Future<void> startBroadcasting(double lat, double lng,
-      {String eventId = ''}) async {
+      {String eventId = '', String categoryId = ''}) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
@@ -29,6 +29,7 @@ class LiveTrackingService {
       lng: lng,
       startedAt: DateTime.now().millisecondsSinceEpoch,
       eventId: eventId,
+      categoryId: categoryId,
     ).toMap();
 
     await _myRef.set(data);

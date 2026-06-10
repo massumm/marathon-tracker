@@ -105,6 +105,7 @@ class AdminService {
               lastSeen: runner.lastSeen,
               distanceKm: runner.distanceKm,
               eventId: runner.eventId,
+              categoryId: runner.categoryId,
             );
           })
           .where((r) => r.lastSeen >= cutoff)
@@ -214,6 +215,7 @@ class AdminService {
               lastSeen: runner.lastSeen,
               distanceKm: runner.distanceKm,
               eventId: runner.eventId,
+              categoryId: runner.categoryId,
             );
           })
           .toList();

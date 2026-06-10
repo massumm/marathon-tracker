@@ -26,16 +26,29 @@ class _AdminLiveLeaderboardScreenState extends State<AdminLiveLeaderboardScreen>
   Timer? _ticker;
   late AnimationController _pulse;
   late Animation<double> _pulseAnim;
+  late TabController _tabController;
+  StreamSubscription<List<RunnerData>>? _runnersSub;
+  List<RunnerData> _runners = [];
 
   @override
   void initState() {
     super.initState();
+    _runnersSub = AdminService.instance
+        .watchLiveRunnersForEvent(widget.event.id)
+        .listen((runners) {
+      if (mounted) setState(() => _runners = runners);
+    });
     _pulse = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1400),
     )..repeat(reverse: true);
     _pulseAnim = Tween<double>(begin: 1.0, end: 1.08)
         .animate(CurvedAnimation(parent: _pulse, curve: Curves.easeInOut));
+
+    _tabController = TabController(
+      length: widget.event.categories.length,
+      vsync: this,
+    );
 
     final event = widget.event;
     if (event.startTime.isNotEmpty) {
@@ -82,7 +95,9 @@ class _AdminLiveLeaderboardScreenState extends State<AdminLiveLeaderboardScreen>
   @override
   void dispose() {
     _ticker?.cancel();
+    _runnersSub?.cancel();
     _pulse.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
@@ -156,7 +171,29 @@ class _AdminLiveLeaderboardScreenState extends State<AdminLiveLeaderboardScreen>
           ? _buildEnded()
           : _counting
               ? _buildCountdown()
-              : _buildLeaderboard(),
+              : Column(
+                  children: [
+                    if (widget.event.categories.isNotEmpty)
+                      TabBar(
+                        controller: _tabController,
+                        isScrollable: widget.event.categories.length > 3,
+                        labelColor: AppTheme.primary,
+                        unselectedLabelColor: AppTheme.textSecondary,
+                        indicatorColor: AppTheme.primary,
+                        tabs: widget.event.categories.entries
+                            .map((e) => Tab(text: e.value.label))
+                            .toList(),
+                      ),
+                    Expanded(
+                      child: TabBarView(
+                        controller: _tabController,
+                        children: widget.event.categories.entries
+                            .map((catEntry) => _buildCategoryLeaderboard(catEntry.key))
+                            .toList(),
+                      ),
+                    ),
+                  ],
+                ),
     );
   }
 
@@ -305,43 +342,39 @@ class _AdminLiveLeaderboardScreenState extends State<AdminLiveLeaderboardScreen>
     );
   }
 
+  Widget _buildCategoryLeaderboard(String categoryId) {
+    final runners = _runners.where((r) => r.categoryId == categoryId).toList();
+
+    if (runners.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.directions_run_outlined,
+                size: 64, color: Colors.grey.shade300),
+            const SizedBox(height: 16),
+            const Text('No runners in this category',
+                style: TextStyle(fontSize: 16, color: AppTheme.textSecondary)),
+            const SizedBox(height: 8),
+            const Text('Waiting for participants to start...',
+                style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      itemCount: runners.length,
+      itemBuilder: (_, i) => _RunnerRow(runner: runners[i], rank: i + 1),
+    );
+  }
+
   Widget _buildLeaderboard() {
-    return StreamBuilder<List<RunnerData>>(
-      stream: AdminService.instance.watchLiveRunnersForEvent(widget.event.id),
-      builder: (_, snap) {
-        if (snap.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        final runners = snap.data ?? [];
-
-        if (runners.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.directions_run_outlined,
-                    size: 64, color: Colors.grey.shade300),
-                const SizedBox(height: 16),
-                const Text('No runners yet',
-                    style: TextStyle(
-                        fontSize: 16, color: AppTheme.textSecondary)),
-                const SizedBox(height: 8),
-                const Text('Waiting for participants to start...',
-                    style: TextStyle(
-                        fontSize: 13, color: AppTheme.textSecondary)),
-              ],
-            ),
-          );
-        }
-
-        return ListView.builder(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-          itemCount: runners.length,
-          itemBuilder: (_, i) =>
-              _RunnerRow(runner: runners[i], rank: i + 1),
-        );
-      },
+    return _buildCategoryLeaderboard(
+      widget.event.categories.isNotEmpty
+          ? widget.event.categories.entries.first.key
+          : '',
     );
   }
 }

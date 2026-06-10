@@ -9,6 +9,7 @@ class RunnerData {
   final int lastSeen;
   final double distanceKm;
   final String eventId;
+  final String categoryId;
 
   RunnerData({
     required this.uid,
@@ -21,6 +22,7 @@ class RunnerData {
     int? lastSeen,
     this.distanceKm = 0.0,
     this.eventId = '',
+    this.categoryId = '',
   }) : lastSeen = lastSeen ?? startedAt;
 
   factory RunnerData.fromMap(String uid, Map<dynamic, dynamic> map) {
@@ -37,6 +39,7 @@ class RunnerData {
       lastSeen: (map['lastSeen'] as num?)?.toInt() ?? startedAt,
       distanceKm: (map['distanceKm'] as num?)?.toDouble() ?? 0.0,
       eventId: map['eventId'] as String? ?? '',
+      categoryId: map['categoryId'] as String? ?? '',
     );
   }
 
@@ -50,5 +53,6 @@ class RunnerData {
         'lastSeen': lastSeen,
         'distanceKm': distanceKm,
         'eventId': eventId,
+        'categoryId': categoryId,
       };
 }

@@ -1,8 +1,18 @@
 [
   {
-    "origin": ["https://runmate.xorgeek.com", "http://localhost:*"],
-    "method": ["GET", "HEAD"],
-    "responseHeader": ["Content-Type", "Authorization", "Content-Length"],
+    "origin": [
+      "https://runmate.xorgeek.com",
+      "https://runmate-stage.xorgeek.com",
+      "http://localhost:*"
+    ],
+    "method": ["GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"],
+    "responseHeader": [
+      "Content-Type",
+      "Authorization",
+      "Content-Length",
+      "X-Requested-With",
+      "x-goog-resumable"
+    ],
     "maxAgeSeconds": 3600
   }
 ]

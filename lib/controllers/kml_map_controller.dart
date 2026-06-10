@@ -111,6 +111,7 @@ class KmlMapController extends GetxController {
   bool _programmaticCamera = false;
   double _lastHeading = 0.0;
   String currentEventId = '';
+  String selectedCategoryId = '';
   DateTime? eventStartTime;
   DateTime? cutoffDateTime;
   DateTime? chipDeadline;
@@ -163,6 +164,8 @@ class KmlMapController extends GetxController {
       kmlFilePath = args['storagePath'] as String? ?? '';
       routeLabel = args['label'] as String? ?? '';
       currentEventId = args['eventId'] as String? ?? '';
+      selectedCategoryId = args['categoryId'] as String? ?? '';
+      debugPrint('[KML_CONTROLLER] prepareRoute - categoryId: "$selectedCategoryId", eventId: "$currentEventId"');
       final evMs = args['eventDateTime'] as int? ?? 0;
       final hasTime = args['hasStartTime'] as bool? ?? false;
       eventStartTime = (hasTime && evMs > 0)
@@ -196,6 +199,7 @@ class KmlMapController extends GetxController {
       kmlDirectUrl = null;
       routeLabel = '';
       currentEventId = '';
+      selectedCategoryId = '';
       eventStartTime = null;
       cutoffDateTime = null;
       chipDeadline = null;
@@ -800,7 +804,7 @@ class KmlMapController extends GetxController {
       final lat = pos?.latitude ?? initialLocation.latitude;
       final lng = pos?.longitude ?? initialLocation.longitude;
       await LiveTrackingService.instance
-          .startBroadcasting(lat, lng, eventId: currentEventId);
+          .startBroadcasting(lat, lng, eventId: currentEventId, categoryId: selectedCategoryId);
       isLive.value = true;
     }
   }
@@ -993,9 +997,9 @@ class KmlMapController extends GetxController {
     // Auto-broadcast when tracking starts
     final lat = pos?.latitude ?? initialLocation.latitude;
     final lng = pos?.longitude ?? initialLocation.longitude;
-    debugPrint('[TRACKING] calling startBroadcasting');
+    debugPrint('[TRACKING] calling startBroadcasting with categoryId: $selectedCategoryId, eventId: $currentEventId');
     await LiveTrackingService.instance
-        .startBroadcasting(lat, lng, eventId: currentEventId)
+        .startBroadcasting(lat, lng, eventId: currentEventId, categoryId: selectedCategoryId)
         .timeout(const Duration(seconds: 5), onTimeout: () {});
     debugPrint('[TRACKING] startBroadcasting done');
     isLive.value = true;
