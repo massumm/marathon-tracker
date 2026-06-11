@@ -47,7 +47,14 @@ class _LoginBodyState extends State<_LoginBody> {
 
   void _switchMode(_AuthMode mode) {
     _formKey.currentState?.reset();
-    setState(() => _mode = mode);
+    _emailCtrl.clear();
+    _usernameCtrl.clear();
+    _passwordCtrl.clear();
+    _confirmCtrl.clear();
+    setState(() {
+      _mode = mode;
+      _selectedGender = null;
+    });
   }
 
   void _showError(String message) {
@@ -59,6 +66,7 @@ class _LoginBodyState extends State<_LoginBody> {
   }
 
   Future<void> _submit() async {
+    FocusScope.of(context).unfocus();
     if (!(_formKey.currentState?.validate() ?? false)) return;
     try {
       if (_mode == _AuthMode.signIn) {
@@ -69,8 +77,10 @@ class _LoginBodyState extends State<_LoginBody> {
             gender: _selectedGender);
       }
     } on FirebaseAuthException catch (e) {
+      debugPrint('[Auth] FirebaseAuthException → code=${e.code} message=${e.message} email=${e.email} credential=${e.credential}');
       _showError(_friendlyError(e.code));
     } catch (e) {
+      debugPrint('[Auth] Unknown error → $e');
       _showError('Something went wrong. Please try again.');
     }
   }
@@ -141,10 +151,12 @@ class _LoginBodyState extends State<_LoginBody> {
   String _friendlyError(String code) => switch (code) {
         'user-not-found' => 'No account found for that email.',
         'wrong-password' => 'Incorrect password.',
+        'invalid-credential' => 'Incorrect email or password.',
         'email-already-in-use' => 'An account already exists for that email.',
         'weak-password' => 'Password must be at least 6 characters.',
         'invalid-email' => 'Please enter a valid email address.',
         'too-many-requests' => 'Too many attempts. Please try again later.',
+        'network-request-failed' => 'No internet connection.',
         _ => 'Authentication failed. Please try again.',
       };
 

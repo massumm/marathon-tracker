@@ -372,9 +372,9 @@ class SettingsScreen extends GetView<MyPageController> {
       actions: [
         TextButton(onPressed: Get.back, child: Text('cancel'.tr)),
         TextButton(
-          onPressed: () {
+          onPressed: () async {
             Get.back();
-            controller.signOut();
+            await controller.signOut();
           },
           style: TextButton.styleFrom(foregroundColor: Colors.red),
           child: Text('sign_out'.tr),
