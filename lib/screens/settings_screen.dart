@@ -7,6 +7,7 @@ import '../controllers/map_controller.dart';
 import '../controllers/my_page_controller.dart';
 import '../core/theme.dart';
 import '../services/event_notification_service.dart';
+import '../widgets/confirm_dialog.dart';
 
 class SettingsScreen extends GetView<MyPageController> {
   const SettingsScreen({super.key});
@@ -29,6 +30,20 @@ class SettingsScreen extends GetView<MyPageController> {
             title: 'change_password'.tr,
             onTap: () => _resetPassword(context),
           ),
+          Obx(() {
+            final gender = controller.myStats.value?.gender;
+            final label = gender == 0
+                ? 'Male'
+                : gender == 1
+                    ? 'Female'
+                    : 'Not set';
+            return _tile(
+              icon: gender == 1 ? Icons.female : Icons.male,
+              title: 'gender'.tr,
+              subtitle: label,
+              onTap: () => _changeGender(context, gender),
+            );
+          }),
           _tile(
             icon: Icons.language,
             title: 'language_settings'.tr,
@@ -116,6 +131,40 @@ class SettingsScreen extends GetView<MyPageController> {
             : null,
         onTap: onTap,
       );
+
+  void _changeGender(BuildContext context, int? currentGender) {
+    Get.dialog(SimpleDialog(
+      title: Text('gender_edit'.tr),
+      children: [0, 1].map((value) {
+        final label = value == 0 ? 'Male' : 'Female';
+        final icon = value == 0 ? Icons.male : Icons.female;
+        final color = value == 0 ? Colors.blue.shade400 : Colors.pink.shade300;
+        final isCurrent = currentGender == value;
+        return SimpleDialogOption(
+          onPressed: () {
+            Get.back();
+            ConfirmDialog.show(
+              title: 'gender_edit'.tr,
+              message: 'Change gender to $label?',
+              onConfirm: () => controller.updateGender(value),
+            );
+          },
+          child: Row(children: [
+            Icon(icon, size: 20, color: color),
+            const SizedBox(width: 10),
+            Text(label,
+                style: TextStyle(
+                    fontWeight:
+                        isCurrent ? FontWeight.bold : FontWeight.normal)),
+            if (isCurrent) ...[
+              const SizedBox(width: 8),
+              Icon(Icons.check, size: 18, color: color),
+            ],
+          ]),
+        );
+      }).toList(),
+    ));
+  }
 
   void _selectLanguage() {
     final isJa = Get.locale?.languageCode == 'ja';
@@ -323,9 +372,9 @@ class SettingsScreen extends GetView<MyPageController> {
       actions: [
         TextButton(onPressed: Get.back, child: Text('cancel'.tr)),
         TextButton(
-          onPressed: () {
+          onPressed: () async {
             Get.back();
-            controller.signOut();
+            await controller.signOut();
           },
           style: TextButton.styleFrom(foregroundColor: Colors.red),
           child: Text('sign_out'.tr),

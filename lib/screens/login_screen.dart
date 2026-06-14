@@ -34,6 +34,7 @@ class _LoginBodyState extends State<_LoginBody> {
   final _confirmCtrl = TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
+  int? _selectedGender;
 
   @override
   void dispose() {
@@ -46,7 +47,14 @@ class _LoginBodyState extends State<_LoginBody> {
 
   void _switchMode(_AuthMode mode) {
     _formKey.currentState?.reset();
-    setState(() => _mode = mode);
+    _emailCtrl.clear();
+    _usernameCtrl.clear();
+    _passwordCtrl.clear();
+    _confirmCtrl.clear();
+    setState(() {
+      _mode = mode;
+      _selectedGender = null;
+    });
   }
 
   void _showError(String message) {
@@ -58,17 +66,21 @@ class _LoginBodyState extends State<_LoginBody> {
   }
 
   Future<void> _submit() async {
+    FocusScope.of(context).unfocus();
     if (!(_formKey.currentState?.validate() ?? false)) return;
     try {
       if (_mode == _AuthMode.signIn) {
         await _auth.signInWithEmail(_emailCtrl.text, _passwordCtrl.text);
       } else {
         await _auth.signUpWithEmail(
-            _emailCtrl.text, _passwordCtrl.text, _usernameCtrl.text.trim());
+            _emailCtrl.text, _passwordCtrl.text, _usernameCtrl.text.trim(),
+            gender: _selectedGender);
       }
     } on FirebaseAuthException catch (e) {
+      debugPrint('[Auth] FirebaseAuthException → code=${e.code} message=${e.message} email=${e.email} credential=${e.credential}');
       _showError(_friendlyError(e.code));
     } catch (e) {
+      debugPrint('[Auth] Unknown error → $e');
       _showError('Something went wrong. Please try again.');
     }
   }
@@ -139,10 +151,12 @@ class _LoginBodyState extends State<_LoginBody> {
   String _friendlyError(String code) => switch (code) {
         'user-not-found' => 'No account found for that email.',
         'wrong-password' => 'Incorrect password.',
+        'invalid-credential' => 'Incorrect email or password.',
         'email-already-in-use' => 'An account already exists for that email.',
         'weak-password' => 'Password must be at least 6 characters.',
         'invalid-email' => 'Please enter a valid email address.',
         'too-many-requests' => 'Too many attempts. Please try again later.',
+        'network-request-failed' => 'No internet connection.',
         _ => 'Authentication failed. Please try again.',
       };
 
@@ -262,6 +276,40 @@ class _LoginBodyState extends State<_LoginBody> {
                 if (val.length > 30) return 'Maximum 30 characters';
                 return null;
               },
+            ),
+            const SizedBox(height: 14),
+            DropdownButtonFormField<int>(
+              initialValue: _selectedGender,
+              decoration: _inputDeco(
+                label: 'Gender',
+                hint: 'Select gender',
+                icon: Icons.person_outline,
+              ),
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppTheme.textPrimary,
+              ),
+              dropdownColor: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              isDense: true,
+              items: const [
+                DropdownMenuItem(
+                  value: 0,
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 4),
+                    child: Text('Male', style: TextStyle(fontSize: 13)),
+                  ),
+                ),
+                DropdownMenuItem(
+                  value: 1,
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 4),
+                    child: Text('Female', style: TextStyle(fontSize: 13)),
+                  ),
+                ),
+              ],
+              onChanged: (v) => setState(() => _selectedGender = v),
+              validator: (v) => v == null ? 'Please select a gender' : null,
             ),
             const SizedBox(height: 14),
           ],

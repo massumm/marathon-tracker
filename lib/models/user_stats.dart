@@ -7,6 +7,8 @@ class UserStats {
   final int totalRuns;
   final int totalSeconds;
   final int age;
+  // 0 = male, 1 = female, null = not set
+  final int? gender;
   int rank;
 
   UserStats({
@@ -18,6 +20,7 @@ class UserStats {
     required this.totalRuns,
     required this.totalSeconds,
     this.age = 0,
+    this.gender,
     this.rank = 0,
   });
 
@@ -31,6 +34,7 @@ class UserStats {
       totalRuns: (map['totalRuns'] as num?)?.toInt() ?? 0,
       totalSeconds: (map['totalSeconds'] as num?)?.toInt() ?? 0,
       age: (map['age'] as num?)?.toInt() ?? 0,
+      gender: (map['gender'] as num?)?.toInt(),
     );
   }
 

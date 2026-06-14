@@ -24,6 +24,7 @@ import 'l10n/strings.dart';
 import 'screens/home_screen.dart';
 import 'screens/kml_map_screen.dart';
 import 'screens/leaderboard_screen.dart';
+import 'screens/email_verification_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/my_page_map_screen.dart';
 import 'screens/my_routes_screen.dart';
@@ -116,6 +117,10 @@ class MapApp extends StatelessWidget {
         GetPage(
           name: AppRoutes.login,
           page: () => const LoginScreen(),
+        ),
+        GetPage(
+          name: AppRoutes.emailVerification,
+          page: () => const EmailVerificationScreen(),
         ),
         GetPage(
           name: AppRoutes.home,

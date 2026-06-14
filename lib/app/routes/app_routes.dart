@@ -1,6 +1,7 @@
 abstract class AppRoutes {
   static const splash = '/';
   static const login = '/login';
+  static const emailVerification = '/email-verification';
   static const home = '/home';
   static const kmlMap = '/kml-map';
   static const myPageMap = '/my-page-map';

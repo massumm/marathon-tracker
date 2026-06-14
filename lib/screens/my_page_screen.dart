@@ -744,18 +744,44 @@ class _ProfileHeader extends StatelessWidget {
                         style: const TextStyle(
                             fontSize: 12, color: AppTheme.textSecondary)),
                   const SizedBox(height: 6),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text('runner'.tr,
-                        style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.primary)),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text('runner'.tr,
+                            style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.primary)),
+                      ),
+                      if (controller.myStats.value?.gender != null) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: controller.myStats.value!.gender == 0
+                                ? Colors.blue.withValues(alpha: 0.1)
+                                : Colors.pink.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Icon(
+                            controller.myStats.value!.gender == 0
+                                ? Icons.male
+                                : Icons.female,
+                            size: 15,
+                            color: controller.myStats.value!.gender == 0
+                                ? Colors.blue.shade400
+                                : Colors.pink.shade300,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),

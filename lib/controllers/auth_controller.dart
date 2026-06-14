@@ -17,9 +17,9 @@ class AuthController extends GetxController {
 
   final isLoading = false.obs;
 
-  // Username set just before account creation so the authStateChanges listener
-  // can write the correct displayName when it fires.
   String? _pendingUsername;
+  int? _pendingGender;
+  bool _pendingVerification = false;
 
   User? get currentUser => _auth.currentUser;
 
@@ -27,13 +27,15 @@ class AuthController extends GetxController {
   void onReady() {
     super.onReady();
     _auth.authStateChanges().listen((user) {
+      if (_pendingVerification) return;
       if (user != null) {
         final username = _pendingUsername;
+        final gender = _pendingGender;
         _pendingUsername = null;
+        _pendingGender = null;
         FriendsService.instance.registerProfile(displayName: username);
         UserStatsService.instance.registerOrUpdate(displayName: username);
-        //LiveTrackingService.instance.cleanupStaleBroadcast();
-        //UserStatsService.instance.syncPendingStats();
+        if (gender != null) UserStatsService.instance.updateGender(gender);
         Get.offAllNamed(AppRoutes.home);
       } else {
         Get.offAllNamed(AppRoutes.login);
@@ -73,18 +75,23 @@ class AuthController extends GetxController {
   }
 
   Future<void> signUpWithEmail(
-      String email, String password, String username) async {
+      String email, String password, String username,
+      {int? gender}) async {
     isLoading.value = true;
     try {
       // Store before creation so authStateChanges listener picks it up.
       _pendingUsername = username.trim();
+      _pendingGender = gender;
+      _pendingVerification = true;
       final cred = await _auth.createUserWithEmailAndPassword(
           email: email.trim(), password: password);
-      // Persist displayName in Firebase Auth so future sign-ins resolve it
-      // correctly without falling back to the email prefix.
       await cred.user?.updateProfile(displayName: username.trim());
+      await cred.user?.sendEmailVerification();
+      Get.offAllNamed(AppRoutes.emailVerification, arguments: email.trim());
     } catch (e) {
       _pendingUsername = null;
+      _pendingGender = null;
+      _pendingVerification = false;
       rethrow;
     } finally {
       isLoading.value = false;
@@ -135,6 +142,27 @@ class AuthController extends GetxController {
   String _sha256(String input) {
     final bytes = utf8.encode(input);
     return sha256.convert(bytes).toString();
+  }
+
+  Future<bool> checkEmailVerified() async {
+    await _auth.currentUser?.reload();
+    final verified = _auth.currentUser?.emailVerified ?? false;
+    if (verified) {
+      _pendingVerification = false;
+      final username = _pendingUsername;
+      final gender = _pendingGender;
+      _pendingUsername = null;
+      _pendingGender = null;
+      FriendsService.instance.registerProfile(displayName: username);
+      UserStatsService.instance.registerOrUpdate(displayName: username);
+      if (gender != null) UserStatsService.instance.updateGender(gender);
+      Get.offAllNamed(AppRoutes.home);
+    }
+    return verified;
+  }
+
+  Future<void> resendVerificationEmail() async {
+    await _auth.currentUser?.sendEmailVerification();
   }
 
   Future<void> sendPasswordReset(String email) async {
