@@ -1,69 +1,90 @@
-import 'dart:async';
-
 import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import '../models/event_model.dart';
 import '../services/event_notification_service.dart';
 
 class MapController extends GetxController {
+  static const _pageSize = 20;
+
   final events = <EventModel>[].obs;
   final isLoading = false.obs;
+  final isLoadingMore = false.obs;
+  final hasMore = true.obs;
   final errorMsg = ''.obs;
 
-  StreamSubscription? _eventsSub;
+  EventModel? _cursor;
 
   @override
   void onInit() {
     super.onInit();
-    isLoading.value = true;
-    final ref = FirebaseDatabase.instance.ref('events');
-    // keepSynced ensures the cache is kept fresh whenever online.
-    ref.keepSynced(true);
-    _eventsSub = ref.orderByChild('createdAt').onValue.listen(
-      (event) {
-        if (event.snapshot.exists && event.snapshot.value != null) {
-          final map = event.snapshot.value as Map<dynamic, dynamic>;
-          events.value = map.entries
-              .map((e) => EventModel.fromMap(
-                  e.key as String, e.value as Map<dynamic, dynamic>))
-              .toList()
-            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-        } else {
-          events.value = [];
-        }
-        isLoading.value = false;
-        errorMsg.value = '';
-        EventNotificationService.instance.scheduleForEvents(events.toList());
-      },
-      onError: (_) {
-        errorMsg.value = 'Error loading events';
-        isLoading.value = false;
-      },
-    );
+    _loadPage();
   }
 
-  Future<void> fetchEvents() async {
+  Future<void> _loadPage() async {
+    if (isLoading.value || isLoadingMore.value || !hasMore.value) return;
+
+    if (_cursor == null) {
+      isLoading.value = true;
+    } else {
+      isLoadingMore.value = true;
+    }
+
     try {
-      final snap = await FirebaseDatabase.instance
+      var query = FirebaseDatabase.instance
           .ref('events')
           .orderByChild('createdAt')
-          .get();
+          .limitToLast(_cursor == null ? _pageSize : _pageSize + 1);
+
+      if (_cursor != null) {
+        query = query.endAt(_cursor!.createdAt, key: _cursor!.id);
+      }
+
+      final snap = await query.get();
+      debugPrint('[MapController] snap exists=${snap.exists}, cursor=${_cursor?.id}');
+      var page = <EventModel>[];
+
       if (snap.exists && snap.value != null) {
         final map = snap.value as Map<dynamic, dynamic>;
-        events.value = map.entries
+        page = map.entries
             .map((e) => EventModel.fromMap(
                 e.key as String, e.value as Map<dynamic, dynamic>))
             .toList()
           ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      } else {
-        events.value = [];
+
+        if (_cursor != null) {
+          page.removeWhere((e) => e.id == _cursor!.id);
+        }
       }
-    } catch (_) {}
+
+      debugPrint('[MapController] page.length=${page.length}, names=${page.map((e) => e.name).toList()}');
+      events.addAll(page);
+
+      if (page.isNotEmpty) _cursor = page.last;
+      hasMore.value = page.length == _pageSize;
+      debugPrint('[MapController] total events=${events.length}, hasMore=${hasMore.value}, newCursor=${_cursor?.id}');
+      errorMsg.value = '';
+      EventNotificationService.instance.scheduleForEvents(events.toList());
+    } catch (_) {
+      errorMsg.value = 'Error loading events';
+    } finally {
+      isLoading.value = false;
+      isLoadingMore.value = false;
+    }
   }
 
+  Future<void> loadMore() => _loadPage();
+
   @override
-  void onClose() {
-    _eventsSub?.cancel();
-    super.onClose();
+  Future<void> refresh() async {
+    events.clear();
+    _cursor = null;
+    hasMore.value = true;
+    isLoading.value = false;
+    isLoadingMore.value = false;
+    errorMsg.value = '';
+    await _loadPage();
   }
+
+  Future<void> fetchEvents() => refresh();
 }

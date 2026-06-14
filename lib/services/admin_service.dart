@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_storage/firebase_storage.dart' as fs;
+import 'package:flutter/foundation.dart';
 
 import '../models/admin_user_model.dart';
 import '../models/event_model.dart';
@@ -187,38 +188,35 @@ class AdminService {
           : <dynamic, dynamic>{};
 
       final now = DateTime.now().millisecondsSinceEpoch;
-      final list = map.entries
-          .map((e) {
-            final uid = e.key as String;
-            final runner =
-                RunnerData.fromMap(uid, e.value as Map<dynamic, dynamic>);
-            final stats = statsMap[uid];
-            final resolvedName = (stats is Map)
-                ? (stats['displayName'] as String? ?? '').trim()
-                : '';
-            final displayName = resolvedName.isNotEmpty
-                ? resolvedName
-                : runner.displayName.isNotEmpty &&
-                        runner.displayName != 'Runner'
-                    ? runner.displayName
-                    : runner.email.isNotEmpty
-                        ? runner.email.split('@').first
-                        : uid;
-            return RunnerData(
-              uid: runner.uid,
-              email: runner.email,
-              displayName: displayName,
-              photoUrl: runner.photoUrl,
-              lat: runner.lat,
-              lng: runner.lng,
-              startedAt: runner.startedAt,
-              lastSeen: runner.lastSeen,
-              distanceKm: runner.distanceKm,
-              eventId: runner.eventId,
-              categoryId: runner.categoryId,
-            );
-          })
-          .toList();
+      final list = map.entries.map((e) {
+        final uid = e.key as String;
+        final runner =
+            RunnerData.fromMap(uid, e.value as Map<dynamic, dynamic>);
+        final stats = statsMap[uid];
+        final resolvedName = (stats is Map)
+            ? (stats['displayName'] as String? ?? '').trim()
+            : '';
+        final displayName = resolvedName.isNotEmpty
+            ? resolvedName
+            : runner.displayName.isNotEmpty && runner.displayName != 'Runner'
+                ? runner.displayName
+                : runner.email.isNotEmpty
+                    ? runner.email.split('@').first
+                    : uid;
+        return RunnerData(
+          uid: runner.uid,
+          email: runner.email,
+          displayName: displayName,
+          photoUrl: runner.photoUrl,
+          lat: runner.lat,
+          lng: runner.lng,
+          startedAt: runner.startedAt,
+          lastSeen: runner.lastSeen,
+          distanceKm: runner.distanceKm,
+          eventId: runner.eventId,
+          categoryId: runner.categoryId,
+        );
+      }).toList();
 
       // Online runners (lastSeen < 2 min) first, then offline — both groups
       // sorted by distance descending so the leaderboard stays meaningful.
@@ -239,8 +237,7 @@ class AdminService {
       _db.ref('user_stats').get(),
       _db.ref('events').get(),
     ]);
-    final userCount =
-        results[0].exists ? (results[0].value as Map).length : 0;
+    final userCount = results[0].exists ? (results[0].value as Map).length : 0;
     int eventCount = 0;
     if (results[1].exists) {
       final eventsMap = results[1].value as Map;
@@ -261,8 +258,7 @@ class AdminService {
   Stream<Map<String, int>> watchStats({String? organizerUid}) {
     return _db.ref('events').onValue.asyncMap((eventsEvent) async {
       final usersSnap = await _db.ref('user_stats').get();
-      final userCount =
-          usersSnap.exists ? (usersSnap.value as Map).length : 0;
+      final userCount = usersSnap.exists ? (usersSnap.value as Map).length : 0;
       int eventCount = 0;
       if (eventsEvent.snapshot.exists) {
         final eventsMap = eventsEvent.snapshot.value as Map;
@@ -292,11 +288,48 @@ class AdminService {
           .toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
       if (organizerUid != null) {
-        events =
-            events.where((ev) => ev.organizerUid == organizerUid).toList();
+        events = events.where((ev) => ev.organizerUid == organizerUid).toList();
       }
       return events;
     });
+  }
+
+  Future<List<EventModel>> fetchEventsPage({
+    int pageSize = 15,
+    EventModel? cursor,
+    String? organizerUid,
+  }) async {
+    Query query = _db
+        .ref('events')
+        .orderByChild('createdAt')
+        .limitToLast(cursor == null ? pageSize : pageSize + 1);
+
+    if (cursor != null) {
+      query = query.endAt(cursor.createdAt, key: cursor.id);
+    }
+
+    final snap = await query.get();
+    if (!snap.exists || snap.value == null) return [];
+
+    final map = snap.value as Map<dynamic, dynamic>;
+    var events = map.entries
+        .map((e) => EventModel.fromMap(
+            e.key as String, e.value as Map<dynamic, dynamic>))
+        .toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+    if (kDebugMode) {
+      print(events.map((e) => '${e.id}: ${e.createdAt}').join('\n'));
+    }
+    if (cursor != null) {
+      events.removeWhere((e) => e.id == cursor.id);
+    }
+
+    if (organizerUid != null) {
+      events = events.where((ev) => ev.organizerUid == organizerUid).toList();
+    }
+
+    return events;
   }
 
   Future<String> createEvent(Map<String, dynamic> data) async {
@@ -350,11 +383,12 @@ class AdminService {
     return ref.getDownloadURL();
   }
 
-  Future<String> uploadKml(
-      String eventId, String categoryId, String fileName, Uint8List bytes) async {
+  Future<String> uploadKml(String eventId, String categoryId, String fileName,
+      Uint8List bytes) async {
     final storagePath = 'events/$eventId/kml/$categoryId.kml';
     final ref = _storage.ref(storagePath);
-    await ref.putData(bytes,
+    await ref.putData(
+        bytes,
         fs.SettableMetadata(
             contentType: 'application/vnd.google-earth.kml+xml'));
     return ref.getDownloadURL();
@@ -381,8 +415,7 @@ class AdminService {
         'displayName': data['displayName'] as String? ?? '',
         'email': data['email'] as String? ?? '',
         'photoUrl': data['photoUrl'] as String? ?? '',
-        'totalDistanceKm':
-            (data['totalDistanceKm'] as num?)?.toDouble() ?? 0.0,
+        'totalDistanceKm': (data['totalDistanceKm'] as num?)?.toDouble() ?? 0.0,
         'totalRuns': (data['totalRuns'] as num?)?.toInt() ?? 0,
         'totalSeconds': (data['totalSeconds'] as num?)?.toInt() ?? 0,
       };

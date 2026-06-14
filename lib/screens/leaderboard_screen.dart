@@ -9,42 +9,63 @@ import '../services/group_service.dart';
 import '../services/user_stats_service.dart';
 import '../widgets/user_avatar.dart';
 
-class LeaderboardScreen extends StatelessWidget {
+class LeaderboardScreen extends StatefulWidget {
   const LeaderboardScreen({super.key});
+
+  @override
+  State<LeaderboardScreen> createState() => _LeaderboardScreenState();
+}
+
+class _LeaderboardScreenState extends State<LeaderboardScreen> {
+  // null = all, 0 = male, 1 = female
+  int? _genderFilter;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('leaderboard'.tr)),
-      body: StreamBuilder<List<GroupModel>>(
-        stream: GroupService.instance.watchAllMyGroups(),
-        builder: (ctx, snap) {
-          if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final groups = snap.data ?? [];
-          if (groups.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.groups_outlined,
-                      size: 72, color: Colors.grey.shade300),
-                  const SizedBox(height: 16),
-                  Text('no_groups_leaderboard'.tr,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                          fontSize: 15, color: AppTheme.textSecondary)),
-                ],
-              ),
-            );
-          }
-          return ListView.builder(
-            padding: const EdgeInsets.only(bottom: 40),
-            itemCount: groups.length,
-            itemBuilder: (_, i) => _GroupSection(group: groups[i]),
-          );
-        },
+      body: Column(
+        children: [
+          _GenderFilterBar(
+            selected: _genderFilter,
+            onChanged: (v) => setState(() => _genderFilter = v),
+          ),
+          Expanded(
+            child: StreamBuilder<List<GroupModel>>(
+              stream: GroupService.instance.watchAllMyGroups(),
+              builder: (ctx, snap) {
+                if (snap.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final groups = snap.data ?? [];
+                if (groups.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.groups_outlined,
+                            size: 72, color: Colors.grey.shade300),
+                        const SizedBox(height: 16),
+                        Text('no_groups_leaderboard'.tr,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                                fontSize: 15, color: AppTheme.textSecondary)),
+                      ],
+                    ),
+                  );
+                }
+                return ListView.builder(
+                  padding: const EdgeInsets.only(bottom: 40),
+                  itemCount: groups.length,
+                  itemBuilder: (_, i) => _GroupSection(
+                    group: groups[i],
+                    genderFilter: _genderFilter,
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -54,7 +75,8 @@ class LeaderboardScreen extends StatelessWidget {
 
 class _GroupSection extends StatelessWidget {
   final GroupModel group;
-  const _GroupSection({required this.group});
+  final int? genderFilter;
+  const _GroupSection({required this.group, this.genderFilter});
 
   @override
   Widget build(BuildContext context) {
@@ -135,7 +157,12 @@ class _GroupSection extends StatelessWidget {
                       child: Center(child: CircularProgressIndicator()),
                     );
                   }
-                  final stats = statsSnap.data ?? [];
+                  final allStats = statsSnap.data ?? [];
+                  final stats = genderFilter == null
+                      ? allStats
+                      : allStats
+                          .where((s) => s.gender == genderFilter)
+                          .toList();
                   if (stats.isEmpty) return _noDataRow('no_run_data_yet'.tr);
                   return Column(
                     children: [
@@ -163,6 +190,54 @@ class _GroupSection extends StatelessWidget {
             style: const TextStyle(
                 fontSize: 13, color: AppTheme.textSecondary)),
       );
+}
+
+// ── Gender filter ─────────────────────────────────────────────────────────────
+
+class _GenderFilterBar extends StatelessWidget {
+  final int? selected;
+  final ValueChanged<int?> onChanged;
+  const _GenderFilterBar({required this.selected, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          _chip(null, 'All'),
+          const SizedBox(width: 8),
+          _chip(0, 'Male'),
+          const SizedBox(width: 8),
+          _chip(1, 'Female'),
+        ],
+      ),
+    );
+  }
+
+  Widget _chip(int? value, String label) {
+    final active = selected == value;
+    return ChoiceChip(
+      label: Text(label),
+      selected: active,
+      onSelected: (_) => onChanged(value),
+      selectedColor: AppTheme.primary.withValues(alpha: 0.15),
+      labelStyle: TextStyle(
+        color: active ? AppTheme.primary : AppTheme.textSecondary,
+        fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+        fontSize: 12,
+      ),
+      side: BorderSide(
+        color: active
+            ? AppTheme.primary.withValues(alpha: 0.5)
+            : Colors.grey.shade300,
+      ),
+      backgroundColor: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      visualDensity: VisualDensity.compact,
+    );
+  }
 }
 
 // ── Podium (top 3 within a group) ─────────────────────────────────────────────

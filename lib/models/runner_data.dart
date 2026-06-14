@@ -10,6 +10,8 @@ class RunnerData {
   final double distanceKm;
   final String eventId;
   final String categoryId;
+  // 0 = male, 1 = female, null = not set
+  final int? gender;
 
   RunnerData({
     required this.uid,
@@ -23,6 +25,7 @@ class RunnerData {
     this.distanceKm = 0.0,
     this.eventId = '',
     this.categoryId = '',
+    this.gender,
   }) : lastSeen = lastSeen ?? startedAt;
 
   factory RunnerData.fromMap(String uid, Map<dynamic, dynamic> map) {
@@ -40,6 +43,7 @@ class RunnerData {
       distanceKm: (map['distanceKm'] as num?)?.toDouble() ?? 0.0,
       eventId: map['eventId'] as String? ?? '',
       categoryId: map['categoryId'] as String? ?? '',
+      gender: (map['gender'] as num?)?.toInt(),
     );
   }
 
@@ -54,5 +58,6 @@ class RunnerData {
         'distanceKm': distanceKm,
         'eventId': eventId,
         'categoryId': categoryId,
+        if (gender != null) 'gender': gender,
       };
 }

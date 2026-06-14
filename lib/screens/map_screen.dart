@@ -21,7 +21,27 @@ class MapScreen extends StatefulWidget {
 
 class _MapScreenState extends State<MapScreen> {
   final _ctrl = Get.find<MapController>();
+  final _scrollController = ScrollController();
   String _filter = 'all';
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 300) {
+      _ctrl.loadMore();
+    }
+  }
 
   bool _isLive(EventModel e) {
     if (e.isFinished) return false;
@@ -129,14 +149,27 @@ class _MapScreenState extends State<MapScreen> {
                 );
               }
               return RefreshIndicator(
-                onRefresh: _ctrl.fetchEvents,
+                onRefresh: _ctrl.refresh,
                 child: ListView.builder(
+                  controller: _scrollController,
                   padding: EdgeInsets.only(
                     top: 8,
                     bottom: MediaQuery.of(context).padding.bottom + 8,
                   ),
-                  itemCount: filtered.length,
-                  itemBuilder: (_, i) => _EventCard(key: ValueKey(filtered[i].id), event: filtered[i]),
+                  itemCount: filtered.length +
+                      (_ctrl.isLoadingMore.value ? 1 : 0),
+                  itemBuilder: (_, i) {
+                    if (i == filtered.length) {
+                      return const Center(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 24),
+                          child: CircularProgressIndicator(),
+                        ),
+                      );
+                    }
+                    return _EventCard(
+                        key: ValueKey(filtered[i].id), event: filtered[i]);
+                  },
                 ),
               );
             }),

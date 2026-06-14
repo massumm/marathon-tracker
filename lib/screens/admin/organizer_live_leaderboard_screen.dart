@@ -34,6 +34,8 @@ class _OrganizerLiveLeaderboardScreenState
   StreamSubscription<List<RunnerData>>? _runnersSub;
   List<RunnerData> _runners = [];
   Set<String> _finishedCats = {};
+  // null = all, 0 = male, 1 = female
+  int? _genderFilter;
 
   Set<String> _computeFinishedCats() => widget.event.categories.values
       .where(widget.event.isCategoryFinished)
@@ -330,30 +332,12 @@ class _OrganizerLiveLeaderboardScreenState
   /// which show all runners.
   Widget _buildLeaderboard(RaceCategory? cat) {
     final finished = cat != null && _finishedCats.contains(cat.id);
-    final runners = cat == null
+    final byCategory = cat == null
         ? _runners
         : _runners.where((r) => r.categoryId == cat.id).toList();
-
-    if (runners.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.directions_run_outlined,
-                size: 64, color: Colors.grey.shade300),
-            const SizedBox(height: 16),
-            const Text('No runners yet',
-                style: TextStyle(fontSize: 16, color: AppTheme.textSecondary)),
-            const SizedBox(height: 8),
-            Text(
-              'Waiting for participants in "${widget.event.name}"...',
-              style: const TextStyle(
-                  fontSize: 13, color: AppTheme.textSecondary),
-            ),
-          ],
-        ),
-      );
-    }
+    final runners = _genderFilter == null
+        ? byCategory
+        : byCategory.where((r) => r.gender == _genderFilter).toList();
 
     return Column(
       children: [
@@ -372,14 +356,87 @@ class _OrganizerLiveLeaderboardScreenState
                   cutoffRemaining: cutoffDisplay);
             },
           ),
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            itemCount: runners.length,
-            itemBuilder: (_, i) => _RunnerRow(runner: runners[i], rank: i + 1),
-          ),
+        _GenderFilterBar(
+          selected: _genderFilter,
+          onChanged: (v) => setState(() => _genderFilter = v),
         ),
+        if (runners.isEmpty)
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.directions_run_outlined,
+                      size: 64, color: Colors.grey.shade300),
+                  const SizedBox(height: 16),
+                  const Text('No runners yet',
+                      style: TextStyle(
+                          fontSize: 16, color: AppTheme.textSecondary)),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Waiting for participants in "${widget.event.name}"...',
+                    style: const TextStyle(
+                        fontSize: 13, color: AppTheme.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              itemCount: runners.length,
+              itemBuilder: (_, i) => _RunnerRow(runner: runners[i], rank: i + 1),
+            ),
+          ),
       ],
+    );
+  }
+}
+
+class _GenderFilterBar extends StatelessWidget {
+  final int? selected;
+  final ValueChanged<int?> onChanged;
+  const _GenderFilterBar({required this.selected, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          _chip(null, 'All'),
+          const SizedBox(width: 8),
+          _chip(0, 'Male'),
+          const SizedBox(width: 8),
+          _chip(1, 'Female'),
+        ],
+      ),
+    );
+  }
+
+  Widget _chip(int? value, String label) {
+    final active = selected == value;
+    return ChoiceChip(
+      label: Text(label),
+      selected: active,
+      onSelected: (_) => onChanged(value),
+      selectedColor: AppTheme.primary.withValues(alpha: 0.15),
+      labelStyle: TextStyle(
+        color: active ? AppTheme.primary : AppTheme.textSecondary,
+        fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+        fontSize: 12,
+      ),
+      side: BorderSide(
+        color: active
+            ? AppTheme.primary.withValues(alpha: 0.5)
+            : Colors.grey.shade300,
+      ),
+      backgroundColor: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      visualDensity: VisualDensity.compact,
     );
   }
 }

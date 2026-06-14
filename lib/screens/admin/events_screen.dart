@@ -5,61 +5,121 @@ import '../../models/event_model.dart';
 import '../../services/admin_service.dart';
 import 'event_form_screen.dart';
 
-class AdminEventsScreen extends StatelessWidget {
+class AdminEventsScreen extends StatefulWidget {
   const AdminEventsScreen({super.key});
 
   @override
+  State<AdminEventsScreen> createState() => _AdminEventsScreenState();
+}
+
+class _AdminEventsScreenState extends State<AdminEventsScreen> {
+  static const _pageSize = 15;
+
+  final _scrollController = ScrollController();
+  final _events = <EventModel>[];
+  bool _loading = false;
+  bool _hasMore = true;
+  bool _initialized = false;
+  EventModel? _cursor;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPage();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      _loadPage();
+    }
+  }
+
+  Future<void> _loadPage() async {
+    if (_loading || !_hasMore) return;
+    setState(() => _loading = true);
+
+    final page = await AdminService.instance.fetchEventsPage(
+      pageSize: _pageSize,
+      cursor: _cursor,
+    );
+
+    if (!mounted) return;
+    setState(() {
+      _events.addAll(page);
+      if (page.isNotEmpty) _cursor = page.last;
+      _hasMore = page.length == _pageSize;
+      _loading = false;
+      _initialized = true;
+    });
+  }
+
+  Future<void> _refresh() async {
+    setState(() {
+      _events.clear();
+      _cursor = null;
+      _hasMore = true;
+      _initialized = false;
+    });
+    await _loadPage();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (!_initialized) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return Stack(
       children: [
-        StreamBuilder<List<EventModel>>(
-          stream: AdminService.instance.watchEvents(),
-          builder: (_, snap) {
-            if (snap.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (snap.hasError) {
-              return Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.error_outline,
-                        size: 48, color: Colors.red.shade300),
-                    const SizedBox(height: 12),
-                    const Text('Failed to load events',
-                        style: TextStyle(color: AppTheme.textSecondary)),
-                  ],
-                ),
+        if (_events.isEmpty)
+          Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.event_outlined,
+                    size: 64, color: Colors.grey.shade300),
+                const SizedBox(height: 16),
+                const Text('No events yet',
+                    style: TextStyle(
+                        fontSize: 16, color: AppTheme.textSecondary)),
+                const SizedBox(height: 8),
+                const Text('Create your first marathon event',
+                    style: TextStyle(
+                        fontSize: 13, color: AppTheme.textSecondary)),
+              ],
+            ),
+          )
+        else
+          ListView.builder(
+            controller: _scrollController,
+            padding: const EdgeInsets.fromLTRB(28, 28, 28, 100),
+            itemCount: _events.length + (_loading ? 1 : 0),
+            itemBuilder: (_, i) {
+              if (i == _events.length) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+              }
+              final event = _events[i];
+              return _EventCard(
+                event: event,
+                onDeleted: () =>
+                    setState(() => _events.removeWhere((e) => e.id == event.id)),
+                onEdited: _refresh,
               );
-            }
-            final events = snap.data ?? [];
-            if (events.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.event_outlined,
-                        size: 64, color: Colors.grey.shade300),
-                    const SizedBox(height: 16),
-                    const Text('No events yet',
-                        style: TextStyle(
-                            fontSize: 16, color: AppTheme.textSecondary)),
-                    const SizedBox(height: 8),
-                    const Text('Create your first marathon event',
-                        style: TextStyle(
-                            fontSize: 13, color: AppTheme.textSecondary)),
-                  ],
-                ),
-              );
-            }
-
-            return ListView.builder(
-              padding: const EdgeInsets.fromLTRB(28, 28, 28, 100),
-              itemCount: events.length,
-              itemBuilder: (_, i) => _EventCard(event: events[i]),
-            );
-          },
-        ),
+            },
+          ),
 
         // FAB
         Positioned(
@@ -71,7 +131,7 @@ class AdminEventsScreen extends StatelessWidget {
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const EventFormScreen()),
-            ),
+            ).then((_) => _refresh()),
           ),
         ),
       ],
@@ -81,7 +141,14 @@ class AdminEventsScreen extends StatelessWidget {
 
 class _EventCard extends StatelessWidget {
   final EventModel event;
-  const _EventCard({required this.event});
+  final VoidCallback onDeleted;
+  final VoidCallback onEdited;
+
+  const _EventCard({
+    required this.event,
+    required this.onDeleted,
+    required this.onEdited,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -178,10 +245,9 @@ class _EventCard extends StatelessWidget {
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) =>
-                              EventFormScreen(existing: event),
+                          builder: (_) => EventFormScreen(existing: event),
                         ),
-                      ),
+                      ).then((_) => onEdited()),
                     ),
                     const SizedBox(width: 4),
                     _ActionIcon(
@@ -265,7 +331,8 @@ class _EventCard extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 10,
                                 color: hasKml
-                                    ? AppTheme.trackingGreen.withValues(alpha: 0.7)
+                                    ? AppTheme.trackingGreen
+                                        .withValues(alpha: 0.7)
                                     : Colors.grey,
                               ),
                             ),
@@ -306,9 +373,10 @@ class _EventCard extends StatelessWidget {
               onPressed: () => Navigator.pop(dialogCtx),
               child: const Text('Cancel')),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(dialogCtx);
-              AdminService.instance.deleteEvent(event.id);
+              await AdminService.instance.deleteEvent(event.id);
+              onDeleted();
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Delete'),
