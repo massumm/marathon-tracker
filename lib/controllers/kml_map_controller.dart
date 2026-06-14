@@ -13,6 +13,7 @@ import 'package:http/http.dart' as http;
 import '../app/routes/app_routes.dart';
 import '../core/config.dart';
 import '../core/theme.dart';
+import '../models/event_model.dart';
 import '../models/runner_data.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -189,8 +190,9 @@ class KmlMapController extends GetxController {
         });
       }
       _graceTimeMinutes = args['graceTimeMinutes'] as int? ?? 10;
-      _categoryCutoffMinutes =
-          _parseCutoffMinutes(args['categoryCutoff'] as String? ?? '');
+      final cutoffMins = RaceCategory.parseCutoffMinutes(
+          args['categoryCutoff'] as String? ?? '');
+      _categoryCutoffMinutes = cutoffMins > 0 ? cutoffMins : null;
       categoryCutoffDeadline = eventStartTime != null && _categoryCutoffMinutes != null
           ? eventStartTime!.add(Duration(minutes: _categoryCutoffMinutes!))
           : null;
@@ -208,18 +210,6 @@ class KmlMapController extends GetxController {
       _categoryCutoffMinutes = null;
     }
     _loadKml();
-  }
-
-  /// Parses "HH:MM" or "HH:MM suffix" cutoff strings into total minutes.
-  /// Returns null when the string can't be parsed or totals zero.
-  int? _parseCutoffMinutes(String s) {
-    final parts = s.trim().split(':');
-    if (parts.length < 2) return null;
-    final h = int.tryParse(parts[0].trim());
-    final m = int.tryParse(parts[1].trim().split(' ').first);
-    if (h == null || m == null) return null;
-    final total = h * 60 + m;
-    return total > 0 ? total : null;
   }
 
   Future<void> _loadFriendsAndSubscribe() async {

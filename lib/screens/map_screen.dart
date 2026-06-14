@@ -365,6 +365,8 @@ class _EventCardState extends State<_EventCard> {
         'hasStartTime': widget.event.startTime.isNotEmpty,
         'cutoffMinutes': widget.event.cutoffMinutes,
         'chipTimeMinutes': widget.event.chipTimeMinutes,
+        'graceTimeMinutes': widget.event.graceTimeMinutes,
+        'categoryCutoff': cat.cutoff,
       },
     );
   }

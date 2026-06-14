@@ -1,7 +1,7 @@
 class RaceCategory {
   final String id;
   final String label;
-  final String cutoff;
+  final String cutoff; // display string, e.g. "03:45" or legacy "90 Minutes"
   final String kmlPath;
   final String kmlUrl;
 
@@ -12,6 +12,31 @@ class RaceCategory {
     required this.kmlPath,
     required this.kmlUrl,
   });
+
+  /// Total cutoff minutes derived from [cutoff]; 0 = no cutoff.
+  int get cutoffMinutes => parseCutoffMinutes(cutoff);
+
+  /// Parses a cutoff display string into total minutes. Accepts "HH:MM",
+  /// "HH:MM suffix" ("03:45 Hours") and legacy phrases ("2 Hours 30 Minutes",
+  /// "90 Minutes"). Returns 0 when nothing parseable ("No Cut-Off Time").
+  static int parseCutoffMinutes(String raw) {
+    final s = raw.trim();
+    if (s.contains(':')) {
+      final parts = s.split(':');
+      if (parts.length != 2) return 0;
+      final h = int.tryParse(parts[0].trim());
+      final m = int.tryParse(parts[1].trim().split(' ').first);
+      if (h == null || m == null) return 0;
+      return h * 60 + m;
+    }
+    var total = 0;
+    for (final match in RegExp(r'(\d+)\s*(hour|minute)', caseSensitive: false)
+        .allMatches(s)) {
+      final n = int.parse(match.group(1)!);
+      total += match.group(2)!.toLowerCase() == 'hour' ? n * 60 : n;
+    }
+    return total;
+  }
 
   factory RaceCategory.fromMap(String id, Map<dynamic, dynamic> map) {
     return RaceCategory(
@@ -67,6 +92,15 @@ class EventModel {
   });
 
   bool get hasCutoff => cutoffMinutes > 0 && startTime.isNotEmpty;
+
+  /// True when [cat]'s own cutoff has passed, relative to this event's start.
+  /// Always false when the category has no cutoff or the event has no
+  /// startTime (mirrors [hasCutoff] — without a start there is no deadline).
+  bool isCategoryFinished(RaceCategory cat, {DateTime? now}) {
+    if (cat.cutoffMinutes <= 0 || startTime.isEmpty) return false;
+    final deadline = eventDateTime.add(Duration(minutes: cat.cutoffMinutes));
+    return (now ?? DateTime.now()).isAfter(deadline);
+  }
 
   /// Wall-clock time when the event closes: eventDateTime + cutoffMinutes.
   DateTime get cutoffDateTime =>
@@ -125,6 +159,33 @@ class EventModel {
     final d = int.tryParse(parts[2]);
     if (y == null || m == null || d == null) return null;
     return DateTime(y, m, d);
+  }
+
+  /// Wall-clock moment when the whole event is over: startTime plus the
+  /// longest cutoff (event-level or any category's). Null when the event
+  /// can't auto-finish — no startTime, or a category without a cutoff and
+  /// no event-level cutoff to bound it.
+  DateTime? get finishDateTime {
+    if (startTime.isEmpty) return null;
+    var maxMins = cutoffMinutes;
+    for (final c in categories.values) {
+      if (c.cutoffMinutes <= 0) {
+        // No category cutoff — only the event-level cutoff can close it.
+        if (cutoffMinutes <= 0) return null;
+        continue;
+      }
+      if (c.cutoffMinutes > maxMins) maxMins = c.cutoffMinutes;
+    }
+    if (maxMins <= 0) return null;
+    return eventDateTime.add(Duration(minutes: maxMins));
+  }
+
+  /// True once final results can be shown: every cutoff has passed, or
+  /// failing that, the event date is behind us.
+  bool get isResultsReady {
+    if (isFinished) return true;
+    final finish = finishDateTime;
+    return finish != null && DateTime.now().isAfter(finish);
   }
 
   /// True when the event date is strictly before today (event has passed).

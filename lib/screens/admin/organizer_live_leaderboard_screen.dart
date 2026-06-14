@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/theme.dart';
@@ -32,6 +33,12 @@ class _OrganizerLiveLeaderboardScreenState
   late TabController _tabController;
   StreamSubscription<List<RunnerData>>? _runnersSub;
   List<RunnerData> _runners = [];
+  Set<String> _finishedCats = {};
+
+  Set<String> _computeFinishedCats() => widget.event.categories.values
+      .where(widget.event.isCategoryFinished)
+      .map((c) => c.id)
+      .toSet();
 
   @override
   void initState() {
@@ -43,6 +50,7 @@ class _OrganizerLiveLeaderboardScreenState
     });
     _remaining = ValueNotifier(Duration.zero);
     _cutoffRemaining = ValueNotifier(Duration.zero);
+    _finishedCats = _computeFinishedCats();
 
     debugPrint('[LEADERBOARD] Event: ${widget.event.name}, Categories count: ${widget.event.categories.length}');
     for (final cat in widget.event.categories.entries) {
@@ -104,6 +112,13 @@ class _OrganizerLiveLeaderboardScreenState
           _cutoffRemaining.value = cr;
         }
       }
+      // Per-category cutoffs are independent of the event-level cutoff —
+      // without this, a category tab only flips to final standings on the
+      // next runner update instead of at the cutoff moment.
+      final finishedNow = _computeFinishedCats();
+      if (!setEquals(finishedNow, _finishedCats)) {
+        setState(() => _finishedCats = finishedNow);
+      }
     });
   }
 
@@ -132,7 +147,7 @@ class _OrganizerLiveLeaderboardScreenState
     if (_counting) return _buildCountdown();
 
     if (widget.event.categories.isEmpty) {
-      return _buildLeaderboard('');
+      return _buildLeaderboard(null);
     }
 
     final categoryList = widget.event.categories.entries.toList();
@@ -151,7 +166,7 @@ class _OrganizerLiveLeaderboardScreenState
           child: TabBarView(
             controller: _tabController,
             children: categoryList
-                .map((catEntry) => _buildLeaderboard(catEntry.key))
+                .map((catEntry) => _buildLeaderboard(catEntry.value))
                 .toList(),
           ),
         ),
@@ -162,27 +177,31 @@ class _OrganizerLiveLeaderboardScreenState
   Widget _buildEnded() {
     return Column(
       children: [
-        Container(
-          color: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.flag_rounded, size: 20, color: Colors.grey),
-              const SizedBox(width: 8),
-              Text(
-                'Cutoff reached — Final Standings · ${widget.event.name}',
-                style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.textSecondary),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-        Expanded(child: _buildLeaderboard('')),
+        _finalStandingsBanner(widget.event.name),
+        Expanded(child: _buildLeaderboard(null)),
       ],
+    );
+  }
+
+  Widget _finalStandingsBanner(String label) {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.flag_rounded, size: 20, color: Colors.grey),
+          const SizedBox(width: 8),
+          Text(
+            'Cutoff reached — Final Standings · $label',
+            style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textSecondary),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
     );
   }
 
@@ -307,10 +326,13 @@ class _OrganizerLiveLeaderboardScreenState
     );
   }
 
-  Widget _buildLeaderboard(String categoryId) {
-    final runners = categoryId.isEmpty
+  /// [cat] is null for the no-categories and event-ended fallbacks,
+  /// which show all runners.
+  Widget _buildLeaderboard(RaceCategory? cat) {
+    final finished = cat != null && _finishedCats.contains(cat.id);
+    final runners = cat == null
         ? _runners
-        : _runners.where((r) => r.categoryId == categoryId).toList();
+        : _runners.where((r) => r.categoryId == cat.id).toList();
 
     if (runners.isEmpty) {
       return Center(
@@ -335,18 +357,21 @@ class _OrganizerLiveLeaderboardScreenState
 
     return Column(
       children: [
-        ValueListenableBuilder<Duration>(
-          valueListenable: _cutoffRemaining,
-          builder: (_, cutoff, __) {
-            final cutoffDisplay = (!_ended && widget.event.hasCutoff)
-                ? _fmtDuration(cutoff)
-                : null;
-            return _LiveBanner(
-                eventName: widget.event.name,
-                count: runners.length,
-                cutoffRemaining: cutoffDisplay);
-          },
-        ),
+        if (finished)
+          _finalStandingsBanner(cat.label)
+        else
+          ValueListenableBuilder<Duration>(
+            valueListenable: _cutoffRemaining,
+            builder: (_, cutoff, __) {
+              final cutoffDisplay = (!_ended && widget.event.hasCutoff)
+                  ? _fmtDuration(cutoff)
+                  : null;
+              return _LiveBanner(
+                  eventName: widget.event.name,
+                  count: runners.length,
+                  cutoffRemaining: cutoffDisplay);
+            },
+          ),
         Expanded(
           child: ListView.builder(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),

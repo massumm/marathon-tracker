@@ -856,11 +856,12 @@ class _EventFormScreenState extends State<EventFormScreen> {
                                   readOnly: true,
                                   onTap: () async {
                                     final existing = entry.cutoffCtrl.text.trim();
-                                    final parts = existing.split(':');
-                                    final initial = parts.length == 2
+                                    final mins =
+                                        RaceCategory.parseCutoffMinutes(existing);
+                                    final initial = mins > 0
                                         ? TimeOfDay(
-                                            hour: int.tryParse(parts[0]) ?? 3,
-                                            minute: int.tryParse(parts[1]) ?? 0,
+                                            hour: (mins ~/ 60) % 24,
+                                            minute: mins % 60,
                                           )
                                         : const TimeOfDay(hour: 3, minute: 0);
                                     final picked = await showTimePicker(

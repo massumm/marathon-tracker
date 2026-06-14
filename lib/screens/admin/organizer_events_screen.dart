@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../core/theme.dart';
@@ -395,7 +397,7 @@ class _ActionIcon extends StatelessWidget {
   }
 }
 
-class _LiveLeaderboardButton extends StatelessWidget {
+class _LiveLeaderboardButton extends StatefulWidget {
   final EventModel event;
   final void Function(EventModel event)? onLiveTap;
   final void Function(EventModel event)? onResultsTap;
@@ -406,11 +408,54 @@ class _LiveLeaderboardButton extends StatelessWidget {
   });
 
   @override
+  State<_LiveLeaderboardButton> createState() => _LiveLeaderboardButtonState();
+}
+
+class _LiveLeaderboardButtonState extends State<_LiveLeaderboardButton> {
+  Timer? _finishTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _armFinishTimer();
+  }
+
+  @override
+  void didUpdateWidget(_LiveLeaderboardButton old) {
+    super.didUpdateWidget(old);
+    if (old.event.finishDateTime != widget.event.finishDateTime) {
+      _armFinishTimer();
+    }
+  }
+
+  // Flip LIVE → View Results the moment the last cutoff passes, without
+  // waiting for an external rebuild.
+  void _armFinishTimer() {
+    _finishTimer?.cancel();
+    final finish = widget.event.finishDateTime;
+    if (finish == null) return;
+    final delay = finish.difference(DateTime.now());
+    if (delay.isNegative) return;
+    _finishTimer = Timer(delay + const Duration(seconds: 1), () {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _finishTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final isFinished = event.isFinished;
+    final event = widget.event;
+    final onLiveTap = widget.onLiveTap;
+    final onResultsTap = widget.onResultsTap;
+    final isFinished = event.isResultsReady;
     final isToday = event.isToday;
 
-    // Finished event → green "View Results"
+    // Finished event (date passed, or all cutoffs over) → green "View Results"
     if (isFinished) {
       return _buildButton(
         gradient: const LinearGradient(

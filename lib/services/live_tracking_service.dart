@@ -39,7 +39,12 @@ class LiveTrackingService {
   /// Update location + cumulative distance while broadcasting.
   Future<void> updateLocation(
       double lat, double lng, double distanceKm) async {
-    await _myRef.update({'lat': lat, 'lng': lng, 'distanceKm': distanceKm});
+    await _myRef.update({
+      'lat': lat,
+      'lng': lng,
+      'distanceKm': distanceKm,
+      'lastSeen': ServerValue.timestamp,
+    });
   }
 
   /// Stop broadcasting and remove from the list.
