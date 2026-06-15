@@ -8,9 +8,9 @@ import 'package:firebase_core/firebase_core.dart';
 import 'core/theme.dart';
 import 'firebase_options_live.dart';
 import 'models/admin_user_model.dart';
-import 'screens/admin/admin_login_screen.dart';
+import 'screens/admin/auth/admin_login_screen.dart';
 import 'screens/admin/admin_shell.dart';
-import 'screens/admin/organizer_shell.dart';
+import 'screens/admin/organizer/organizer_shell.dart';
 import 'services/admin_service.dart';
 
 void main() async {

@@ -1,54 +1,40 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-import '../../core/theme.dart';
-import '../../models/event_model.dart';
-import 'dashboard/dashboard.dart';
-import 'organizer/organizer_live_leaderboard_screen.dart';
-import 'organizer/organizers_screen.dart';
-import 'users/users_screen.dart';
+import '../../../core/theme.dart';
+import '../../../models/admin_user_model.dart';
+import '../../../models/event_model.dart';
+import 'organizer_dashboard.dart';
+import 'organizer_events_screen.dart';
+import 'organizer_event_leaderboard_screen.dart';
+import 'organizer_live_leaderboard_screen.dart';
+import 'organizer_profile_screen.dart';
 
-// Allows OrganizersScreen to push into the shell's inner navigator.
-class AdminShellNavigator {
-  static GlobalKey<NavigatorState>? _key;
-  static void _register(GlobalKey<NavigatorState> key) => _key = key;
-
-  static void push(Widget page) {
-    _key?.currentState?.push(
-      MaterialPageRoute(builder: (_) => page),
-    );
-  }
-
-  static void pop() => _key?.currentState?.maybePop();
-}
-
-class AdminShell extends StatefulWidget {
+class OrganizerShell extends StatefulWidget {
+  final AdminUser organizer;
   final VoidCallback onSignOut;
-  const AdminShell({super.key, required this.onSignOut});
+  const OrganizerShell({super.key, required this.organizer, required this.onSignOut});
 
   @override
-  State<AdminShell> createState() => _AdminShellState();
+  State<OrganizerShell> createState() => _OrganizerShellState();
 }
 
-class _AdminShellState extends State<AdminShell> {
+class _OrganizerShellState extends State<OrganizerShell> {
   int _selected = 0;
-  // Stack of sub-page titles pushed on top of the root IndexedStack.
-  // Each push into the inner navigator adds a title here; each pop removes one.
-  final _titleStack = <String>[];
+  String? _subPageTitle;
+  late String _displayName;
 
   final _innerNavKey = GlobalKey<NavigatorState>();
 
   static const _navItems = [
     _NavItem(Icons.dashboard_outlined, Icons.dashboard, 'Dashboard'),
-    _NavItem(Icons.manage_accounts_outlined, Icons.manage_accounts,
-        'Organizers'),
-    _NavItem(Icons.people_outline, Icons.people, 'Users'),
+    _NavItem(Icons.event_outlined, Icons.event, 'Events'),
+    _NavItem(Icons.person_outline, Icons.person, 'Profile'),
   ];
 
   @override
   void initState() {
     super.initState();
-    AdminShellNavigator._register(_innerNavKey);
+    _displayName = widget.organizer.displayName;
   }
 
   void _selectTab(int i) {
@@ -57,34 +43,35 @@ class _AdminShellState extends State<AdminShell> {
     }
     setState(() {
       _selected = i;
-      _titleStack.clear();
+      _subPageTitle = null;
     });
   }
 
-  void _pushPage(Widget page, String title) {
-    setState(() => _titleStack.add(title));
+  void _pushLeaderboard(EventModel event) {
+    setState(() => _subPageTitle = 'Live Leaderboard');
     _innerNavKey.currentState?.push(
-      MaterialPageRoute(builder: (_) => page),
+      MaterialPageRoute(
+        builder: (_) => OrganizerLiveLeaderboardScreen(event: event),
+      ),
     );
   }
 
-  void _popPage() {
-    _innerNavKey.currentState?.pop();
-    setState(() {
-      if (_titleStack.isNotEmpty) _titleStack.removeLast();
-    });
+  void _pushEventLeaderboard(EventModel event) {
+    setState(() => _subPageTitle = 'Results — ${event.name}');
+    _innerNavKey.currentState?.push(
+      MaterialPageRoute(
+        builder: (_) => OrganizerEventLeaderboardScreen(event: event),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
     final width = MediaQuery.of(context).size.width;
     final isCollapsed = width < 900;
 
-    final topTitle = _titleStack.isNotEmpty
-        ? _titleStack.last
-        : _navItems[_selected].label;
-    final canGoBack = _titleStack.isNotEmpty;
+    final topTitle = _subPageTitle ?? _navItems[_selected].label;
+    final canGoBack = _subPageTitle != null;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF0F2F5),
@@ -106,7 +93,6 @@ class _AdminShellState extends State<AdminShell> {
             ),
             child: Column(
               children: [
-                // Logo
                 Container(
                   height: 64,
                   alignment: Alignment.center,
@@ -130,12 +116,12 @@ class _AdminShellState extends State<AdminShell> {
                       ),
                       if (!isCollapsed) ...[
                         const SizedBox(width: 12),
-                        const Expanded(
+                        Expanded(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
+                              const Text(
                                 'Marathon Map',
                                 style: TextStyle(
                                   color: Colors.white,
@@ -144,12 +130,13 @@ class _AdminShellState extends State<AdminShell> {
                                 ),
                               ),
                               Text(
-                                'Super Admin',
-                                style: TextStyle(
-                                  color: AppTheme.primary,
+                                _displayName,
+                                style: const TextStyle(
+                                  color: Colors.orange,
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                 ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ),
@@ -162,11 +149,10 @@ class _AdminShellState extends State<AdminShell> {
                 const Divider(height: 1, color: Colors.white10, thickness: 1),
                 const SizedBox(height: 16),
 
-                // Nav items
                 ..._navItems.asMap().entries.map((entry) {
                   final i = entry.key;
                   final item = entry.value;
-                  final isActive = _selected == i;
+                  final isActive = _selected == i && _subPageTitle == null;
 
                   return Padding(
                     padding: const EdgeInsets.symmetric(
@@ -224,10 +210,9 @@ class _AdminShellState extends State<AdminShell> {
 
                 const Spacer(),
 
-                // Sign-out
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   child: Material(
                     color: Colors.transparent,
                     borderRadius: BorderRadius.circular(10),
@@ -297,7 +282,10 @@ class _AdminShellState extends State<AdminShell> {
                           icon: const Icon(Icons.arrow_back,
                               color: AppTheme.textPrimary),
                           tooltip: 'Back',
-                          onPressed: _popPage,
+                          onPressed: () {
+                            _innerNavKey.currentState?.pop();
+                            setState(() => _subPageTitle = null);
+                          },
                         ),
                         const SizedBox(width: 4),
                       ],
@@ -310,55 +298,57 @@ class _AdminShellState extends State<AdminShell> {
                         ),
                       ),
                       const Spacer(),
-                      if (user != null) ...[
-                        Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              user.displayName ?? 'Super Admin',
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            _displayName,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.textPrimary,
+                            ),
+                          ),
+                          Text(
+                            widget.organizer.email,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(width: 12),
+                      Tooltip(
+                        message: 'Profile',
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(18),
+                          onTap: () => _selectTab(2),
+                          child: CircleAvatar(
+                            radius: 18,
+                            backgroundColor:
+                                Colors.orange.withValues(alpha: 0.15),
+                            child: Text(
+                              (_displayName.isNotEmpty
+                                      ? _displayName
+                                      : widget.organizer.email)
+                                  .substring(0, 1)
+                                  .toUpperCase(),
                               style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: AppTheme.textPrimary,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.orange,
+                                fontSize: 15,
                               ),
                             ),
-                            Text(
-                              user.email ?? '',
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: AppTheme.textSecondary,
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
-                        const SizedBox(width: 12),
-                        CircleAvatar(
-                          radius: 18,
-                          backgroundColor:
-                              AppTheme.primary.withValues(alpha: 0.15),
-                          backgroundImage: user.photoURL != null
-                              ? NetworkImage(user.photoURL!)
-                              : null,
-                          child: user.photoURL == null
-                              ? Text(
-                                  (user.displayName ?? user.email ?? 'S')
-                                      .substring(0, 1)
-                                      .toUpperCase(),
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    color: AppTheme.primary,
-                                    fontSize: 15,
-                                  ),
-                                )
-                              : null,
-                        ),
-                      ],
+                      ),
                     ],
                   ),
                 ),
 
-                // Inner navigator — sidebar stays visible while pages push/pop
+                // Inner navigator
                 Expanded(
                   child: Navigator(
                     key: _innerNavKey,
@@ -366,25 +356,15 @@ class _AdminShellState extends State<AdminShell> {
                       builder: (_) => IndexedStack(
                         index: _selected,
                         children: [
-                          const AdminDashboard(),
-                          OrganizersScreen(
-                            onOrganizerTap: (org) {
-                              _pushPage(
-                                OrganizerEventsPage(
-                                  organizer: org,
-                                  onLeaderboardTap: (EventModel event) {
-                                    _pushPage(
-                                      OrganizerLiveLeaderboardScreen(
-                                          event: event),
-                                      'Live Leaderboard',
-                                    );
-                                  },
-                                ),
-                                'Organizer Events',
-                              );
-                            },
+                          OrganizerDashboard(organizer: widget.organizer),
+                          OrganizerEventsScreen(
+                            organizerUid: widget.organizer.uid,
+                            onLeaderboardTap: _pushLeaderboard,
+                            onResultsTap: _pushEventLeaderboard,
                           ),
-                          const AdminUsersScreen(),
+                          OrganizerProfileScreen(
+                            organizer: widget.organizer,
+                          ),
                         ],
                       ),
                     ),
