@@ -1,8 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-import '../../core/theme.dart';
-import '../../models/admin_user_model.dart';
+import '../../../core/theme.dart';
+import '../../../models/admin_user_model.dart';
 
 class OrganizerProfileScreen extends StatefulWidget {
   final AdminUser organizer;

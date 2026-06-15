@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme.dart';
-import '../../models/admin_user_model.dart';
-import '../../models/event_model.dart';
+import '../../../core/theme.dart';
+import '../../../models/admin_user_model.dart';
+import '../../../models/event_model.dart';
 import 'organizer_dashboard.dart';
 import 'organizer_events_screen.dart';
 import 'organizer_event_leaderboard_screen.dart';

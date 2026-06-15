@@ -8,11 +8,11 @@ import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../controllers/kml_map_controller.dart';
-import '../core/image_utils.dart';
-import '../core/theme.dart';
-import '../services/firebase_service.dart';
-import '../widgets/user_avatar.dart';
+import '../../controllers/kml_map_controller.dart';
+import '../../core/image_utils.dart';
+import '../../core/theme.dart';
+import '../../services/firebase_service.dart';
+import '../../widgets/user_avatar.dart';
 
 const _medals = ['🥇', '🥈', '🥉'];
 

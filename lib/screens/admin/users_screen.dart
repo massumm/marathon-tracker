@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme.dart';
-import '../../services/admin_service.dart';
+import '../../../core/theme.dart';
+import '../../../services/admin_service.dart';
 
 class AdminUsersScreen extends StatefulWidget {
   const AdminUsersScreen({super.key});

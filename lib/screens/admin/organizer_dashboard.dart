@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme.dart';
-import '../../models/admin_user_model.dart';
-import '../../services/admin_service.dart';
+import '../../../core/theme.dart';
+import '../../../models/admin_user_model.dart';
+import '../../../services/admin_service.dart';
 
 class OrganizerDashboard extends StatelessWidget {
   final AdminUser organizer;

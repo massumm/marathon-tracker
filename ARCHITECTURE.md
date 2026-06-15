@@ -291,8 +291,13 @@ live_runners/
     lat: number
     lng: number
     startedAt: timestamp
+    lastSeen: timestamp
+    distanceKm: number
     displayName: string
     photoUrl: string
+    eventId: string
+    categoryId: string
+    gender: number (0=male, 1=female, omitted if not set)
 
 tracked_routes/
   {uid}/

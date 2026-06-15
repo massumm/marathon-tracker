@@ -4,8 +4,8 @@ import 'dart:html' as html;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import '../../core/config.dart';
-import '../../core/theme.dart';
+import '../../../core/config.dart';
+import '../../../core/theme.dart';
 
 class KMLUploadScreen extends StatefulWidget {
   const KMLUploadScreen({super.key});

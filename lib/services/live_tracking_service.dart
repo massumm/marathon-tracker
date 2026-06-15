@@ -20,6 +20,10 @@ class LiveTrackingService {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
+    final genderSnap =
+        await _db.ref('user_stats/${user.uid}/gender').get();
+    final gender = (genderSnap.value as num?)?.toInt();
+
     final data = RunnerData(
       uid: user.uid,
       email: user.email ?? '',
@@ -30,6 +34,7 @@ class LiveTrackingService {
       startedAt: DateTime.now().millisecondsSinceEpoch,
       eventId: eventId,
       categoryId: categoryId,
+      gender: gender,
     ).toMap();
 
     await _myRef.set(data);

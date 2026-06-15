@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-import '../../core/theme.dart';
+import '../../../core/theme.dart';
 
 
 class AdminLoginScreen extends StatefulWidget {

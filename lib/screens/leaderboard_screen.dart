@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../app/routes/app_routes.dart';
-import '../core/theme.dart';
-import '../models/group_model.dart';
-import '../models/user_stats.dart';
-import '../services/group_service.dart';
-import '../services/user_stats_service.dart';
-import '../widgets/user_avatar.dart';
+import '../../app/routes/app_routes.dart';
+import '../../core/theme.dart';
+import '../../models/group_model.dart';
+import '../../models/user_stats.dart';
+import '../../services/group_service.dart';
+import '../../services/user_stats_service.dart';
+import '../../widgets/user_avatar.dart';
 
 class LeaderboardScreen extends StatelessWidget {
   const LeaderboardScreen({super.key});
