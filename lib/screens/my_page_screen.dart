@@ -825,45 +825,127 @@ class _StatsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.symmetric(vertical: 14),
-      decoration: BoxDecoration(
-        color: AppTheme.primary,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
         children: [
-          _statCol(stats.distanceStr, 'total_distance'.tr),
-          _divider(),
-          _statCol('${stats.totalRuns}', 'total_runs'.tr),
-          _divider(),
-          _statCol(stats.avgPaceStr, 'avg_pace'.tr),
+          // ── Top highlight bar ─────────────────────────────────────────
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [AppTheme.primary, Color(0xFFFF9A5C)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _highlightStat(Icons.straighten_rounded,
+                    stats.distanceStr, 'total_distance'.tr),
+                _vDivider(),
+                _highlightStat(Icons.directions_run_rounded,
+                    '${stats.totalRuns}', 'total_runs'.tr),
+                _vDivider(),
+                _highlightStat(Icons.timer_outlined,
+                    stats.timeStr, 'total_time'.tr),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          // ── Secondary stats grid ──────────────────────────────────────
+          Row(
+            children: [
+              Expanded(
+                child: _statCard(
+                  icon: Icons.speed_rounded,
+                  value: stats.avgPaceStr,
+                  label: 'avg_pace'.tr,
+                  color: const Color(0xFF5C7AFF),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _statCard(
+                  icon: Icons.local_fire_department_rounded,
+                  value: stats.caloriesStr,
+                  label: 'total_calories'.tr,
+                  color: Colors.deepOrange,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _statCard(
+                  icon: Icons.directions_walk_rounded,
+                  value: stats.stepsStr,
+                  label: 'total_steps'.tr,
+                  color: Colors.teal,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _statCol(String value, String label) => Column(
+  Widget _highlightStat(IconData icon, String value, String label) => Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          Icon(icon, color: Colors.white70, size: 16),
+          const SizedBox(height: 4),
           Text(value,
               style: const TextStyle(
-                  fontSize: 16,
+                  fontSize: 17,
                   fontWeight: FontWeight.w800,
-                  color: Colors.white)),
+                  color: Colors.white,
+                  letterSpacing: 0.3)),
           const SizedBox(height: 2),
           Text(label,
               style: TextStyle(
-                  fontSize: 10, color: Colors.white.withValues(alpha: 0.75))),
+                  fontSize: 10,
+                  color: Colors.white.withValues(alpha: 0.75),
+                  fontWeight: FontWeight.w500)),
         ],
       );
 
-  Widget _divider() => Container(
-        width: 1,
-        height: 28,
-        color: Colors.white.withValues(alpha: 0.3),
+  Widget _vDivider() => Container(
+        width: 1, height: 36, color: Colors.white.withValues(alpha: 0.3));
+
+  Widget _statCard({
+    required IconData icon,
+    required String value,
+    required String label,
+    required Color color,
+  }) =>
+      Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withValues(alpha: 0.18)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 20),
+            const SizedBox(height: 6),
+            Text(value,
+                style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: color,
+                    letterSpacing: 0.2)),
+            const SizedBox(height: 2),
+            Text(label,
+                style: const TextStyle(
+                    fontSize: 10,
+                    color: AppTheme.textSecondary,
+                    fontWeight: FontWeight.w500)),
+          ],
+        ),
       );
 }
 

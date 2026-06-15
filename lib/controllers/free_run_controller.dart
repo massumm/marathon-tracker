@@ -20,7 +20,8 @@ class FreeRunController extends GetxController {
   final runState = FreeRunState.idle.obs;
   final elapsedSeconds = 0.obs;
   final distanceKm = 0.0.obs;
-  final trackingPoints = <LatLng>[].obs;
+  // Each RxList is one continuous segment (new segment created on resume).
+  final segments = <RxList<LatLng>>[].obs;
   final currentPosition = const LatLng(0, 0).obs;
   final isSaving = false.obs;
   final mapReady = false.obs;
@@ -30,12 +31,13 @@ class FreeRunController extends GetxController {
   GoogleMapController? mapController;
   StreamSubscription<Position>? _positionSub;
   Timer? _timer;
-  LatLng? _lastPoint;
   double _cachedDistanceKm = 0;
   int _runStartMs = 0;
 
-  static const double _minMovementM = 5.0;
-  static const double _jumpFilterM = 30.0;
+  static const double _maxJumpMetres = 50.0;
+  static const double _minMovementM = 2.0;
+  static const int _smoothingWindow = 2;
+  final _smoothingBuffer = <LatLng>[];
 
   // ── lifecycle ─────────────────────────────────────────────────────────────
   @override
@@ -59,7 +61,7 @@ class FreeRunController extends GetxController {
       ).timeout(const Duration(seconds: 8));
       final latlng = LatLng(pos.latitude, pos.longitude);
       currentPosition.value = latlng;
-      mapController?.animateCamera(CameraUpdate.newLatLngZoom(latlng, 17));
+      _animateCamera(CameraUpdate.newLatLngZoom(latlng, 17));
     } catch (_) {}
   }
 
@@ -68,15 +70,15 @@ class FreeRunController extends GetxController {
     final ok = await _checkPermissions();
     if (!ok) return;
 
-    trackingPoints.clear();
+    segments.clear();
+    _smoothingBuffer.clear();
     _cachedDistanceKm = 0;
     distanceKm.value = 0;
     elapsedSeconds.value = 0;
-    _lastPoint = null;
     _runStartMs = DateTime.now().millisecondsSinceEpoch;
 
     _startTimer();
-    _startPositionStream();
+    _startPositionStream(newSegment: true);
     runState.value = FreeRunState.running;
     await FlutterForegroundTask.startService(
       serviceId: 257,
@@ -93,7 +95,8 @@ class FreeRunController extends GetxController {
 
   void resumeRun() {
     _startTimer();
-    _startPositionStream();
+    // New segment on resume so the polyline doesn't connect across the pause gap.
+    _startPositionStream(newSegment: true);
     runState.value = FreeRunState.running;
   }
 
@@ -103,6 +106,17 @@ class FreeRunController extends GetxController {
     runState.value = FreeRunState.stopped;
     await FlutterForegroundTask.stopService();
     await _saveRun();
+  }
+
+  void resetRun() {
+    segments.clear();
+    _smoothingBuffer.clear();
+    _cachedDistanceKm = 0;
+    distanceKm.value = 0;
+    elapsedSeconds.value = 0;
+    gpsAccuracy.value = -1;
+    _runStartMs = 0;
+    runState.value = FreeRunState.idle;
   }
 
   // ── internals ─────────────────────────────────────────────────────────────
@@ -115,28 +129,79 @@ class FreeRunController extends GetxController {
     });
   }
 
-  void _startPositionStream() {
+  void _startPositionStream({required bool newSegment}) {
     _positionSub?.cancel();
+    _smoothingBuffer.clear(); // always fresh baseline on (re)start
+
+    if (newSegment) {
+      segments.add(<LatLng>[].obs); // new segment; jump filter uses this list's .last
+    }
+
     _positionSub = LocationService.instance.getPositionStream().listen((pos) {
       final point = LatLng(pos.latitude, pos.longitude);
+
+      // Always update map marker + GPS badge regardless of recording filters.
       currentPosition.value = point;
       gpsAccuracy.value = pos.accuracy;
+      if (!isUserPanned) {
+        _animateCamera(CameraUpdate.newLatLngZoom(point, 17));
+      }
 
-      if (_lastPoint != null) {
-        final dist = Geolocator.distanceBetween(
-          _lastPoint!.latitude, _lastPoint!.longitude,
+      final current = segments.last;
+
+      // GPS jump filter — against last accepted point in the current segment.
+      if (current.isNotEmpty) {
+        final prev = current.last;
+        final moved = Geolocator.distanceBetween(
+          prev.latitude, prev.longitude,
           point.latitude, point.longitude,
         );
-        if (dist < _minMovementM) return;
-        if (dist > _jumpFilterM) return; // GPS jump — ignore
-        _cachedDistanceKm += dist / 1000.0;
+        if (moved > _maxJumpMetres) return; // impossible jump — discard
+        if (moved < _minMovementM) return;  // standing still — skip
+        _cachedDistanceKm += moved / 1000.0;
         distanceKm.value = _cachedDistanceKm;
       }
 
-      _lastPoint = point;
-      trackingPoints.add(point);
-      mapController?.animateCamera(CameraUpdate.newLatLng(point));
+      // Moving-average smoothing over last N raw points (reduces zig-zag).
+      _smoothingBuffer.add(point);
+      if (_smoothingBuffer.length > _smoothingWindow) _smoothingBuffer.removeAt(0);
+      final smoothed = LatLng(
+        _smoothingBuffer.map((p) => p.latitude).reduce((a, b) => a + b) /
+            _smoothingBuffer.length,
+        _smoothingBuffer.map((p) => p.longitude).reduce((a, b) => a + b) /
+            _smoothingBuffer.length,
+      );
+
+      // Add directly to the RxList — triggers reactive update without copying.
+      current.add(smoothed);
     });
+  }
+
+  bool isUserPanned = false;
+  bool _programmaticCamera = false;
+
+  void onUserPan() {
+    if (!_programmaticCamera) isUserPanned = true;
+  }
+
+  void recenterCamera() {
+    isUserPanned = false;
+    final pos = currentPosition.value;
+    if (pos.latitude != 0 || pos.longitude != 0) {
+      _animateCamera(CameraUpdate.newLatLngZoom(pos, 17));
+    }
+  }
+
+  void _animateCamera(CameraUpdate update) {
+    _programmaticCamera = true;
+    try {
+      mapController
+          ?.animateCamera(update)
+          .then((_) => _programmaticCamera = false)
+          .catchError((_) => _programmaticCamera = false);
+    } catch (_) {
+      _programmaticCamera = false;
+    }
   }
 
   Future<bool> _checkPermissions() async {
@@ -159,22 +224,25 @@ class FreeRunController extends GetxController {
   }
 
   Future<void> _saveRun() async {
-    if (trackingPoints.isEmpty) return;
+    final allPoints = segments.expand((s) => s).toList();
+    if (allPoints.isEmpty) return;
     isSaving.value = true;
     try {
       final now = DateTime.fromMillisecondsSinceEpoch(_runStartMs);
       final dateStr =
-          '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
+          '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
       final timeStr =
-          '${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}${now.second.toString().padLeft(2, '0')}';
-      final fileName = 'free_run_${dateStr}_$timeStr.json';
+          '${now.hour.toString().padLeft(2, '0')}-${now.minute.toString().padLeft(2, '0')}';
+      const eventLabel = 'Free Run';
+      const slug = 'Free_Run';
+      final fileName = '${slug}_${dateStr}_$timeStr.json';
 
       final pace = elapsedSeconds.value > 0
           ? _cachedDistanceKm / (elapsedSeconds.value / 3600)
           : 0.0;
 
       final data = {
-        'event': 'Free Run',
+        'event': eventLabel,
         'type': 'free_run',
         'run_start_ms': _runStartMs,
         'start_date':
@@ -184,7 +252,7 @@ class FreeRunController extends GetxController {
         'time': _formatTime(elapsedSeconds.value),
         'distance': '${_cachedDistanceKm.toStringAsFixed(2)} km',
         'pace': '${pace.toStringAsFixed(1)} km/h',
-        'route': trackingPoints
+        'route': allPoints
             .map((p) => {'lat': p.latitude, 'lng': p.longitude})
             .toList(),
       };

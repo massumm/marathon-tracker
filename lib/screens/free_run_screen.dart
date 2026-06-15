@@ -5,12 +5,28 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../controllers/free_run_controller.dart';
 import '../core/theme.dart';
 
-class FreeRunScreen extends StatelessWidget {
+class FreeRunScreen extends StatefulWidget {
   const FreeRunScreen({super.key});
 
   @override
+  State<FreeRunScreen> createState() => _FreeRunScreenState();
+}
+
+class _FreeRunScreenState extends State<FreeRunScreen> {
+  late final FreeRunController ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    ctrl = Get.find<FreeRunController>();
+    // If a previous run already finished and was saved, start fresh.
+    if (ctrl.runState.value == FreeRunState.stopped && !ctrl.isSaving.value) {
+      ctrl.resetRun();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final ctrl = Get.put(FreeRunController());
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
@@ -18,6 +34,7 @@ class FreeRunScreen extends StatelessWidget {
           // ── Map ──────────────────────────────────────────────────────────
           Obx(() => GoogleMap(
                 onMapCreated: ctrl.onMapCreated,
+                onCameraMove: (_) => ctrl.onUserPan(),
                 initialCameraPosition: const CameraPosition(
                   target: LatLng(23.8103, 90.4125),
                   zoom: 16,
@@ -26,16 +43,16 @@ class FreeRunScreen extends StatelessWidget {
                 myLocationButtonEnabled: false,
                 zoomControlsEnabled: false,
                 mapToolbarEnabled: false,
-                polylines: ctrl.trackingPoints.length > 1
-                    ? {
-                        Polyline(
-                          polylineId: const PolylineId('free_run'),
-                          points: ctrl.trackingPoints.toList(),
-                          color: AppTheme.primary,
-                          width: 5,
-                        ),
-                      }
-                    : {},
+                polylines: {
+                  for (var i = 0; i < ctrl.segments.length; i++)
+                    if (ctrl.segments[i].length > 1)
+                      Polyline(
+                        polylineId: PolylineId('seg_$i'),
+                        points: ctrl.segments[i],
+                        color: AppTheme.primary,
+                        width: 5,
+                      ),
+                },
               )),
 
           // ── GPS health badge ─────────────────────────────────────────────
@@ -59,13 +76,7 @@ class FreeRunScreen extends StatelessWidget {
               right: 12,
               bottom: 180,
               child: GestureDetector(
-                onTap: () {
-                  final pos = ctrl.currentPosition.value;
-                  if (pos.latitude != 0 || pos.longitude != 0) {
-                    ctrl.mapController?.animateCamera(
-                        CameraUpdate.newLatLngZoom(pos, 17));
-                  }
-                },
+                onTap: ctrl.recenterCamera,
                 child: Container(
                   width: 46,
                   height: 46,
@@ -87,15 +98,7 @@ class FreeRunScreen extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: GestureDetector(
-                onTap: () {
-                  final state = ctrl.runState.value;
-                  if (state == FreeRunState.running ||
-                      state == FreeRunState.paused) {
-                    _confirmExit(context, ctrl);
-                  } else {
-                    Get.back();
-                  }
-                },
+                onTap: () => Get.back(),
                 child: Container(
                   width: 42,
                   height: 42,
@@ -133,30 +136,6 @@ class FreeRunScreen extends StatelessWidget {
     );
   }
 
-  void _confirmExit(BuildContext context, FreeRunController ctrl) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Stop Free Run?'),
-        content: const Text('Your run will be stopped and saved.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await ctrl.stopRun();
-              Get.back();
-            },
-            child: const Text('Stop & Exit',
-                style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 // ── Stats card ───────────────────────────────────────────────────────────────
@@ -488,7 +467,10 @@ class _SummaryCard extends StatelessWidget {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14)),
                 ),
-                onPressed: () => Get.back(),
+                onPressed: () {
+                  ctrl.resetRun();
+                  Get.back();
+                },
                 child: const Text('Done',
                     style: TextStyle(
                         fontSize: 15, fontWeight: FontWeight.w700)),

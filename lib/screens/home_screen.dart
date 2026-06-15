@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:liquid_glass_bar/liquid_glass_bar.dart';
 
 import '../../app/routes/app_routes.dart';
+import '../../controllers/free_run_controller.dart';
 import '../../controllers/home_controller.dart';
 import '../../controllers/kml_map_controller.dart';
 import '../../core/theme.dart';
@@ -56,6 +57,59 @@ class _RunningBanner extends StatelessWidget {
   }
 }
 
+class _FreeRunBanner extends StatelessWidget {
+  const _FreeRunBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final ctrl = Get.find<FreeRunController>();
+    return Obx(() {
+      final state = ctrl.runState.value;
+      if (state == FreeRunState.idle || state == FreeRunState.stopped) {
+        return const SizedBox.shrink();
+      }
+      return GestureDetector(
+        onTap: () => Get.toNamed(AppRoutes.freeRun),
+        child: Container(
+          color: AppTheme.primary,
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+          child: SafeArea(
+            bottom: false,
+            child: Row(
+              children: [
+                const Icon(Icons.directions_run_rounded,
+                    color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    state == FreeRunState.paused
+                        ? 'Free Run – Paused'
+                        : 'Free Run in progress',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13),
+                  ),
+                ),
+                Obx(() => Text(
+                      ctrl.formattedTime,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                          letterSpacing: 1),
+                    )),
+                const SizedBox(width: 6),
+                const Icon(Icons.chevron_right, color: Colors.white, size: 18),
+              ],
+            ),
+          ),
+        ),
+      );
+    });
+  }
+}
+
 class HomeScreen extends GetView<HomeController> {
   const HomeScreen({super.key});
 
@@ -70,6 +124,7 @@ class HomeScreen extends GetView<HomeController> {
           body: Column(
             children: [
               const _RunningBanner(),
+              const _FreeRunBanner(),
               Expanded(
                 child: IndexedStack(
                   index: controller.tabIndex.value,

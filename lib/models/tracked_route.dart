@@ -74,16 +74,27 @@ class TrackedRoute {
   /// Returns event name from filename.
   /// New format: `EventName_YYYY-MM-DD_HH-mm.json`
   /// Old format: `my_route_<ms>.json` — falls back to raw name.
+  static const _months = [
+    '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+  ];
+
   static String parseEventFromFileName(String fileName) {
     final base = fileName.replaceAll('.json', '');
-    // New format: last two segments are date and time
     final parts = base.split('_');
     if (parts.length >= 3) {
       final timePart = parts.last; // HH-mm
       final datePart = parts[parts.length - 2]; // YYYY-MM-DD
       if (RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(datePart) &&
           RegExp(r'^\d{2}-\d{2}$').hasMatch(timePart)) {
-        return parts.sublist(0, parts.length - 2).join(' ');
+        final eventName = parts.sublist(0, parts.length - 2).join(' ');
+        // For Free Run, append the date so each card has a unique title.
+        if (eventName == 'Free Run') {
+          final dp = datePart.split('-');
+          final month = _months[int.parse(dp[1])];
+          return 'Free Run · $month ${int.parse(dp[2])}';
+        }
+        return eventName;
       }
     }
     return base;
@@ -99,8 +110,12 @@ class TrackedRoute {
       final datePart = parts[parts.length - 2];
       if (RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(datePart) &&
           RegExp(r'^\d{2}-\d{2}$').hasMatch(timePart)) {
+        final dp = datePart.split('-');
+        final month = _months[int.parse(dp[1])];
+        final day = int.parse(dp[2]);
+        final year = dp[0];
         final time = timePart.replaceAll('-', ':');
-        return '$datePart  $time';
+        return '$month $day, $year  $time';
       }
     }
     // Old format: my_route_<ms>
