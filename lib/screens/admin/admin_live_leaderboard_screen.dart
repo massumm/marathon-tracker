@@ -2,11 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../../core/theme.dart';
-import '../../models/event_model.dart';
-import '../../models/runner_data.dart';
-import '../../services/admin_service.dart';
-import '../../widgets/user_avatar.dart';
+import '../../../core/theme.dart';
+import '../../../models/event_model.dart';
+import '../../../models/runner_data.dart';
+import '../../../services/admin_service.dart';
+import '../../../widgets/user_avatar.dart';
 
 class AdminLiveLeaderboardScreen extends StatefulWidget {
   final EventModel event;
@@ -29,6 +29,7 @@ class _AdminLiveLeaderboardScreenState extends State<AdminLiveLeaderboardScreen>
   late TabController _tabController;
   StreamSubscription<List<RunnerData>>? _runnersSub;
   List<RunnerData> _runners = [];
+  // int? _genderFilter; // gender filter disabled
 
   @override
   void initState() {
@@ -343,30 +344,49 @@ class _AdminLiveLeaderboardScreenState extends State<AdminLiveLeaderboardScreen>
   }
 
   Widget _buildCategoryLeaderboard(String categoryId) {
-    final runners = _runners.where((r) => r.categoryId == categoryId).toList();
+    final byCategory =
+        _runners.where((r) => r.categoryId == categoryId).toList();
+    final runners = byCategory;
+    // Gender filter disabled:
+    // final runners = _genderFilter == null
+    //     ? byCategory
+    //     : byCategory.where((r) => r.gender == _genderFilter).toList();
 
-    if (runners.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.directions_run_outlined,
-                size: 64, color: Colors.grey.shade300),
-            const SizedBox(height: 16),
-            const Text('No runners in this category',
-                style: TextStyle(fontSize: 16, color: AppTheme.textSecondary)),
-            const SizedBox(height: 8),
-            const Text('Waiting for participants to start...',
-                style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
-          ],
-        ),
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      itemCount: runners.length,
-      itemBuilder: (_, i) => _RunnerRow(runner: runners[i], rank: i + 1),
+    return Column(
+      children: [
+        // _GenderFilterBar(
+        //   selected: _genderFilter,
+        //   onChanged: (v) => setState(() => _genderFilter = v),
+        // ),
+        if (runners.isEmpty)
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.directions_run_outlined,
+                      size: 64, color: Colors.grey.shade300),
+                  const SizedBox(height: 16),
+                  const Text('No runners in this category',
+                      style: TextStyle(
+                          fontSize: 16, color: AppTheme.textSecondary)),
+                  const SizedBox(height: 8),
+                  const Text('Waiting for participants to start...',
+                      style: TextStyle(
+                          fontSize: 13, color: AppTheme.textSecondary)),
+                ],
+              ),
+            ),
+          )
+        else
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              itemCount: runners.length,
+              itemBuilder: (_, i) => _RunnerRow(runner: runners[i], rank: i + 1),
+            ),
+          ),
+      ],
     );
   }
 
@@ -378,6 +398,40 @@ class _AdminLiveLeaderboardScreenState extends State<AdminLiveLeaderboardScreen>
     );
   }
 }
+
+// Gender filter widget — disabled for now; re-enable when runner gender data is
+// available in live broadcasts.
+// class _GenderFilterBar extends StatelessWidget {
+//   final int? selected;
+//   final ValueChanged<int?> onChanged;
+//   const _GenderFilterBar({required this.selected, required this.onChanged});
+//   @override
+//   Widget build(BuildContext context) {
+//     return Container(
+//       color: Colors.white,
+//       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+//       child: Row(children: [
+//         _chip(null, 'All'), const SizedBox(width: 8),
+//         _chip(0, 'Male'),  const SizedBox(width: 8),
+//         _chip(1, 'Female'),
+//       ]),
+//     );
+//   }
+//   Widget _chip(int? value, String label) {
+//     final active = selected == value;
+//     return ChoiceChip(
+//       label: Text(label), selected: active,
+//       onSelected: (_) => onChanged(value),
+//       selectedColor: AppTheme.primary.withValues(alpha: 0.15),
+//       labelStyle: TextStyle(color: active ? AppTheme.primary : AppTheme.textSecondary,
+//           fontWeight: active ? FontWeight.w700 : FontWeight.w500, fontSize: 12),
+//       side: BorderSide(color: active ? AppTheme.primary.withValues(alpha: 0.5) : Colors.grey.shade300),
+//       backgroundColor: Colors.white,
+//       padding: const EdgeInsets.symmetric(horizontal: 8),
+//       visualDensity: VisualDensity.compact,
+//     );
+//   }
+// }
 
 class _RunnerRow extends StatefulWidget {
   final RunnerData runner;

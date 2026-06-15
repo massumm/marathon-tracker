@@ -7,11 +7,11 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
 
-import '../app/routes/app_routes.dart';
-import '../controllers/my_page_controller.dart';
-import '../core/theme.dart';
-import '../models/group_model.dart';
-import '../models/user_stats.dart';
+import '../../app/routes/app_routes.dart';
+import '../../controllers/my_page_controller.dart';
+import '../../core/theme.dart';
+import '../../models/group_model.dart';
+import '../../models/user_stats.dart';
 
 class MyPageScreen extends GetView<MyPageController> {
   const MyPageScreen({super.key});

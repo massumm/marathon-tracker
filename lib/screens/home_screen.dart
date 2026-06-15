@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:liquid_glass_bar/liquid_glass_bar.dart';
 
-import '../app/routes/app_routes.dart';
-import '../controllers/home_controller.dart';
-import '../controllers/kml_map_controller.dart';
-import '../core/theme.dart';
+import '../../app/routes/app_routes.dart';
+import '../../controllers/home_controller.dart';
+import '../../controllers/kml_map_controller.dart';
+import '../../core/theme.dart';
 import 'map_screen.dart';
 import 'my_page_screen.dart';
 

@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
-import '../controllers/map_controller.dart';
-import '../controllers/my_page_controller.dart';
-import '../core/theme.dart';
-import '../services/event_notification_service.dart';
-import '../widgets/confirm_dialog.dart';
+import '../../controllers/map_controller.dart';
+import '../../controllers/my_page_controller.dart';
+import '../../core/theme.dart';
+import '../../services/event_notification_service.dart';
+import '../../widgets/confirm_dialog.dart';
 
 class SettingsScreen extends GetView<MyPageController> {
   const SettingsScreen({super.key});

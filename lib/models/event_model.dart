@@ -61,6 +61,7 @@ class EventModel {
   final String name;
   final String date;
   final String startTime;    // 'HH:mm', e.g. '08:00' — empty for legacy events
+  final String endTime;      // 'HH:mm', e.g. '17:20' — explicit finish time; takes priority over cutoff calculation
   final int cutoffMinutes;   // 0 = no cutoff; e.g. 300 = 5 h from startTime
   final String location;
   final String bannerUrl;
@@ -78,6 +79,7 @@ class EventModel {
     required this.name,
     required this.date,
     this.startTime = '',
+    this.endTime = '',
     this.cutoffMinutes = 0,
     required this.location,
     required this.bannerUrl,
@@ -161,23 +163,54 @@ class EventModel {
     return DateTime(y, m, d);
   }
 
-  /// Wall-clock moment when the whole event is over: startTime plus the
-  /// longest cutoff (event-level or any category's). Null when the event
-  /// can't auto-finish — no startTime, or a category without a cutoff and
-  /// no event-level cutoff to bound it.
+  /// Wall-clock moment when the whole event is over.
+  /// Uses the explicit [endTime] (HH:mm) when set; otherwise falls back to
+  /// startTime + the longest cutoff (event-level or per-category).
   DateTime? get finishDateTime {
-    if (startTime.isEmpty) return null;
-    var maxMins = cutoffMinutes;
-    for (final c in categories.values) {
-      if (c.cutoffMinutes <= 0) {
-        // No category cutoff — only the event-level cutoff can close it.
-        if (cutoffMinutes <= 0) return null;
-        continue;
-      }
-      if (c.cutoffMinutes > maxMins) maxMins = c.cutoffMinutes;
+    if (date.isEmpty) return null;
+
+    // Explicit end time takes priority over cutoff calculation.
+    if (endTime.isNotEmpty) {
+      try {
+        final dp = date.split('-');
+        final tp = endTime.split(':');
+        if (dp.length == 3 && tp.length == 2) {
+          return DateTime(
+            int.parse(dp[0]), int.parse(dp[1]), int.parse(dp[2]),
+            int.tryParse(tp[0]) ?? 0, int.tryParse(tp[1]) ?? 0,
+          );
+        }
+      } catch (_) {}
     }
-    if (maxMins <= 0) return null;
-    return eventDateTime.add(Duration(minutes: maxMins));
+
+    // Fall back to startTime + max cutoff across event-level + all categories.
+    // Categories with no cutoff (0 min) are simply skipped — they don't prevent
+    // the event from having a finish time derived from the ones that DO have one.
+    if (startTime.isNotEmpty) {
+      var maxMins = cutoffMinutes;
+      for (final c in categories.values) {
+        if (c.cutoffMinutes > maxMins) maxMins = c.cutoffMinutes;
+      }
+      if (maxMins > 0) return eventDateTime.add(Duration(minutes: maxMins));
+    }
+
+    // Last resort: end of the event day (23:59). Ensures the timer always fires
+    // and the LIVE button flips at midnight even for events with no cutoff/endTime.
+    try {
+      final dp = date.split('-');
+      return DateTime(int.parse(dp[0]), int.parse(dp[1]), int.parse(dp[2]), 23, 59);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// True while the event is actively underway: after startTime, before finishDateTime.
+  bool get isRunning {
+    if (isResultsReady) return false;
+    final finish = finishDateTime;
+    if (finish == null) return false;
+    final now = DateTime.now();
+    return now.isAfter(eventDateTime) && now.isBefore(finish);
   }
 
   /// True once final results can be shown: every cutoff has passed, or
@@ -188,7 +221,8 @@ class EventModel {
     return finish != null && DateTime.now().isAfter(finish);
   }
 
-  /// True when the event date is strictly before today (event has passed).
+  /// True when the event date is before today, OR when today's event has
+  /// passed its finishDateTime (endTime or startTime + max cutoff).
   bool get isFinished {
     try {
       final parts = date.split('-');
@@ -200,7 +234,10 @@ class EventModel {
       );
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
-      return eventDate.isBefore(today);
+      if (eventDate.isBefore(today)) return true;
+      // Also finished when today's event has passed its computed end time.
+      final finish = finishDateTime;
+      return finish != null && now.isAfter(finish);
     } catch (_) {
       return false;
     }
@@ -239,6 +276,7 @@ class EventModel {
       name: map['name'] as String? ?? '',
       date: map['date'] as String? ?? '',
       startTime: map['startTime'] as String? ?? '',
+      endTime: map['endTime'] as String? ?? '',
       cutoffMinutes: (map['cutoffMinutes'] as num?)?.toInt() ?? 0,
       location: map['location'] as String? ?? '',
       bannerUrl: map['bannerUrl'] as String? ?? '',
@@ -257,6 +295,7 @@ class EventModel {
         'name': name,
         'date': date,
         'startTime': startTime,
+        if (endTime.isNotEmpty) 'endTime': endTime,
         'cutoffMinutes': cutoffMinutes,
         'location': location,
         'bannerUrl': bannerUrl,

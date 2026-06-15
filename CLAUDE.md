@@ -36,7 +36,7 @@ friends/{uid}/{friendUid} — true
 event_comments/{eventId}/{commentId}/likes/{uid} — true
 event_comments/{eventId}/{commentId}/replies/{replyId}
 events/{eventId}          — name, date, location, bannerUrl, categories
-live_runners/{uid}        — lat, lng, startedAt, displayName, photoUrl
+live_runners/{uid}        — lat, lng, startedAt, displayName, photoUrl, eventId, categoryId, gender (0=male,1=female)
 ```
 
 ## Important Conventions

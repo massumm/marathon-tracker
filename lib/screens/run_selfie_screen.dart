@@ -9,8 +9,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../core/theme.dart';
-import '../models/tracked_route.dart';
+import '../../core/theme.dart';
+import '../../models/tracked_route.dart';
 
 class RunSelfieScreen extends StatefulWidget {
   final TrackedRoute route;

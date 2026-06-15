@@ -2,9 +2,9 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../core/theme.dart';
-import '../models/user_stats.dart';
-import '../services/user_stats_service.dart';
+import '../../core/theme.dart';
+import '../../models/user_stats.dart';
+import '../../services/user_stats_service.dart';
 
 class UserProfileScreen extends StatefulWidget {
   const UserProfileScreen({super.key});

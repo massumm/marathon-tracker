@@ -1,12 +1,14 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
-import '../../core/theme.dart';
-import '../../firebase_options.dart';
-import '../../models/admin_user_model.dart';
-import '../../models/event_model.dart';
-import '../../services/admin_service.dart';
+import '../../../core/theme.dart';
+import '../../../firebase_options.dart';
+import '../../../models/admin_user_model.dart';
+import '../../../models/event_model.dart';
+import '../../../services/admin_service.dart';
 import 'event_form_screen.dart';
 
 class OrganizersScreen extends StatelessWidget {
@@ -105,8 +107,7 @@ class _OrganizerCard extends StatelessWidget {
             onTap: () => onTap?.call(organizer),
             borderRadius: BorderRadius.circular(16),
             child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               child: Row(
                 children: [
                   CircleAvatar(
@@ -141,8 +142,7 @@ class _OrganizerCard extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(organizer.email,
                             style: const TextStyle(
-                                fontSize: 13,
-                                color: AppTheme.textSecondary)),
+                                fontSize: 13, color: AppTheme.textSecondary)),
                         const SizedBox(height: 6),
                         Row(
                           children: [
@@ -152,8 +152,7 @@ class _OrganizerCard extends StatelessWidget {
                             Text(
                               '$eventCount event${eventCount == 1 ? '' : 's'}',
                               style: const TextStyle(
-                                  fontSize: 12,
-                                  color: AppTheme.textSecondary),
+                                  fontSize: 12, color: AppTheme.textSecondary),
                             ),
                           ],
                         ),
@@ -161,8 +160,8 @@ class _OrganizerCard extends StatelessWidget {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: Colors.orange.shade50,
                       borderRadius: BorderRadius.circular(20),
@@ -423,8 +422,7 @@ class _EventCard extends StatelessWidget {
                     Flexible(
                       child: Text(event.location,
                           style: const TextStyle(
-                              fontSize: 13,
-                              color: AppTheme.textSecondary),
+                              fontSize: 13, color: AppTheme.textSecondary),
                           overflow: TextOverflow.ellipsis),
                     ),
                   ],
@@ -524,8 +522,7 @@ class _EventCard extends StatelessWidget {
             AppTheme.primary.withValues(alpha: 0.7),
           ],
         ),
-        borderRadius:
-            const BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
       ),
       child: const Center(
         child: Icon(Icons.directions_run, color: Colors.white, size: 36),
@@ -588,82 +585,153 @@ class _ActionIcon extends StatelessWidget {
 
 // ── Live leaderboard button (shared) ─────────────────────────────────────────
 
-class _LiveLeaderboardButton extends StatelessWidget {
+class _LiveLeaderboardButton extends StatefulWidget {
   final EventModel event;
   final void Function(EventModel event)? onTap;
   const _LiveLeaderboardButton({required this.event, this.onTap});
 
   @override
+  State<_LiveLeaderboardButton> createState() => _LiveLeaderboardButtonState();
+}
+
+class _LiveLeaderboardButtonState extends State<_LiveLeaderboardButton> {
+  Timer? _finishTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _armFinishTimer();
+  }
+
+  @override
+  void didUpdateWidget(_LiveLeaderboardButton old) {
+    super.didUpdateWidget(old);
+    if (old.event.finishDateTime != widget.event.finishDateTime) {
+      _armFinishTimer();
+    }
+  }
+
+  // One-shot timer that fires the moment the event's finish time arrives so
+  // the button flips from LIVE → View Final Results without a page refresh.
+  void _armFinishTimer() {
+    _finishTimer?.cancel();
+    final finish = widget.event.finishDateTime;
+    if (finish == null) return;
+    final delay = finish.difference(DateTime.now());
+    if (delay.isNegative) return;
+    _finishTimer = Timer(delay + const Duration(seconds: 1), () {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _finishTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final isToday = event.isToday;
+    final event = widget.event;
+    final isEnded = event.isResultsReady;
+    final isToday = !isEnded;
 
-    return StreamBuilder(
-      stream: isToday
-          ? AdminService.instance.watchLiveRunners()
-          : const Stream.empty(),
-      builder: (_, snap) {
-        final runnerCount = snap.data?.length ?? 0;
+    if (isEnded) {
+      return _buildButton(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF2E7D32), Color(0xFF1B5E20)],
+        ),
+        icon: Icons.emoji_events_outlined,
+        label: 'View Final Results',
+        onTap: () => widget.onTap?.call(event),
+      );
+    }
 
-        return SizedBox(
-          width: double.infinity,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              gradient: isToday
-                  ? const LinearGradient(
-                      colors: [Color(0xFFE53935), Color(0xFFB71C1C)],
-                    )
-                  : null,
-              color: isToday ? null : Colors.grey.shade200,
+    if (isToday) {
+      return StreamBuilder(
+        stream: AdminService.instance.watchLiveRunnersForEvent(event.id),
+        builder: (_, snap) {
+          final count = snap.data?.length ?? 0;
+          return _buildButton(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFE53935), Color(0xFFB71C1C)],
             ),
-            child: Material(
-              color: Colors.transparent,
-              borderRadius: BorderRadius.circular(10),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(10),
-                onTap: isToday ? () => onTap?.call(event) : null,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                      vertical: 11, horizontal: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (isToday) ...[
-                        Container(
-                          width: 7,
-                          height: 7,
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                      ] else
-                        Icon(Icons.leaderboard_outlined,
-                            size: 16, color: Colors.grey.shade500),
-                      const SizedBox(width: 6),
-                      Text(
-                        isToday
-                            ? 'LIVE — View Leaderboard${runnerCount > 0 ? '  ($runnerCount running)' : ''}'
-                            : 'Leaderboard (not today\'s event)',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: isToday
-                              ? Colors.white
-                              : Colors.grey.shade500,
-                          letterSpacing: isToday ? 0.3 : 0,
-                        ),
+            liveDot: true,
+            label:
+                'LIVE — View Leaderboard${count > 0 ? '  ($count running)' : ''}',
+            onTap: () => widget.onTap?.call(event),
+          );
+        },
+      );
+    }
+
+    return _buildButton(
+      color: Colors.grey.shade200,
+      icon: Icons.leaderboard_outlined,
+      iconColor: Colors.grey.shade400,
+      label: 'Leaderboard (upcoming)',
+      labelColor: Colors.grey.shade500,
+      onTap: null,
+    );
+  }
+
+  Widget _buildButton({
+    LinearGradient? gradient,
+    Color? color,
+    IconData? icon,
+    Color? iconColor,
+    bool liveDot = false,
+    required String label,
+    Color? labelColor,
+    VoidCallback? onTap,
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          gradient: gradient,
+          color: color,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (liveDot)
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
                       ),
-                    ],
+                    )
+                  else if (icon != null)
+                    Icon(icon, size: 16, color: iconColor ?? Colors.white),
+                  const SizedBox(width: 8),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: labelColor ?? Colors.white,
+                      letterSpacing: gradient != null ? 0.3 : 0,
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }
@@ -696,7 +764,10 @@ class _CreateOrganizerDialogState extends State<_CreateOrganizerDialog> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
 
     FirebaseApp? secondaryApp;
     try {
@@ -768,8 +839,9 @@ class _CreateOrganizerDialogState extends State<_CreateOrganizerDialog> {
                   labelText: 'Email',
                   prefixIcon: Icon(Icons.email_outlined),
                 ),
-                validator: (v) =>
-                    (v == null || !v.contains('@')) ? 'Enter a valid email' : null,
+                validator: (v) => (v == null || !v.contains('@'))
+                    ? 'Enter a valid email'
+                    : null,
               ),
               const SizedBox(height: 14),
               TextFormField(

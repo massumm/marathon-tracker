@@ -7,12 +7,12 @@ import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 
-import '../app/routes/app_routes.dart';
-import '../core/theme.dart';
-import '../models/tracked_route.dart';
-import '../screens/run_selfie_screen.dart';
-import '../services/firebase_service.dart';
-import '../services/offline_storage_service.dart';
+import '../../app/routes/app_routes.dart';
+import '../../core/theme.dart';
+import '../../models/tracked_route.dart';
+import 'run_selfie_screen.dart';
+import '../../services/firebase_service.dart';
+import '../../services/offline_storage_service.dart';
 
 class RouteDetailScreen extends StatefulWidget {
   const RouteDetailScreen({super.key});

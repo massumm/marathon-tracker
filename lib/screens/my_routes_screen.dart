@@ -2,11 +2,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../app/routes/app_routes.dart';
-import '../controllers/my_page_controller.dart';
-import '../core/theme.dart';
-import '../models/tracked_route.dart';
-import '../widgets/route_list_card.dart';
+import '../../app/routes/app_routes.dart';
+import '../../controllers/my_page_controller.dart';
+import '../../core/theme.dart';
+import '../../models/tracked_route.dart';
+import '../../widgets/route_list_card.dart';
 
 class MyRoutesScreen extends GetView<MyPageController> {
   const MyRoutesScreen({super.key});

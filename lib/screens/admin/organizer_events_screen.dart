@@ -2,9 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../../core/theme.dart';
-import '../../models/event_model.dart';
-import '../../services/admin_service.dart';
+import '../../../core/theme.dart';
+import '../../../models/event_model.dart';
+import '../../../services/admin_service.dart';
 import 'event_form_screen.dart';
 
 class OrganizerEventsScreen extends StatelessWidget {
@@ -75,7 +75,6 @@ class OrganizerEventsScreen extends StatelessWidget {
             );
           },
         ),
-
         Positioned(
           right: 28,
           bottom: 28,
@@ -85,8 +84,7 @@ class OrganizerEventsScreen extends StatelessWidget {
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) =>
-                    EventFormScreen(organizerUid: organizerUid),
+                builder: (_) => EventFormScreen(organizerUid: organizerUid),
               ),
             ),
           ),
@@ -143,7 +141,6 @@ class _EventCard extends StatelessWidget {
             )
           else
             _placeholderBanner(),
-
           Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -235,7 +232,8 @@ class _EventCard extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF1565C0).withValues(alpha: 0.1),
+                            color:
+                                const Color(0xFF1565C0).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Text(
@@ -335,8 +333,7 @@ class _EventCard extends StatelessWidget {
             AppTheme.primary.withValues(alpha: 0.7),
           ],
         ),
-        borderRadius:
-            const BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
       ),
       child: const Center(
         child: Icon(Icons.directions_run, color: Colors.white, size: 36),
@@ -413,37 +410,48 @@ class _LiveLeaderboardButton extends StatefulWidget {
 
 class _LiveLeaderboardButtonState extends State<_LiveLeaderboardButton> {
   Timer? _finishTimer;
+  Timer? _startTimer;
 
   @override
   void initState() {
     super.initState();
-    _armFinishTimer();
+    _armTimers();
   }
 
   @override
   void didUpdateWidget(_LiveLeaderboardButton old) {
     super.didUpdateWidget(old);
-    if (old.event.finishDateTime != widget.event.finishDateTime) {
-      _armFinishTimer();
+    if (old.event.finishDateTime != widget.event.finishDateTime ||
+        old.event.eventDateTime != widget.event.eventDateTime) {
+      _armTimers();
     }
   }
 
-  // Flip LIVE → View Results the moment the last cutoff passes, without
-  // waiting for an external rebuild.
-  void _armFinishTimer() {
+  void _armTimers() {
     _finishTimer?.cancel();
+    _startTimer?.cancel();
+    final now = DateTime.now();
     final finish = widget.event.finishDateTime;
-    if (finish == null) return;
-    final delay = finish.difference(DateTime.now());
-    if (delay.isNegative) return;
-    _finishTimer = Timer(delay + const Duration(seconds: 1), () {
-      if (mounted) setState(() {});
-    });
+    if (finish != null) {
+      final delay = finish.difference(now);
+      if (!delay.isNegative) {
+        _finishTimer = Timer(delay + const Duration(seconds: 1), () {
+          if (mounted) setState(() {});
+        });
+      }
+    }
+    final startDelay = widget.event.eventDateTime.difference(now);
+    if (!startDelay.isNegative) {
+      _startTimer = Timer(startDelay + const Duration(seconds: 1), () {
+        if (mounted) setState(() {});
+      });
+    }
   }
 
   @override
   void dispose() {
     _finishTimer?.cancel();
+    _startTimer?.cancel();
     super.dispose();
   }
 
@@ -453,9 +461,9 @@ class _LiveLeaderboardButtonState extends State<_LiveLeaderboardButton> {
     final onLiveTap = widget.onLiveTap;
     final onResultsTap = widget.onResultsTap;
     final isFinished = event.isResultsReady;
-    final isToday = event.isToday;
+    final isRunning = event.isRunning;
 
-    // Finished event (date passed, or all cutoffs over) → green "View Results"
+    // Event over → green "View Results"
     if (isFinished) {
       return _buildButton(
         gradient: const LinearGradient(
@@ -467,8 +475,8 @@ class _LiveLeaderboardButtonState extends State<_LiveLeaderboardButton> {
       );
     }
 
-    // Today → red LIVE with live runner count (scoped to this event only)
-    if (isToday) {
+    // Actively running (between startTime and endTime) → red LIVE
+    if (isRunning) {
       return StreamBuilder(
         stream: AdminService.instance.watchLiveRunnersForEvent(event.id),
         builder: (_, snap) {
@@ -486,7 +494,7 @@ class _LiveLeaderboardButtonState extends State<_LiveLeaderboardButton> {
       );
     }
 
-    // Upcoming → disabled gray
+    // Not yet started or future → disabled gray
     return _buildButton(
       color: Colors.grey.shade200,
       icon: Icons.leaderboard_outlined,
@@ -523,8 +531,7 @@ class _LiveLeaderboardButtonState extends State<_LiveLeaderboardButton> {
             borderRadius: BorderRadius.circular(10),
             onTap: onTap,
             child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(vertical: 11, horizontal: 16),
+              padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 16),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -538,9 +545,7 @@ class _LiveLeaderboardButtonState extends State<_LiveLeaderboardButton> {
                       ),
                     )
                   else if (icon != null)
-                    Icon(icon,
-                        size: 16,
-                        color: iconColor ?? Colors.white),
+                    Icon(icon, size: 16, color: iconColor ?? Colors.white),
                   const SizedBox(width: 8),
                   Text(
                     label,

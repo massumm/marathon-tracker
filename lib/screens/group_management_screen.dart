@@ -3,11 +3,11 @@ import 'package:get/get.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../app/routes/app_routes.dart';
-import '../controllers/group_controller.dart';
-import '../core/theme.dart';
-import '../models/group_model.dart';
-import '../widgets/user_avatar.dart';
+import '../../app/routes/app_routes.dart';
+import '../../controllers/group_controller.dart';
+import '../../core/theme.dart';
+import '../../models/group_model.dart';
+import '../../widgets/user_avatar.dart';
 
 class GroupManagementScreen extends StatefulWidget {
   const GroupManagementScreen({super.key});

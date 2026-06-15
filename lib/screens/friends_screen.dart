@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../app/routes/app_routes.dart';
-import '../controllers/friends_controller.dart';
-import '../core/theme.dart';
-import '../models/friend_model.dart';
-import '../widgets/qr_code_sheet.dart';
-import '../widgets/user_avatar.dart';
+import '../../app/routes/app_routes.dart';
+import '../../controllers/friends_controller.dart';
+import '../../core/theme.dart';
+import '../../models/friend_model.dart';
+import '../../widgets/qr_code_sheet.dart';
+import '../../widgets/user_avatar.dart';
 
 class FriendsScreen extends GetView<FriendsController> {
   const FriendsScreen({super.key});

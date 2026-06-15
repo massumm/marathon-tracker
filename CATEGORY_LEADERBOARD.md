@@ -1,18 +1,22 @@
-# Category-Wise Leaderboard Implementation
+# Category-Wise & Gender Leaderboard Implementation
 
 ## Overview
-Implemented category-wise filtering for live leaderboards in the admin panel. Users can now view rankings filtered by marathon category (e.g., 1km, 7km, etc.).
+Live leaderboards in the admin panel support two layers of filtering:
+1. **Race category** (e.g., 1km, 7km) — via tabs, one per category
+2. **Gender** (All / Male / Female) — via filter chips inside each category tab
 
 ## Changes Made
 
 ### 1. **RunnerData Model** (`lib/models/runner_data.dart`)
 - Added `categoryId` field to track which category the runner is participating in
-- Updated `fromMap()` and `toMap()` to serialize/deserialize categoryId
+- Added `gender` field (int?, 0=male, 1=female, null=not set) to enable gender-based filtering
+- Updated `fromMap()` and `toMap()` to serialize/deserialize both fields; `gender` is omitted from `toMap()` when null
 
 ```dart
 class RunnerData {
   ...
-  final String categoryId;  // NEW
+  final String categoryId;  // race category (e.g. 'cat_0')
+  final int? gender;        // 0 = male, 1 = female, null = not set
   ...
 }
 ```
@@ -53,15 +57,18 @@ void prepareRoute(dynamic args) {
 ```
 
 ### 4. **Live Tracking Service** (`lib/services/live_tracking_service.dart`)
-- Updated `startBroadcasting()` method signature to accept `categoryId` parameter
-- Stores categoryId in Firebase `live_runners/{uid}` node
+- `startBroadcasting()` reads `user_stats/{uid}/gender` from RTDB and includes it in the broadcast — no changes needed at call sites
+- Stores `categoryId` and `gender` in Firebase `live_runners/{uid}` node
 
 ```dart
 Future<void> startBroadcasting(double lat, double lng,
     {String eventId = '', String categoryId = ''}) async {
+  final genderSnap = await _db.ref('user_stats/${user.uid}/gender').get();
+  final gender = (genderSnap.value as num?)?.toInt();
   final data = RunnerData(
     ...
-    categoryId: categoryId,  // NEW
+    categoryId: categoryId,
+    gender: gender,          // NEW — read from user_stats at run start
     ...
   ).toMap();
   ...
@@ -69,25 +76,27 @@ Future<void> startBroadcasting(double lat, double lng,
 ```
 
 ### 5. **Admin Live Leaderboard** (`lib/screens/admin/admin_live_leaderboard_screen.dart`)
-- Added `TabController` to manage category tabs
-- Added category tabs above the leaderboard (one tab per category)
-- Created `_buildCategoryLeaderboard()` method that filters runners by categoryId
-- Tabs are scrollable if more than 3 categories exist
+- `TabController` manages one tab per race category
+- Added `_genderFilter` state (null=all, 0=male, 1=female)
+- `_GenderFilterBar` widget (All / Male / Female `ChoiceChip`s) renders inside each category tab
+- `_buildCategoryLeaderboard()` filters first by `categoryId`, then by `gender` if a filter is active
 
 **UI Changes:**
 ```
 ┌─────────────────────────────┐
 │ [1km] [7km] [21km] ...      │  ← Category Tabs
 ├─────────────────────────────┤
-│ #1 Runner1  2.3km  |  11m   │  ← Filtered by cat
+│ [All] [Male] [Female]       │  ← Gender Filter Chips
+├─────────────────────────────┤
+│ #1 Runner1  2.3km  |  11m   │  ← Filtered by cat + gender
 │ #2 Runner2  1.8km  |  9m    │
 └─────────────────────────────┘
 ```
 
 ### 6. **Organizer Live Leaderboard** (`lib/screens/admin/organizer_live_leaderboard_screen.dart`)
-- Applied same category tab logic for the organizer view
-- Changed to `TickerProviderStateMixin` to support TabController
-- Added category tabs and filtering
+- Applied same gender filter logic as admin view
+- `_genderFilter` state and `_GenderFilterBar` added to `_buildLeaderboard()`
+- Gender filter is applied on top of the existing category filter
 
 ## Data Flow
 
@@ -113,15 +122,18 @@ Future<void> startBroadcasting(double lat, double lng,
 6. Tracking starts, LiveTrackingService.startBroadcasting() called:
    startBroadcasting(lat, lng, 
      eventId: 'event002', 
-     categoryId: 'cat_0'  ← NEW
+     categoryId: 'cat_0'
    )
+   ↓
+   startBroadcasting() reads user_stats/{uid}/gender → e.g. 0 (male)
    ↓
 7. Firebase writes to live_runners/{uid}:
    {
      lat, lng, startedAt,
      displayName, photoUrl,
      eventId: 'event002',
-     categoryId: 'cat_0'  ← NEW
+     categoryId: 'cat_0',
+     gender: 0             ← read from user_stats at run start
    }
 ```
 
@@ -133,19 +145,26 @@ Future<void> startBroadcasting(double lat, double lng,
 2. Leaderboard screen loads
    - Creates TabController with 2 tabs
    - Shows TabBar with category labels
+   - Gender filter defaults to "All"
    ↓
-3. User 1 running 1km (categoryId: cat_0) shows in live_runners
-   User 2 running 7km (categoryId: cat_1) shows in live_runners
+3. User 1 (male)   running 1km (categoryId: cat_0, gender: 0) in live_runners
+   User 2 (female) running 1km (categoryId: cat_0, gender: 1) in live_runners
+   User 3 (male)   running 7km (categoryId: cat_1, gender: 0) in live_runners
    ↓
-4. Admin clicks tab "1km"
-   - _buildCategoryLeaderboard('cat_0') called
-   - Filters runners where r.categoryId == 'cat_0'
+4. Admin is on tab "1km", filter = All
+   - Shows User 1 and User 2
+   ↓
+5. Admin taps "Male" chip
+   - Filters where r.categoryId == 'cat_0' && r.gender == 0
    - Shows only User 1
    ↓
-5. Admin clicks tab "7km"
-   - _buildCategoryLeaderboard('cat_1') called
-   - Filters runners where r.categoryId == 'cat_1'
+6. Admin taps "Female" chip
+   - Filters where r.categoryId == 'cat_0' && r.gender == 1
    - Shows only User 2
+   ↓
+7. Admin switches to tab "7km" (filter stays on "Male")
+   - Filters where r.categoryId == 'cat_1' && r.gender == 0
+   - Shows only User 3
 ```
 
 ## Firebase Structure
@@ -156,10 +175,13 @@ live_runners/{uid} = {
   "lat": 37.7749,
   "lng": -122.4194,
   "startedAt": 1717858543000,
+  "lastSeen": 1717858600000,
+  "distanceKm": 1.23,
   "displayName": "John Runner",
   "photoUrl": "...",
   "eventId": "event002",
-  "categoryId": "cat_0"    // ← NEW
+  "categoryId": "cat_0",
+  "gender": 0              // 0 = male, 1 = female, omitted if not set
 }
 ```
 
@@ -225,14 +247,19 @@ Added debug logs for troubleshooting:
 ## Testing Checklist
 
 - [ ] Create event with 2+ categories (with KML files)
-- [ ] User 1 starts run, selects Category 1
-- [ ] User 2 starts run, selects Category 2
+- [ ] User 1 (male profile) starts run, selects Category 1
+- [ ] User 2 (female profile) starts run, selects Category 1
+- [ ] User 3 (male profile) starts run, selects Category 2
 - [ ] Admin views live leaderboard
 - [ ] Category tabs appear (one for each category)
-- [ ] Tab 1 shows only User 1
-- [ ] Tab 2 shows only User 2
-- [ ] Switching tabs updates the filtered view
+- [ ] Gender filter chips appear inside each tab (All / Male / Female)
+- [ ] Tab 1 + All shows User 1 and User 2
+- [ ] Tab 1 + Male shows only User 1
+- [ ] Tab 1 + Female shows only User 2
+- [ ] Tab 2 shows only User 3 (gender filter still applies)
+- [ ] Switching tabs preserves the selected gender filter
 - [ ] Console shows categoryId values (not empty)
+- [ ] Firebase `live_runners/{uid}` contains `gender` field
 
 ## Troubleshooting
 
@@ -249,3 +276,8 @@ Added debug logs for troubleshooting:
 1. Check if `selectedCategoryId` is set in KML controller
 2. Verify navigation arguments include `'categoryId': cat.id`
 3. Check if `startBroadcasting()` is called with categoryId parameter
+
+**gender missing from Firebase live_runners:**
+1. Check if the user has set their gender in profile settings — if not set, the field is omitted (null)
+2. Gender is read from `user_stats/{uid}/gender` at run start; verify the value exists there
+3. Runners with no gender stored will only appear under the "All" filter, not Male/Female

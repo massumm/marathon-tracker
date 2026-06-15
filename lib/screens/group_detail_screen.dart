@@ -4,15 +4,15 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../app/routes/app_routes.dart';
-import '../controllers/group_controller.dart';
-import '../core/theme.dart';
-import '../models/comment_model.dart';
-import '../models/group_model.dart';
-import '../screens/group_management_screen.dart';
-import '../services/comment_service.dart';
-import '../services/user_stats_service.dart';
-import '../widgets/user_avatar.dart';
+import '../../app/routes/app_routes.dart';
+import '../../controllers/group_controller.dart';
+import '../../core/theme.dart';
+import '../../models/comment_model.dart';
+import '../../models/group_model.dart';
+import 'group_management_screen.dart';
+import '../../services/comment_service.dart';
+import '../../services/user_stats_service.dart';
+import '../../widgets/user_avatar.dart';
 
 class GroupDetailScreen extends StatefulWidget {
   const GroupDetailScreen({super.key});

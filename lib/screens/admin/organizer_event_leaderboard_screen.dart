@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme.dart';
-import '../../models/event_model.dart';
-import '../../models/user_stats.dart';
-import '../../services/admin_service.dart';
-import '../../widgets/user_avatar.dart';
+import '../../../core/theme.dart';
+import '../../../models/event_model.dart';
+import '../../../models/user_stats.dart';
+import '../../../services/admin_service.dart';
+import '../../../widgets/user_avatar.dart';
 
 /// Post-event results screen — overall participant leaderboard only.
 /// No Scaffold — the OrganizerShell owns the top bar.

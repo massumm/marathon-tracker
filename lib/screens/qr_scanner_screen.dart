@@ -4,11 +4,11 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
 
-import '../app/routes/app_routes.dart';
-import '../core/theme.dart';
-import '../services/friends_service.dart';
-import '../services/group_service.dart';
-import '../services/user_stats_service.dart';
+import '../../app/routes/app_routes.dart';
+import '../../core/theme.dart';
+import '../../services/friends_service.dart';
+import '../../services/group_service.dart';
+import '../../services/user_stats_service.dart';
 
 class QrScannerScreen extends StatefulWidget {
   const QrScannerScreen({super.key});
