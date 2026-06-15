@@ -215,6 +215,7 @@ class AdminService {
           distanceKm: runner.distanceKm,
           eventId: runner.eventId,
           categoryId: runner.categoryId,
+          isVehicle: runner.isVehicle,
         );
       }).toList();
 
