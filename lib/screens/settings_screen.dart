@@ -7,7 +7,6 @@ import '../../controllers/map_controller.dart';
 import '../../controllers/my_page_controller.dart';
 import '../../core/theme.dart';
 import '../../services/event_notification_service.dart';
-import '../../widgets/confirm_dialog.dart';
 
 class SettingsScreen extends GetView<MyPageController> {
   const SettingsScreen({super.key});
@@ -37,10 +36,14 @@ class SettingsScreen extends GetView<MyPageController> {
                 : gender == 1
                     ? 'Female'
                     : 'Not set';
+            final missing = gender == null;
             return _tile(
               icon: gender == 1 ? Icons.female : Icons.male,
+              iconColor: missing ? Colors.orange : null,
               title: 'gender'.tr,
               subtitle: label,
+              subtitleColor: missing ? Colors.orange : null,
+              warning: missing,
               onTap: () => _changeGender(context, gender),
             );
           }),
@@ -112,10 +115,13 @@ class SettingsScreen extends GetView<MyPageController> {
     required String title,
     String? subtitle,
     Color? titleColor,
+    Color? iconColor,
+    Color? subtitleColor,
+    bool warning = false,
     VoidCallback? onTap,
   }) =>
       ListTile(
-        leading: Icon(icon, color: titleColor ?? AppTheme.textSecondary),
+        leading: Icon(icon, color: iconColor ?? titleColor ?? AppTheme.textSecondary),
         title: Text(title,
             style: TextStyle(
                 fontSize: 15,
@@ -123,11 +129,14 @@ class SettingsScreen extends GetView<MyPageController> {
                 color: titleColor ?? AppTheme.textPrimary)),
         subtitle: subtitle != null && subtitle.isNotEmpty
             ? Text(subtitle,
-                style: const TextStyle(
-                    fontSize: 12, color: AppTheme.textSecondary))
+                style: TextStyle(
+                    fontSize: 12,
+                    color: subtitleColor ?? AppTheme.textSecondary))
             : null,
         trailing: onTap != null
-            ? const Icon(Icons.chevron_right, color: AppTheme.textSecondary)
+            ? warning
+                ? const Icon(Icons.warning_amber_rounded, color: Colors.orange)
+                : const Icon(Icons.chevron_right, color: AppTheme.textSecondary)
             : null,
         onTap: onTap,
       );
@@ -141,13 +150,9 @@ class SettingsScreen extends GetView<MyPageController> {
         final color = value == 0 ? Colors.blue.shade400 : Colors.pink.shade300;
         final isCurrent = currentGender == value;
         return SimpleDialogOption(
-          onPressed: () {
+          onPressed: () async {
             Get.back();
-            ConfirmDialog.show(
-              title: 'gender_edit'.tr,
-              message: 'Change gender to $label?',
-              onConfirm: () => controller.updateGender(value),
-            );
+            await _updateGender(value, label);
           },
           child: Row(children: [
             Icon(icon, size: 20, color: color),
@@ -164,6 +169,26 @@ class SettingsScreen extends GetView<MyPageController> {
         );
       }).toList(),
     ));
+  }
+
+  Future<void> _updateGender(int gender, String label) async {
+    try {
+      await controller.updateGender(gender);
+      Get.snackbar(
+        'gender'.tr,
+        'Gender updated to $label',
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 2),
+      );
+    } catch (e) {
+      Get.snackbar(
+        'gender'.tr,
+        e.toString(),
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
   }
 
   void _selectLanguage() {

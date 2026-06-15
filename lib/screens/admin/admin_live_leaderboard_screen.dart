@@ -29,7 +29,7 @@ class _AdminLiveLeaderboardScreenState extends State<AdminLiveLeaderboardScreen>
   late TabController _tabController;
   StreamSubscription<List<RunnerData>>? _runnersSub;
   List<RunnerData> _runners = [];
-  // int? _genderFilter; // gender filter disabled
+  int? _genderFilter;
 
   @override
   void initState() {
@@ -207,28 +207,58 @@ class _AdminLiveLeaderboardScreenState extends State<AdminLiveLeaderboardScreen>
   }
 
   Widget _buildEnded() {
+    final banner = Container(
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.flag_rounded, size: 20, color: Colors.grey),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              'Final Standings · ${widget.event.name}',
+              style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textSecondary),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (widget.event.categories.isEmpty) {
+      return Column(
+        children: [
+          banner,
+          Expanded(child: _buildCategoryLeaderboard('')),
+        ],
+      );
+    }
+
     return Column(
       children: [
-        Container(
-          color: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.flag_rounded, size: 20, color: Colors.grey),
-              const SizedBox(width: 8),
-              Text(
-                'Cutoff reached — Final Standings · ${widget.event.name}',
-                style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.textSecondary),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
+        banner,
+        TabBar(
+          controller: _tabController,
+          isScrollable: widget.event.categories.length > 3,
+          labelColor: AppTheme.primary,
+          unselectedLabelColor: AppTheme.textSecondary,
+          indicatorColor: AppTheme.primary,
+          tabs: widget.event.categories.entries
+              .map((e) => Tab(text: e.value.label))
+              .toList(),
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: widget.event.categories.entries
+                .map((catEntry) => _buildCategoryLeaderboard(catEntry.key))
+                .toList(),
           ),
         ),
-        Expanded(child: _buildLeaderboard()),
       ],
     );
   }
@@ -346,18 +376,16 @@ class _AdminLiveLeaderboardScreenState extends State<AdminLiveLeaderboardScreen>
   Widget _buildCategoryLeaderboard(String categoryId) {
     final byCategory =
         _runners.where((r) => r.categoryId == categoryId).toList();
-    final runners = byCategory;
-    // Gender filter disabled:
-    // final runners = _genderFilter == null
-    //     ? byCategory
-    //     : byCategory.where((r) => r.gender == _genderFilter).toList();
+    final runners = _genderFilter == null
+        ? byCategory
+        : byCategory.where((r) => r.gender == _genderFilter).toList();
 
     return Column(
       children: [
-        // _GenderFilterBar(
-        //   selected: _genderFilter,
-        //   onChanged: (v) => setState(() => _genderFilter = v),
-        // ),
+        _GenderFilterBar(
+          selected: _genderFilter,
+          onChanged: (v) => setState(() => _genderFilter = v),
+        ),
         if (runners.isEmpty)
           Expanded(
             child: Center(
@@ -390,48 +418,49 @@ class _AdminLiveLeaderboardScreenState extends State<AdminLiveLeaderboardScreen>
     );
   }
 
-  Widget _buildLeaderboard() {
-    return _buildCategoryLeaderboard(
-      widget.event.categories.isNotEmpty
-          ? widget.event.categories.entries.first.key
-          : '',
+}
+
+class _GenderFilterBar extends StatelessWidget {
+  final int? selected;
+  final ValueChanged<int?> onChanged;
+  const _GenderFilterBar({required this.selected, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(children: [
+        _chip(null, 'All'), const SizedBox(width: 8),
+        _chip(0, 'Male'), const SizedBox(width: 8),
+        _chip(1, 'Female'),
+      ]),
+    );
+  }
+
+  Widget _chip(int? value, String label) {
+    final active = selected == value;
+    return ChoiceChip(
+      label: Text(label),
+      selected: active,
+      onSelected: (_) => onChanged(active ? null : value),
+      selectedColor: AppTheme.primary.withValues(alpha: 0.15),
+      labelStyle: TextStyle(
+        color: active ? AppTheme.primary : AppTheme.textSecondary,
+        fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+        fontSize: 12,
+      ),
+      side: BorderSide(
+        color: active
+            ? AppTheme.primary.withValues(alpha: 0.5)
+            : Colors.grey.shade300,
+      ),
+      backgroundColor: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      visualDensity: VisualDensity.compact,
     );
   }
 }
-
-// Gender filter widget — disabled for now; re-enable when runner gender data is
-// available in live broadcasts.
-// class _GenderFilterBar extends StatelessWidget {
-//   final int? selected;
-//   final ValueChanged<int?> onChanged;
-//   const _GenderFilterBar({required this.selected, required this.onChanged});
-//   @override
-//   Widget build(BuildContext context) {
-//     return Container(
-//       color: Colors.white,
-//       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-//       child: Row(children: [
-//         _chip(null, 'All'), const SizedBox(width: 8),
-//         _chip(0, 'Male'),  const SizedBox(width: 8),
-//         _chip(1, 'Female'),
-//       ]),
-//     );
-//   }
-//   Widget _chip(int? value, String label) {
-//     final active = selected == value;
-//     return ChoiceChip(
-//       label: Text(label), selected: active,
-//       onSelected: (_) => onChanged(value),
-//       selectedColor: AppTheme.primary.withValues(alpha: 0.15),
-//       labelStyle: TextStyle(color: active ? AppTheme.primary : AppTheme.textSecondary,
-//           fontWeight: active ? FontWeight.w700 : FontWeight.w500, fontSize: 12),
-//       side: BorderSide(color: active ? AppTheme.primary.withValues(alpha: 0.5) : Colors.grey.shade300),
-//       backgroundColor: Colors.white,
-//       padding: const EdgeInsets.symmetric(horizontal: 8),
-//       visualDensity: VisualDensity.compact,
-//     );
-//   }
-// }
 
 class _RunnerRow extends StatefulWidget {
   final RunnerData runner;

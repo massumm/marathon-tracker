@@ -13,6 +13,7 @@ class UserStatsService {
   Future<void> registerOrUpdate({
     String? displayName,
     String? photoUrl,
+    int? gender,
   }) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
@@ -26,6 +27,7 @@ class UserStatsService {
     if (resolvedName != null && resolvedName.isNotEmpty) {
       data['displayName'] = resolvedName;
     }
+    if (gender != null) data['gender'] = gender;
     await _db.ref('user_stats/${user.uid}').update(data);
   }
 
@@ -45,7 +47,7 @@ class UserStatsService {
   /// [runId] is used to persist a local backup before the RTDB write so that
   /// stats can be replayed if the process is killed before RTDB flushes to disk.
   Future<void> addRunStats(double distanceKm, int seconds,
-      {required String runId, String eventId = ''}) async {
+      {required String runId, String eventId = '', String categoryId = ''}) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
@@ -64,7 +66,7 @@ class UserStatsService {
     });
 
     if (eventId.isNotEmpty) {
-      await addEventRunStats(eventId, distanceKm, seconds);
+      await addEventRunStats(eventId, distanceKm, seconds, categoryId: categoryId);
     }
 
     // await OfflineStorageService.instance.markStatConfirmed(runId);
@@ -158,18 +160,22 @@ class UserStatsService {
   /// Saves per-event best run stats under event_stats/{eventId}/{uid}.
   /// Keeps the best (longest distance) run for the event.
   Future<void> addEventRunStats(
-      String eventId, double distanceKm, int seconds) async {
+      String eventId, double distanceKm, int seconds, {String categoryId = ''}) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
     final ref = _db.ref('event_stats/$eventId/${user.uid}');
 
     // .get() requires a live connection — gracefully skip the comparison
     // if offline. RTDB persistence will queue the .set() and sync later.
+    int? gender;
     try {
       final snap = await ref.get();
       final existing = snap.exists ? snap.value as Map<dynamic, dynamic> : null;
       final prevDist = (existing?['distanceKm'] as num?)?.toDouble() ?? 0.0;
       if (distanceKm < prevDist) return; // previous run was longer — keep it
+
+      final genderSnap = await _db.ref('user_stats/${user.uid}/gender').get();
+      gender = genderSnap.exists ? (genderSnap.value as num?)?.toInt() : null;
     } catch (_) {
       // Network unavailable — fall through and write; RTDB will reconcile.
     }
@@ -179,6 +185,8 @@ class UserStatsService {
       'seconds': seconds,
       'displayName': user.displayName ?? 'Runner',
       'photoUrl': user.photoURL ?? '',
+      'categoryId': categoryId,
+      if (gender != null) 'gender': gender,
       'completedAt': ServerValue.timestamp,
     });
   }

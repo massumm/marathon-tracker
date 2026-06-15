@@ -1158,6 +1158,7 @@ class KmlMapController extends GetxController {
         eventId: currentEventId,
         displayName: displayName,
         photoUrl: photoUrl,
+        categoryId: selectedCategoryId,
       );
       Get.snackbar(
         'run_saved'.tr,
@@ -1182,6 +1183,7 @@ class KmlMapController extends GetxController {
           eventId: currentEventId,
           displayName: displayName,
           photoUrl: photoUrl,
+          categoryId: selectedCategoryId,
         );
       }
       // 3. Stats via RTDB (Firebase persistence queues if briefly offline)
@@ -1191,6 +1193,7 @@ class KmlMapController extends GetxController {
         elapsedSeconds.value,
         runId: runId,
         eventId: currentEventId,
+        categoryId: selectedCategoryId,
       );
       debugPrint('[STOP] stats saved');
     }
