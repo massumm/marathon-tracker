@@ -6,8 +6,8 @@ import '../../app/routes/app_routes.dart';
 import '../../controllers/home_controller.dart';
 import '../../controllers/kml_map_controller.dart';
 import '../../core/theme.dart';
-import '../map/map_screen.dart';
-import '../profile/my_page_screen.dart';
+import 'map_screen.dart';
+import 'my_page_screen.dart';
 
 class _RunningBanner extends StatelessWidget {
   const _RunningBanner();
