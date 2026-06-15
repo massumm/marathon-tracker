@@ -52,7 +52,7 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   int _sortPriority(EventModel e) {
-    if (_isLive(e)) return 0;
+    if (e.isToday) return 0;
     if (!e.isFinished) return 1;
     return 2;
   }
@@ -62,7 +62,7 @@ class _MapScreenState extends State<MapScreen> {
       ..sort((a, b) => _sortPriority(a).compareTo(_sortPriority(b)));
     if (_filter == 'live') return events.where(_isLive).toList();
     if (_filter == 'upcoming') {
-      return events.where((e) => !e.isFinished && !_isLive(e)).toList();
+      return events.where((e) => !e.isFinished).toList();
     }
     return events;
   }
@@ -70,9 +70,7 @@ class _MapScreenState extends State<MapScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('events_title'.tr)
-      ),
+      appBar: AppBar(title: Text('events_title'.tr)),
       body: Column(
         children: [
           Padding(
@@ -156,8 +154,8 @@ class _MapScreenState extends State<MapScreen> {
                     top: 8,
                     bottom: MediaQuery.of(context).padding.bottom + 8,
                   ),
-                  itemCount: filtered.length +
-                      (_ctrl.isLoadingMore.value ? 1 : 0),
+                  itemCount:
+                      filtered.length + (_ctrl.isLoadingMore.value ? 1 : 0),
                   itemBuilder: (_, i) {
                     if (i == filtered.length) {
                       return const Center(
@@ -385,7 +383,8 @@ class _EventCardState extends State<_EventCard> {
       );
       return;
     }
-    debugPrint('[MAP_SCREEN] Starting run with categoryId: ${cat.id}, category label: ${cat.label}');
+    debugPrint(
+        '[MAP_SCREEN] Starting run with categoryId: ${cat.id}, category label: ${cat.label}');
     Get.toNamed(
       AppRoutes.kmlMap,
       arguments: {
@@ -649,120 +648,123 @@ class _GroupBarState extends State<_GroupBar> {
           children: [
             const Divider(height: 1, thickness: 1),
             Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius:
-                const BorderRadius.vertical(bottom: Radius.circular(12)),
-            onTap: () => Get.toNamed(
-              AppRoutes.groupManagement,
-              arguments: {'eventId': widget.eventId},
-            ),
-            child: Ink(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: hasGroups
-                      ? [const Color(0xFFFF6B35), const Color(0xFFE03E10)]
-                      : [const Color.fromRGBO(218, 61, 32, 32),const Color.fromRGBO(218, 61, 32, 32)],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ),
+              color: Colors.transparent,
+              child: InkWell(
                 borderRadius:
                     const BorderRadius.vertical(bottom: Radius.circular(12)),
-              ),
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.18),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(Icons.groups_rounded,
-                          color: Colors.white, size: 20),
+                onTap: () => Get.toNamed(
+                  AppRoutes.groupManagement,
+                  arguments: {'eventId': widget.eventId},
+                ),
+                child: Ink(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: hasGroups
+                          ? [const Color(0xFFFF6B35), const Color(0xFFE03E10)]
+                          : [
+                              const Color.fromRGBO(218, 61, 32, 32),
+                              const Color.fromRGBO(218, 61, 32, 32)
+                            ],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'groups'.tr,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                              letterSpacing: 0.2,
-                            ),
+                    borderRadius: const BorderRadius.vertical(
+                        bottom: Radius.circular(12)),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 11),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(10),
                           ),
-                          Text(
-                            hasGroups
-                                ? 'groups_count'
-                                    .tr
-                                    .replaceAll('@count', '$count')
-                                : 'groups_cta'.tr,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.white.withValues(alpha: 0.82),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (hasGroups)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.22),
-                          borderRadius: BorderRadius.circular(20),
+                          child: const Icon(Icons.groups_rounded,
+                              color: Colors.white, size: 20),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.people_alt_rounded,
-                                size: 13, color: Colors.white),
-                            const SizedBox(width: 4),
-                            Text(
-                              '$count',
-                              style: const TextStyle(
-                                  fontSize: 12,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'groups'.tr,
+                                style: const TextStyle(
+                                  fontSize: 13,
                                   fontWeight: FontWeight.w800,
-                                  color: Colors.white),
-                            ),
-                          ],
-                        ),
-                      )
-                    else
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          'join'.tr,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                            color: Color.fromARGB(255, 0, 0, 0),
+                                  color: Colors.white,
+                                  letterSpacing: 0.2,
+                                ),
+                              ),
+                              Text(
+                                hasGroups
+                                    ? 'groups_count'
+                                        .tr
+                                        .replaceAll('@count', '$count')
+                                    : 'groups_cta'.tr,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.white.withValues(alpha: 0.82),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ),
-                    const SizedBox(width: 6),
-                    const Icon(Icons.chevron_right,
-                        color: Colors.white70, size: 18),
-                  ],
+                        if (hasGroups)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.22),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.people_alt_rounded,
+                                    size: 13, color: Colors.white),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '$count',
+                                  style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.white),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              'join'.tr,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: Color.fromARGB(255, 0, 0, 0),
+                              ),
+                            ),
+                          ),
+                        const SizedBox(width: 6),
+                        const Icon(Icons.chevron_right,
+                            color: Colors.white70, size: 18),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
             ),
           ],
         );
@@ -823,7 +825,9 @@ class _RegistrationBar extends StatelessWidget {
             //         end: Alignment.centerRight,
             //       )
             //     : null,
-            color: isOpen ? const Color.fromARGB(255, 249, 222, 111) : const Color.fromARGB(255, 245, 190, 104),
+            color: isOpen
+                ? const Color.fromARGB(255, 249, 222, 111)
+                : const Color.fromARGB(255, 245, 190, 104),
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -849,7 +853,9 @@ class _RegistrationBar extends StatelessWidget {
                 ),
                 if (isOpen)
                   Icon(Icons.open_in_new_rounded,
-                      size: 14, color: const Color.fromARGB(255, 245, 2, 2).withValues(alpha: 0.8)),
+                      size: 14,
+                      color: const Color.fromARGB(255, 245, 2, 2)
+                          .withValues(alpha: 0.8)),
               ],
             ),
           ),

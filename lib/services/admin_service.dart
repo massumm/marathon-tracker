@@ -290,6 +290,19 @@ class AdminService {
       if (organizerUid != null) {
         events = events.where((ev) => ev.organizerUid == organizerUid).toList();
       }
+      debugPrint('[AdminService.watchEvents] ── EVENT LIST (${events.length} total) ──────────────────');
+      for (var i = 0; i < events.length; i++) {
+        final ev = events[i];
+        debugPrint(
+          '[AdminService.watchEvents] [$i] id=${ev.id}'
+          ' | name="${ev.name}"'
+          ' | date=${ev.date} startTime=${ev.startTime.isEmpty ? "none" : ev.startTime}'
+          ' | isToday=${ev.isToday} isFinished=${ev.isFinished} isRunning=${ev.isRunning}'
+          ' | organizer=${ev.organizerUid.isEmpty ? "none" : ev.organizerUid}'
+          ' | categories=${ev.categories.keys.toList()}',
+        );
+      }
+      debugPrint('[AdminService.watchEvents] ────────────────────────────────────────────────────────');
       return events;
     });
   }
@@ -318,9 +331,6 @@ class AdminService {
         .toList()
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-    if (kDebugMode) {
-      print(events.map((e) => '${e.id}: ${e.createdAt}').join('\n'));
-    }
     if (cursor != null) {
       events.removeWhere((e) => e.id == cursor.id);
     }
@@ -328,6 +338,20 @@ class AdminService {
     if (organizerUid != null) {
       events = events.where((ev) => ev.organizerUid == organizerUid).toList();
     }
+
+    debugPrint('[AdminService.fetchEventsPage] ── PAGE (${events.length} events, cursor=${cursor?.id}) ──────────────');
+    for (var i = 0; i < events.length; i++) {
+      final ev = events[i];
+      debugPrint(
+        '[AdminService.fetchEventsPage] [$i] id=${ev.id}'
+        ' | name="${ev.name}"'
+        ' | date=${ev.date} startTime=${ev.startTime.isEmpty ? "none" : ev.startTime}'
+        ' | isToday=${ev.isToday} isFinished=${ev.isFinished} isRunning=${ev.isRunning}'
+        ' | organizer=${ev.organizerUid.isEmpty ? "none" : ev.organizerUid}'
+        ' | categories=${ev.categories.keys.toList()}',
+      );
+    }
+    debugPrint('[AdminService.fetchEventsPage] ────────────────────────────────────────────────────────');
 
     return events;
   }
