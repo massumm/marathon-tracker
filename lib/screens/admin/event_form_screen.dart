@@ -10,7 +10,6 @@ import '../../../models/event_model.dart';
 import '../../../services/admin_service.dart';
 import 'route_editor_screen.dart';
 
-
 class EventFormScreen extends StatefulWidget {
   final EventModel? existing;
   final String organizerUid;
@@ -27,7 +26,8 @@ class _EventFormScreenState extends State<EventFormScreen> {
   late final TextEditingController _timeCtrl;
   late final TextEditingController _chipTimeCtrl; // display only, e.g. "10 min"
   int _chipTimeMinutes = 10;
-  late final TextEditingController _graceTimeCtrl; // display only, e.g. "10 min"
+  late final TextEditingController
+      _graceTimeCtrl; // display only, e.g. "10 min"
   int _graceTimeMinutes = 10;
   late final TextEditingController _locationCtrl;
   late final TextEditingController _regStartCtrl;
@@ -204,7 +204,8 @@ class _EventFormScreenState extends State<EventFormScreen> {
   String _computeEndTime() {
     int maxCutoff = 0;
     for (final entry in _categories) {
-      final mins = RaceCategory.parseCutoffMinutes(entry.cutoffCtrl.text.trim());
+      final mins =
+          RaceCategory.parseCutoffMinutes(entry.cutoffCtrl.text.trim());
       if (mins > maxCutoff) maxCutoff = mins;
     }
     return _endTimeForCutoff(maxCutoff);
@@ -234,7 +235,8 @@ class _EventFormScreenState extends State<EventFormScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Image too large. Please choose an image under 3 MB.')),
+            content:
+                Text('Image too large. Please choose an image under 3 MB.')),
       );
       return;
     }
@@ -283,7 +285,8 @@ class _EventFormScreenState extends State<EventFormScreen> {
       if (regStart != null && !regStart.isBefore(eventDate)) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Registration start date must be before the event date.'),
+            content:
+                Text('Registration start date must be before the event date.'),
             backgroundColor: Colors.orange,
           ),
         );
@@ -292,7 +295,8 @@ class _EventFormScreenState extends State<EventFormScreen> {
       if (regEnd != null && !regEnd.isBefore(eventDate)) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Registration end date must be before the event date.'),
+            content:
+                Text('Registration end date must be before the event date.'),
             backgroundColor: Colors.orange,
           ),
         );
@@ -336,7 +340,8 @@ class _EventFormScreenState extends State<EventFormScreen> {
               _tmpEventId, catId, entry.pickedFileName, entry.pickedBytes!);
         }
 
-        final catCutoffMins = RaceCategory.parseCutoffMinutes(entry.cutoffCtrl.text.trim());
+        final catCutoffMins =
+            RaceCategory.parseCutoffMinutes(entry.cutoffCtrl.text.trim());
         catMaps[catId] = {
           'label': entry.labelCtrl.text.trim(),
           'cutoff': entry.cutoffCtrl.text.trim(),
@@ -432,613 +437,638 @@ class _EventFormScreenState extends State<EventFormScreen> {
               child: ListView(
                 controller: _scrollCtrl,
                 padding: const EdgeInsets.all(28),
-              children: [
-                // ── Banner ───────────────────────────────────────────────
-                _buildSectionHeader('Event Banner', null),
-                const SizedBox(height: 12),
-                MouseRegion(
-                  cursor: SystemMouseCursors.click,
-                  child: GestureDetector(
-                    onTap: _saving ? null : _pickBanner,
-                    child: Container(
-                      height: 200,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: AppTheme.primary.withValues(alpha: 0.3),
-                          width: 1.5,
-                          strokeAlign: BorderSide.strokeAlignInside,
+                children: [
+                  // ── Banner ───────────────────────────────────────────────
+                  _buildSectionHeader('Event Banner', null),
+                  const SizedBox(height: 12),
+                  MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: GestureDetector(
+                      onTap: _saving ? null : _pickBanner,
+                      child: Container(
+                        height: 200,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: AppTheme.primary.withValues(alpha: 0.3),
+                            width: 1.5,
+                            strokeAlign: BorderSide.strokeAlignInside,
+                          ),
+                          image: _bannerPreview != null
+                              ? DecorationImage(
+                                  image: MemoryImage(_bannerPreview!),
+                                  fit: BoxFit.cover)
+                              : _bannerUrl.isNotEmpty
+                                  ? DecorationImage(
+                                      image: NetworkImage(_bannerUrl),
+                                      fit: BoxFit.cover)
+                                  : null,
                         ),
-                        image: _bannerPreview != null
-                            ? DecorationImage(
-                                image: MemoryImage(_bannerPreview!),
-                                fit: BoxFit.cover)
-                            : _bannerUrl.isNotEmpty
-                                ? DecorationImage(
-                                    image: NetworkImage(_bannerUrl),
-                                    fit: BoxFit.cover)
-                                : null,
-                      ),
-                      child: (_bannerPreview == null && _bannerUrl.isEmpty)
-                          ? Center(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.cloud_upload_outlined,
-                                      size: 44, color: Colors.grey.shade400),
-                                  const SizedBox(height: 10),
-                                  Text('Click to upload banner image',
-                                      style: TextStyle(
-                                          color: Colors.grey.shade500,
-                                          fontSize: 14)),
-                                ],
-                              ),
-                            )
-                          : Align(
-                              alignment: Alignment.bottomRight,
-                              child: Padding(
-                                padding: const EdgeInsets.all(10),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black54,
-                                    borderRadius: BorderRadius.circular(8),
+                        child: (_bannerPreview == null && _bannerUrl.isEmpty)
+                            ? Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.cloud_upload_outlined,
+                                        size: 44, color: Colors.grey.shade400),
+                                    const SizedBox(height: 10),
+                                    Text('Click to upload banner image',
+                                        style: TextStyle(
+                                            color: Colors.grey.shade500,
+                                            fontSize: 14)),
+                                  ],
+                                ),
+                              )
+                            : Align(
+                                alignment: Alignment.bottomRight,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(10),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black54,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Text('Change',
+                                        style: TextStyle(
+                                            color: Colors.white, fontSize: 12)),
                                   ),
-                                  child: const Text('Change',
-                                      style: TextStyle(
-                                          color: Colors.white, fontSize: 12)),
                                 ),
                               ),
-                            ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 28),
-
-                // ── Event info ───────────────────────────────────────────
-                _buildSectionHeader('Event Information', null),
-                const SizedBox(height: 14),
-                _buildField(
-                  controller: _nameCtrl,
-                  label: 'Event Name',
-                  hint: 'e.g. Iwaki Sunshine Marathon 2025',
-                  icon: Icons.event,
-                  validator: (v) =>
-                      v == null || v.trim().isEmpty ? 'Required' : null,
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildField(
-                        controller: _dateCtrl,
-                        label: 'Date',
-                        hint: 'e.g. 2025-11-23',
-                        icon: Icons.calendar_today,
-                        validator: (v) =>
-                            v == null || v.trim().isEmpty ? 'Required' : null,
-                        readOnly: true,
-                        onTap: () async {
-                          final today = DateTime.now();
-                          final existing = _parseEventDate();
-                          // Allow editing an event that already has a past date,
-                          // but new events can only pick today or later.
-                          final first = (existing != null && existing.isBefore(today))
-                              ? existing
-                              : today;
-                          final picked = await showDatePicker(
-                            context: context,
-                            initialDate: existing ?? today,
-                            firstDate: first,
-                            lastDate: DateTime(2035),
-                          );
-                          if (picked != null) {
-                            setState(() {
-                              _dateCtrl.text =
-                                  '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
-                              // Clear reg dates that became invalid after event date change
-                              final regStart = _parseDate(_regStartCtrl.text);
-                              final regEnd = _parseDate(_regEndCtrl.text);
-                              if (regStart != null && !regStart.isBefore(picked)) {
-                                _regStartCtrl.clear();
-                              }
-                              if (regEnd != null && !regEnd.isBefore(picked)) {
-                                _regEndCtrl.clear();
-                              }
-                            });
-                          }
-                        },
                       ),
                     ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: _buildField(
-                        controller: _timeCtrl,
-                        label: 'Start Time',
-                        hint: 'e.g. 08:00',
-                        icon: Icons.access_time_rounded,
-                        validator: (v) =>
-                            v == null || v.trim().isEmpty ? 'Required' : null,
-                        readOnly: true,
-                        onTap: () async {
-                          final initial = TimeOfDay.now();
-                          final picked = await showTimePicker(
-                            context: context,
-                            initialTime: initial,
-                            builder: (ctx, child) => MediaQuery(
-                              data: MediaQuery.of(ctx)
-                                  .copyWith(alwaysUse24HourFormat: true),
-                              child: child!,
-                            ),
-                          );
-                          if (picked != null) {
-                            setState(() {
-                              _timeCtrl.text =
-                                  '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
-                            });
-                          }
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                if (_computeEndTime().isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primary.withValues(alpha: 0.07),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.timer_off_rounded, size: 18, color: AppTheme.primary),
-                        const SizedBox(width: 8),
-                        Text(
-                          'End Time (auto): ${_computeEndTime()}',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.primary,
-                          ),
-                        ),
-                      ],
-                    ),
                   ),
-                ],
-                const SizedBox(height: 14),
-                _buildField(
-                  controller: _chipTimeCtrl,
-                  label: 'Chip Time',
-                  hint: 'e.g. 10 min',
-                  icon: Icons.timer_rounded,
-                  readOnly: true,
-                  onTap: _pickChipTime,
-                ),
-                const SizedBox(height: 14),
-                _buildField(
-                  controller: _graceTimeCtrl,
-                  label: 'Grace Time',
-                  hint: 'e.g. 10 min',
-                  icon: Icons.timer_off_outlined,
-                  readOnly: true,
-                  onTap: _pickGraceTime,
-                ),
-                const SizedBox(height: 14),
-                _buildField(
-                  controller: _locationCtrl,
-                  label: 'Location',
-                  hint: 'e.g. Iwaki City, Fukushima',
-                  icon: Icons.location_on_outlined,
-                  validator: (v) =>
-                      v == null || v.trim().isEmpty ? 'Required' : null,
-                ),
 
-                const SizedBox(height: 32),
+                  const SizedBox(height: 28),
 
-                // ── Registration ─────────────────────────────────────────
-                _buildSectionHeader('Registration', null),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: Colors.grey.shade200),
+                  // ── Event info ───────────────────────────────────────────
+                  _buildSectionHeader('Event Information', null),
+                  const SizedBox(height: 14),
+                  _buildField(
+                    controller: _nameCtrl,
+                    label: 'Event Name',
+                    hint: 'e.g. Iwaki Sunshine Marathon 2025',
+                    icon: Icons.event,
+                    validator: (v) =>
+                        v == null || v.trim().isEmpty ? 'Required' : null,
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  const SizedBox(height: 14),
+                  Row(
                     children: [
-                      Text(
-                        'Set a date range and URL to show a "Register Now" button in the app.',
-                        style: TextStyle(
-                            fontSize: 12, color: Colors.grey.shade500),
-                      ),
-                      const SizedBox(height: 14),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildField(
-                              controller: _regStartCtrl,
-                              label: 'Registration Start',
-                              hint: 'e.g. 2025-10-01',
-                              icon: Icons.event_available_outlined,
-                              readOnly: true,
-                              onTap: () async {
-                                final eventDate = _parseEventDate();
-                                if (eventDate == null) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Please set the event date first.')),
-                                  );
-                                  return;
-                                }
-                                final lastAllowed = eventDate.subtract(const Duration(days: 1));
-                                final today = DateTime.now();
-                                final initial = _parseDate(_regStartCtrl.text) ??
-                                    (today.isBefore(lastAllowed) ? today : lastAllowed);
-                                final picked = await showDatePicker(
-                                  context: context,
-                                  initialDate: initial,
-                                  firstDate: DateTime.now(),
-                                  lastDate: lastAllowed,
-                                );
-                                if (picked != null) {
-                                  setState(() {
-                                    _regStartCtrl.text =
-                                        '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
-                                    // End date must be re-selected after start date changes.
-                                    _regEndCtrl.clear();
-                                  });
-                                }
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: _buildField(
-                              controller: _regEndCtrl,
-                              label: 'Registration End',
-                              hint: 'e.g. 2025-11-20',
-                              icon: Icons.event_busy_outlined,
-                              readOnly: true,
-                              onTap: () async {
-                                final eventDate = _parseEventDate();
-                                if (eventDate == null) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Please set the event date first.')),
-                                  );
-                                  return;
-                                }
+                      Expanded(
+                        child: _buildField(
+                          controller: _dateCtrl,
+                          label: 'Date',
+                          hint: 'e.g. 2025-11-23',
+                          icon: Icons.calendar_today,
+                          validator: (v) =>
+                              v == null || v.trim().isEmpty ? 'Required' : null,
+                          readOnly: true,
+                          onTap: () async {
+                            final today = DateTime.now();
+                            final existing = _parseEventDate();
+                            // Allow editing an event that already has a past date,
+                            // but new events can only pick today or later.
+                            final first =
+                                (existing != null && existing.isBefore(today))
+                                    ? existing
+                                    : today;
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: existing ?? today,
+                              firstDate: first,
+                              lastDate: DateTime(2035),
+                            );
+                            if (picked != null) {
+                              setState(() {
+                                _dateCtrl.text =
+                                    '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+                                // Clear reg dates that became invalid after event date change
                                 final regStart = _parseDate(_regStartCtrl.text);
-                                if (regStart == null) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Please set the registration start date first.')),
-                                  );
-                                  return;
+                                final regEnd = _parseDate(_regEndCtrl.text);
+                                if (regStart != null &&
+                                    !regStart.isBefore(picked)) {
+                                  _regStartCtrl.clear();
                                 }
-                                final firstAllowed = regStart.add(const Duration(days: 1));
-                                final lastAllowed = eventDate.subtract(const Duration(days: 1));
-                                final initial = _parseDate(_regEndCtrl.text) ??
-                                    (firstAllowed.isBefore(lastAllowed) ? firstAllowed : lastAllowed);
-                                final picked = await showDatePicker(
-                                  context: context,
-                                  initialDate: initial,
-                                  firstDate: firstAllowed,
-                                  lastDate: lastAllowed,
-                                );
-                                if (picked != null) {
-                                  setState(() {
-                                    _regEndCtrl.text =
-                                        '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
-                                  });
+                                if (regEnd != null &&
+                                    !regEnd.isBefore(picked)) {
+                                  _regEndCtrl.clear();
                                 }
-                              },
-                            ),
-                          ),
-                        ],
+                              });
+                            }
+                          },
+                        ),
                       ),
-                      const SizedBox(height: 14),
-                      _buildField(
-                        controller: _regUrlCtrl,
-                        label: 'Registration URL',
-                        hint: 'https://example.com/register',
-                        icon: Icons.link_rounded,
-                      ),
-                      const SizedBox(height: 4),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton.icon(
-                          onPressed: () => setState(() {
-                            _regStartCtrl.clear();
-                            _regEndCtrl.clear();
-                            _regUrlCtrl.clear();
-                          }),
-                          icon: const Icon(Icons.clear, size: 15),
-                          label: const Text('Clear registration',
-                              style: TextStyle(fontSize: 12)),
-                          style: TextButton.styleFrom(
-                              foregroundColor: Colors.red),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: _buildField(
+                          controller: _timeCtrl,
+                          label: 'Start Time',
+                          hint: 'e.g. 08:00',
+                          icon: Icons.access_time_rounded,
+                          validator: (v) =>
+                              v == null || v.trim().isEmpty ? 'Required' : null,
+                          readOnly: true,
+                          onTap: () async {
+                            final initial = TimeOfDay.now();
+                            final picked = await showTimePicker(
+                              context: context,
+                              initialTime: initial,
+                              builder: (ctx, child) => MediaQuery(
+                                data: MediaQuery.of(ctx)
+                                    .copyWith(alwaysUse24HourFormat: true),
+                                child: child!,
+                              ),
+                            );
+                            if (picked != null) {
+                              setState(() {
+                                _timeCtrl.text =
+                                    '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+                              });
+                            }
+                          },
                         ),
                       ),
                     ],
                   ),
-                ),
-
-                const SizedBox(height: 32),
-
-                // ── Race categories ──────────────────────────────────────
-                _buildSectionHeader(
-                  'Race Categories',
-                  TextButton.icon(
-                    onPressed: _saving ? null : _addCategory,
-                    icon: const Icon(Icons.add_circle_outline, size: 18),
-                    label: const Text('Add Category'),
+                  // if (_computeEndTime().isNotEmpty) ...[
+                  //   const SizedBox(height: 10),
+                  //   Container(
+                  //     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  //     decoration: BoxDecoration(
+                  //       color: AppTheme.primary.withValues(alpha: 0.07),
+                  //       borderRadius: BorderRadius.circular(10),
+                  //       border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
+                  //     ),
+                  //     child: Row(
+                  //       children: [
+                  //         const Icon(Icons.timer_off_rounded, size: 18, color: AppTheme.primary),
+                  //         const SizedBox(width: 8),
+                  //         Text(
+                  //           'End Time (auto): ${_computeEndTime()}',
+                  //           style: const TextStyle(
+                  //             fontSize: 13,
+                  //             fontWeight: FontWeight.w600,
+                  //             color: AppTheme.primary,
+                  //           ),
+                  //         ),
+                  //       ],
+                  //     ),
+                  //   ),
+                  // ],
+                  const SizedBox(height: 14),
+                  _buildField(
+                    controller: _chipTimeCtrl,
+                    label: 'Chip Time',
+                    hint: 'e.g. 10 min',
+                    icon: Icons.timer_rounded,
+                    readOnly: true,
+                    onTap: _pickChipTime,
                   ),
-                ),
-                const SizedBox(height: 14),
+                  const SizedBox(height: 14),
+                  _buildField(
+                    controller: _graceTimeCtrl,
+                    label: 'Grace Time',
+                    hint: 'e.g. 10 min',
+                    icon: Icons.timer_off_outlined,
+                    readOnly: true,
+                    onTap: _pickGraceTime,
+                  ),
+                  const SizedBox(height: 14),
+                  _buildField(
+                    controller: _locationCtrl,
+                    label: 'Location',
+                    hint: 'e.g. Iwaki City, Fukushima',
+                    icon: Icons.location_on_outlined,
+                    validator: (v) =>
+                        v == null || v.trim().isEmpty ? 'Required' : null,
+                  ),
 
-                if (_categories.isEmpty)
+                  const SizedBox(height: 32),
+
+                  // ── Registration ─────────────────────────────────────────
+                  _buildSectionHeader('Registration', null),
+                  const SizedBox(height: 8),
                   Container(
-                    padding: const EdgeInsets.all(32),
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(color: Colors.grey.shade200),
                     ),
-                    child: Center(
-                      child: Column(
-                        children: [
-                          Icon(Icons.category_outlined,
-                              size: 40, color: Colors.grey.shade400),
-                          const SizedBox(height: 10),
-                          Text('No categories added yet',
-                              style: TextStyle(
-                                  color: Colors.grey.shade500, fontSize: 14)),
-                          const SizedBox(height: 6),
-                          Text('Click "Add Category" to add race distances',
-                              style: TextStyle(
-                                  color: Colors.grey.shade400, fontSize: 12)),
-                        ],
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Set a date range and URL to show a "Register Now" button in the app.',
+                          style: TextStyle(
+                              fontSize: 12, color: Colors.grey.shade500),
+                        ),
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildField(
+                                controller: _regStartCtrl,
+                                label: 'Registration Start',
+                                hint: 'e.g. 2025-10-01',
+                                icon: Icons.event_available_outlined,
+                                readOnly: true,
+                                onTap: () async {
+                                  final eventDate = _parseEventDate();
+                                  if (eventDate == null) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content: Text(
+                                              'Please set the event date first.')),
+                                    );
+                                    return;
+                                  }
+                                  final lastAllowed = eventDate
+                                      .subtract(const Duration(days: 1));
+                                  final today = DateTime.now();
+                                  final initial =
+                                      _parseDate(_regStartCtrl.text) ??
+                                          (today.isBefore(lastAllowed)
+                                              ? today
+                                              : lastAllowed);
+                                  final picked = await showDatePicker(
+                                    context: context,
+                                    initialDate: initial,
+                                    firstDate: DateTime.now(),
+                                    lastDate: lastAllowed,
+                                  );
+                                  if (picked != null) {
+                                    setState(() {
+                                      _regStartCtrl.text =
+                                          '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+                                      // End date must be re-selected after start date changes.
+                                      _regEndCtrl.clear();
+                                    });
+                                  }
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: _buildField(
+                                controller: _regEndCtrl,
+                                label: 'Registration End',
+                                hint: 'e.g. 2025-11-20',
+                                icon: Icons.event_busy_outlined,
+                                readOnly: true,
+                                onTap: () async {
+                                  final eventDate = _parseEventDate();
+                                  if (eventDate == null) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content: Text(
+                                              'Please set the event date first.')),
+                                    );
+                                    return;
+                                  }
+                                  final regStart =
+                                      _parseDate(_regStartCtrl.text);
+                                  if (regStart == null) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content: Text(
+                                              'Please set the registration start date first.')),
+                                    );
+                                    return;
+                                  }
+                                  final firstAllowed =
+                                      regStart.add(const Duration(days: 1));
+                                  final lastAllowed = eventDate
+                                      .subtract(const Duration(days: 1));
+                                  final initial =
+                                      _parseDate(_regEndCtrl.text) ??
+                                          (firstAllowed.isBefore(lastAllowed)
+                                              ? firstAllowed
+                                              : lastAllowed);
+                                  final picked = await showDatePicker(
+                                    context: context,
+                                    initialDate: initial,
+                                    firstDate: firstAllowed,
+                                    lastDate: lastAllowed,
+                                  );
+                                  if (picked != null) {
+                                    setState(() {
+                                      _regEndCtrl.text =
+                                          '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+                                    });
+                                  }
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        _buildField(
+                          controller: _regUrlCtrl,
+                          label: 'Registration URL',
+                          hint: 'https://example.com/register',
+                          icon: Icons.link_rounded,
+                        ),
+                        const SizedBox(height: 4),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton.icon(
+                            onPressed: () => setState(() {
+                              _regStartCtrl.clear();
+                              _regEndCtrl.clear();
+                              _regUrlCtrl.clear();
+                            }),
+                            icon: const Icon(Icons.clear, size: 15),
+                            label: const Text('Clear registration',
+                                style: TextStyle(fontSize: 12)),
+                            style: TextButton.styleFrom(
+                                foregroundColor: Colors.red),
+                          ),
+                        ),
+                      ],
                     ),
-                  )
-                else
-                  ...List.generate(_categories.length, (i) {
-                    final entry = _categories[i];
-                    final hasKml = entry.pickedBytes != null ||
-                        entry.existingKmlPath.isNotEmpty;
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 14),
-                      padding: const EdgeInsets.all(18),
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  // ── Race categories ──────────────────────────────────────
+                  _buildSectionHeader(
+                    'Race Categories',
+                    TextButton.icon(
+                      onPressed: _saving ? null : _addCategory,
+                      icon: const Icon(Icons.add_circle_outline, size: 18),
+                      label: const Text('Add Category'),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  if (_categories.isEmpty)
+                    Container(
+                      padding: const EdgeInsets.all(32),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: hasKml
-                              ? AppTheme.trackingGreen.withValues(alpha: 0.4)
-                              : Colors.grey.shade200,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.03),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
+                        border: Border.all(color: Colors.grey.shade200),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Header row
-                          Row(
-                            children: [
-                              Container(
-                                width: 36,
-                                height: 36,
-                                decoration: BoxDecoration(
-                                  color:
-                                      AppTheme.primary.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    '${i + 1}',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                      color: AppTheme.primary,
-                                      fontSize: 15,
+                      child: Center(
+                        child: Column(
+                          children: [
+                            Icon(Icons.category_outlined,
+                                size: 40, color: Colors.grey.shade400),
+                            const SizedBox(height: 10),
+                            Text('No categories added yet',
+                                style: TextStyle(
+                                    color: Colors.grey.shade500, fontSize: 14)),
+                            const SizedBox(height: 6),
+                            Text('Click "Add Category" to add race distances',
+                                style: TextStyle(
+                                    color: Colors.grey.shade400, fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                    )
+                  else
+                    ...List.generate(_categories.length, (i) {
+                      final entry = _categories[i];
+                      final hasKml = entry.pickedBytes != null ||
+                          entry.existingKmlPath.isNotEmpty;
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 14),
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: hasKml
+                                ? AppTheme.trackingGreen.withValues(alpha: 0.4)
+                                : Colors.grey.shade200,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.03),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Header row
+                            Row(
+                              children: [
+                                Container(
+                                  width: 36,
+                                  height: 36,
+                                  decoration: BoxDecoration(
+                                    color:
+                                        AppTheme.primary.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      '${i + 1}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        color: AppTheme.primary,
+                                        fontSize: 15,
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                'Category ${i + 1}',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 15,
-                                  color: AppTheme.textPrimary,
+                                const SizedBox(width: 12),
+                                Text(
+                                  'Category ${i + 1}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 15,
+                                    color: AppTheme.textPrimary,
+                                  ),
                                 ),
-                              ),
-                              const Spacer(),
-                              if (hasKml)
-                                const Padding(
-                                  padding: EdgeInsets.only(right: 8),
-                                  child: Icon(Icons.check_circle,
-                                      color: AppTheme.trackingGreen, size: 20),
+                                const Spacer(),
+                                if (hasKml)
+                                  const Padding(
+                                    padding: EdgeInsets.only(right: 8),
+                                    child: Icon(Icons.check_circle,
+                                        color: AppTheme.trackingGreen,
+                                        size: 20),
+                                  ),
+                                IconButton(
+                                  icon: const Icon(Icons.close,
+                                      size: 18, color: Colors.redAccent),
+                                  tooltip: 'Remove category',
+                                  onPressed:
+                                      _saving ? null : () => _removeCategory(i),
                                 ),
-                              IconButton(
-                                icon: const Icon(Icons.close,
-                                    size: 18, color: Colors.redAccent),
-                                tooltip: 'Remove category',
-                                onPressed:
-                                    _saving ? null : () => _removeCategory(i),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 14),
+                              ],
+                            ),
+                            const SizedBox(height: 14),
 
-                          // Title + cutoff row
-                          Row(
-                            children: [
-                              Expanded(
-                                flex: 2,
-                                child: TextFormField(
-                                  controller: entry.labelCtrl,
-                                  decoration: _inputDeco(
-                                    'Title',
-                                    'e.g. 21.1Km Half Marathon',
-                                    Icons.directions_run,
-                                  ),
-                                  validator: (v) =>
-                                      v == null || v.trim().isEmpty
-                                          ? 'Required'
-                                          : null,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: TextFormField(
-                                  controller: entry.cutoffCtrl,
-                                  readOnly: true,
-                                  onTap: () async {
-                                    final existing = entry.cutoffCtrl.text.trim();
-                                    final mins =
-                                        RaceCategory.parseCutoffMinutes(existing);
-                                    final initial = mins > 0
-                                        ? TimeOfDay(
-                                            hour: (mins ~/ 60) % 24,
-                                            minute: mins % 60,
-                                          )
-                                        : const TimeOfDay(hour: 3, minute: 0);
-                                    final picked = await showTimePicker(
-                                      context: context,
-                                      initialTime: initial,
-                                      builder: (ctx, child) => MediaQuery(
-                                        data: MediaQuery.of(ctx)
-                                            .copyWith(alwaysUse24HourFormat: true),
-                                        child: child!,
-                                      ),
-                                    );
-                                    if (picked != null) {
-                                      entry.cutoffCtrl.text =
-                                          '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
-                                    }
-                                  },
-                                  decoration: _inputDeco(
-                                    'Cut-Off Time',
-                                    'e.g. 03:45',
-                                    Icons.timer_outlined,
+                            // Title + cutoff row
+                            Row(
+                              children: [
+                                Expanded(
+                                  flex: 2,
+                                  child: TextFormField(
+                                    controller: entry.labelCtrl,
+                                    decoration: _inputDeco(
+                                      'Title',
+                                      'e.g. 21.1Km Half Marathon',
+                                      Icons.directions_run,
+                                    ),
+                                    validator: (v) =>
+                                        v == null || v.trim().isEmpty
+                                            ? 'Required'
+                                            : null,
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 14),
-
-                          // KML: upload or draw on map
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: _saving ? null : () => _pickKml(i),
-                                  icon: Icon(
-                                    hasKml
-                                        ? Icons.swap_horiz
-                                        : Icons.upload_file,
-                                    size: 16,
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: entry.cutoffCtrl,
+                                    readOnly: true,
+                                    onTap: () async {
+                                      final existing =
+                                          entry.cutoffCtrl.text.trim();
+                                      final mins =
+                                          RaceCategory.parseCutoffMinutes(
+                                              existing);
+                                      final initial = mins > 0
+                                          ? TimeOfDay(
+                                              hour: (mins ~/ 60) % 24,
+                                              minute: mins % 60,
+                                            )
+                                          : const TimeOfDay(hour: 3, minute: 0);
+                                      final picked = await showTimePicker(
+                                        context: context,
+                                        initialTime: initial,
+                                        builder: (ctx, child) => MediaQuery(
+                                          data: MediaQuery.of(ctx).copyWith(
+                                              alwaysUse24HourFormat: true),
+                                          child: child!,
+                                        ),
+                                      );
+                                      if (picked != null) {
+                                        entry.cutoffCtrl.text =
+                                            '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+                                      }
+                                    },
+                                    decoration: _inputDeco(
+                                      'Cut-Off Time',
+                                      'e.g. 03:45',
+                                      Icons.timer_outlined,
+                                    ),
                                   ),
-                                  label: Text(
-                                    entry.pickedFileName.isNotEmpty
-                                        ? entry.pickedFileName
-                                        : entry.existingKmlPath.isNotEmpty
-                                            ? entry.existingKmlPath
-                                                .split('/')
-                                                .last
-                                            : 'Upload KML',
-                                    style: const TextStyle(fontSize: 13),
-                                    overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 14),
+
+                            // KML: upload or draw on map
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed:
+                                        _saving ? null : () => _pickKml(i),
+                                    icon: Icon(
+                                      hasKml
+                                          ? Icons.swap_horiz
+                                          : Icons.upload_file,
+                                      size: 16,
+                                    ),
+                                    label: Text(
+                                      entry.pickedFileName.isNotEmpty
+                                          ? entry.pickedFileName
+                                          : entry.existingKmlPath.isNotEmpty
+                                              ? entry.existingKmlPath
+                                                  .split('/')
+                                                  .last
+                                              : 'Upload KML',
+                                      style: const TextStyle(fontSize: 13),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: AppTheme.primary,
+                                      side: BorderSide(
+                                          color: AppTheme.primary
+                                              .withValues(alpha: 0.4)),
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8)),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 14, vertical: 10),
+                                    ),
                                   ),
+                                ),
+                                const SizedBox(width: 10),
+                                OutlinedButton.icon(
+                                  onPressed: _saving
+                                      ? null
+                                      : () => _openRouteEditor(i),
+                                  icon:
+                                      const Icon(Icons.map_outlined, size: 16),
+                                  label: const Text('Draw on Map',
+                                      style: TextStyle(fontSize: 13)),
                                   style: OutlinedButton.styleFrom(
-                                    foregroundColor: AppTheme.primary,
+                                    foregroundColor: Colors.deepOrange,
                                     side: BorderSide(
-                                        color: AppTheme.primary
-                                            .withValues(alpha: 0.4)),
+                                        color: Colors.deepOrange
+                                            .withValues(alpha: 0.5)),
                                     shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(8)),
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 14, vertical: 10),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 10),
-                              OutlinedButton.icon(
-                                onPressed:
-                                    _saving ? null : () => _openRouteEditor(i),
-                                icon: const Icon(Icons.map_outlined, size: 16),
-                                label: const Text('Draw on Map',
-                                    style: TextStyle(fontSize: 13)),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.deepOrange,
-                                  side: BorderSide(
-                                      color: Colors.deepOrange
-                                          .withValues(alpha: 0.5)),
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8)),
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 14, vertical: 10),
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Tooltip(
-                                message: 'Watch tutorial',
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(8),
-                                  onTap: () async {
-                                    final uri = Uri.parse(
-                                        AppConfig.drawOnMapTutorialUrl);
-                                    try {
-                                      await launchUrl(uri,
-                                          mode: LaunchMode
-                                              .externalApplication);
-                                    } catch (_) {}
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFFF0000)
-                                          .withValues(alpha: 0.08),
-                                      borderRadius:
-                                          BorderRadius.circular(8),
-                                      border: Border.all(
+                                const SizedBox(width: 6),
+                                Tooltip(
+                                  message: 'Watch tutorial',
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(8),
+                                    onTap: () async {
+                                      final uri = Uri.parse(
+                                          AppConfig.drawOnMapTutorialUrl);
+                                      try {
+                                        await launchUrl(uri,
+                                            mode:
+                                                LaunchMode.externalApplication);
+                                      } catch (_) {}
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
                                         color: const Color(0xFFFF0000)
-                                            .withValues(alpha: 0.25),
+                                            .withValues(alpha: 0.08),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: const Color(0xFFFF0000)
+                                              .withValues(alpha: 0.25),
+                                        ),
                                       ),
-                                    ),
-                                    child: const Icon(
-                                      Icons.play_circle_outline_rounded,
-                                      size: 20,
-                                      color: Color(0xFFCC0000),
+                                      child: const Icon(
+                                        Icons.play_circle_outline_rounded,
+                                        size: 20,
+                                        color: Color(0xFFCC0000),
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
-              ],
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                ],
+              ),
             ),
           ),
         ),
-      ),
       ),
     );
   }
@@ -1123,27 +1153,30 @@ class _SpinBox extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(label,
-            style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+            style:
+                const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
         const SizedBox(height: 6),
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
               icon: const Icon(Icons.remove_circle_outline),
-              onPressed: value - step >= min ? () => onChanged(value - step) : null,
+              onPressed:
+                  value - step >= min ? () => onChanged(value - step) : null,
             ),
             SizedBox(
               width: 40,
               child: Text(
                 value.toString().padLeft(2, '0'),
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                    fontSize: 22, fontWeight: FontWeight.w700),
+                style:
+                    const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
               ),
             ),
             IconButton(
               icon: const Icon(Icons.add_circle_outline),
-              onPressed: value + step <= max ? () => onChanged(value + step) : null,
+              onPressed:
+                  value + step <= max ? () => onChanged(value + step) : null,
             ),
           ],
         ),
