@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme.dart';
 import '../../models/event_model.dart';
-import 'dashboard/dashboard.dart';
-import 'organizer/organizer_live_leaderboard_screen.dart';
-import 'organizer/organizers_screen.dart';
-import 'users/users_screen.dart';
+import 'dashboard.dart';
+import 'organizer_live_leaderboard_screen.dart';
+import 'organizers_screen.dart';
+import 'users_screen.dart';
 
 // Allows OrganizersScreen to push into the shell's inner navigator.
 class AdminShellNavigator {

@@ -6,125 +6,75 @@ import '../../../core/theme.dart';
 import '../../../models/event_model.dart';
 import '../../../services/admin_service.dart';
 import 'event_form_screen.dart';
-import '../organizer/organizer_live_leaderboard_screen.dart';
 
-class AdminEventsScreen extends StatefulWidget {
-  const AdminEventsScreen({super.key});
-
-  @override
-  State<AdminEventsScreen> createState() => _AdminEventsScreenState();
-}
-
-class _AdminEventsScreenState extends State<AdminEventsScreen> {
-  static const _pageSize = 15;
-
-  final _scrollController = ScrollController();
-  final _events = <EventModel>[];
-  bool _loading = false;
-  bool _hasMore = true;
-  bool _initialized = false;
-  EventModel? _cursor;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadPage();
-    _scrollController.addListener(_onScroll);
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  void _onScroll() {
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 200) {
-      _loadPage();
-    }
-  }
-
-  Future<void> _loadPage() async {
-    if (_loading || !_hasMore) return;
-    setState(() => _loading = true);
-
-    final page = await AdminService.instance.fetchEventsPage(
-      pageSize: _pageSize,
-      cursor: _cursor,
-    );
-
-    if (!mounted) return;
-    setState(() {
-      _events.addAll(page);
-      if (page.isNotEmpty) _cursor = page.last;
-      _hasMore = page.length == _pageSize;
-      _loading = false;
-      _initialized = true;
-    });
-  }
-
-  Future<void> _refresh() async {
-    setState(() {
-      _events.clear();
-      _cursor = null;
-      _hasMore = true;
-      _initialized = false;
-    });
-    await _loadPage();
-  }
+class OrganizerEventsScreen extends StatelessWidget {
+  final String organizerUid;
+  final void Function(EventModel event)? onLeaderboardTap;
+  final void Function(EventModel event)? onResultsTap;
+  const OrganizerEventsScreen({
+    super.key,
+    required this.organizerUid,
+    this.onLeaderboardTap,
+    this.onResultsTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    if (!_initialized) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
     return Stack(
       children: [
-        if (_events.isEmpty)
-          Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.event_outlined,
-                    size: 64, color: Colors.grey.shade300),
-                const SizedBox(height: 16),
-                const Text('No events yet',
-                    style:
-                        TextStyle(fontSize: 16, color: AppTheme.textSecondary)),
-                const SizedBox(height: 8),
-                const Text('Create your first marathon event',
-                    style:
-                        TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
-              ],
-            ),
-          )
-        else
-          ListView.builder(
-            controller: _scrollController,
-            padding: const EdgeInsets.fromLTRB(28, 28, 28, 100),
-            itemCount: _events.length + (_loading ? 1 : 0),
-            itemBuilder: (_, i) {
-              if (i == _events.length) {
-                return const Center(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(vertical: 24),
-                    child: CircularProgressIndicator(),
-                  ),
-                );
-              }
-              final event = _events[i];
-              return _EventCard(
-                event: event,
-                onDeleted: () => setState(
-                    () => _events.removeWhere((e) => e.id == event.id)),
-                onEdited: _refresh,
+        StreamBuilder<List<EventModel>>(
+          stream: AdminService.instance.watchEvents(organizerUid: organizerUid),
+          builder: (_, snap) {
+            if (snap.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snap.hasError) {
+              return Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.error_outline,
+                        size: 48, color: Colors.red.shade300),
+                    const SizedBox(height: 12),
+                    const Text('Failed to load events',
+                        style: TextStyle(color: AppTheme.textSecondary)),
+                  ],
+                ),
               );
-            },
-          ),
+            }
+            final events = snap.data ?? [];
+            if (events.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.event_outlined,
+                        size: 64, color: Colors.grey.shade300),
+                    const SizedBox(height: 16),
+                    const Text('No events yet',
+                        style: TextStyle(
+                            fontSize: 16, color: AppTheme.textSecondary)),
+                    const SizedBox(height: 8),
+                    const Text('Create your first marathon event',
+                        style: TextStyle(
+                            fontSize: 13, color: AppTheme.textSecondary)),
+                  ],
+                ),
+              );
+            }
 
-        // FAB
+            return ListView.builder(
+              padding: const EdgeInsets.fromLTRB(28, 28, 28, 100),
+              itemCount: events.length,
+              itemBuilder: (_, i) => _EventCard(
+                event: events[i],
+                organizerUid: organizerUid,
+                onLeaderboardTap: onLeaderboardTap,
+                onResultsTap: onResultsTap,
+              ),
+            );
+          },
+        ),
         Positioned(
           right: 28,
           bottom: 28,
@@ -133,8 +83,10 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
             label: const Text('New Event'),
             onPressed: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const EventFormScreen()),
-            ).then((_) => _refresh()),
+              MaterialPageRoute(
+                builder: (_) => EventFormScreen(organizerUid: organizerUid),
+              ),
+            ),
           ),
         ),
       ],
@@ -144,13 +96,14 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
 
 class _EventCard extends StatelessWidget {
   final EventModel event;
-  final VoidCallback onDeleted;
-  final VoidCallback onEdited;
-
+  final String organizerUid;
+  final void Function(EventModel event)? onLeaderboardTap;
+  final void Function(EventModel event)? onResultsTap;
   const _EventCard({
     required this.event,
-    required this.onDeleted,
-    required this.onEdited,
+    required this.organizerUid,
+    this.onLeaderboardTap,
+    this.onResultsTap,
   });
 
   @override
@@ -175,7 +128,6 @@ class _EventCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Banner
           if (event.bannerUrl.isNotEmpty)
             ClipRRect(
               borderRadius:
@@ -184,50 +136,16 @@ class _EventCard extends StatelessWidget {
                 event.bannerUrl,
                 height: 160,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  height: 80,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppTheme.primary,
-                        AppTheme.primary.withValues(alpha: 0.7),
-                      ],
-                    ),
-                    borderRadius:
-                        const BorderRadius.vertical(top: Radius.circular(16)),
-                  ),
-                  child: const Center(
-                    child: Icon(Icons.directions_run,
-                        color: Colors.white, size: 36),
-                  ),
-                ),
+                errorBuilder: (_, __, ___) => _placeholderBanner(),
               ),
             )
           else
-            Container(
-              height: 80,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppTheme.primary,
-                    AppTheme.primary.withValues(alpha: 0.7),
-                  ],
-                ),
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(16)),
-              ),
-              child: const Center(
-                child:
-                    Icon(Icons.directions_run, color: Colors.white, size: 36),
-              ),
-            ),
-
+            _placeholderBanner(),
           Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Name + actions
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -248,9 +166,12 @@ class _EventCard extends StatelessWidget {
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => EventFormScreen(existing: event),
+                          builder: (_) => EventFormScreen(
+                            existing: event,
+                            organizerUid: organizerUid,
+                          ),
                         ),
-                      ).then((_) => onEdited()),
+                      ),
                     ),
                     const SizedBox(width: 4),
                     _ActionIcon(
@@ -262,8 +183,6 @@ class _EventCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 10),
-
-                // Date + location
                 Row(
                   children: [
                     const Icon(Icons.calendar_today_outlined,
@@ -276,15 +195,62 @@ class _EventCard extends StatelessWidget {
                     const Icon(Icons.location_on_outlined,
                         size: 14, color: AppTheme.textSecondary),
                     const SizedBox(width: 6),
-                    Text(event.location,
-                        style: const TextStyle(
-                            fontSize: 13, color: AppTheme.textSecondary)),
+                    Expanded(
+                      child: Text(event.location,
+                          style: const TextStyle(
+                              fontSize: 13, color: AppTheme.textSecondary),
+                          overflow: TextOverflow.ellipsis),
+                    ),
                   ],
                 ),
-
+                if (event.registrationUrl.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Icon(Icons.app_registration_rounded,
+                          size: 14,
+                          color: event.isRegistrationOpen
+                              ? const Color(0xFF1565C0)
+                              : AppTheme.textSecondary),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Registration: ${event.registrationStartDate.isNotEmpty ? event.registrationStartDate : '?'}'
+                        ' → ${event.registrationEndDate.isNotEmpty ? event.registrationEndDate : '?'}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: event.isRegistrationOpen
+                              ? const Color(0xFF1565C0)
+                              : AppTheme.textSecondary,
+                          fontWeight: event.isRegistrationOpen
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                        ),
+                      ),
+                      if (event.isRegistrationOpen) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color:
+                                const Color(0xFF1565C0).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text(
+                            'OPEN',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF1565C0),
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 16),
-
-                // Categories chips
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
@@ -327,25 +293,11 @@ class _EventCard extends StatelessWidget {
                                   : AppTheme.textSecondary,
                             ),
                           ),
-                          if (cat.cutoff.isNotEmpty) ...[
-                            const SizedBox(width: 6),
-                            Text(
-                              '(${cat.cutoff})',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: hasKml
-                                    ? AppTheme.trackingGreen
-                                        .withValues(alpha: 0.7)
-                                    : Colors.grey,
-                              ),
-                            ),
-                          ],
                         ],
                       ),
                     );
                   }).toList(),
                 ),
-
                 const SizedBox(height: 10),
                 Text(
                   '$uploadedCats / $totalCats KML files uploaded',
@@ -358,11 +310,33 @@ class _EventCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 14),
-                _LiveLeaderboardButton(event: event),
+                _LiveLeaderboardButton(
+                  event: event,
+                  onLiveTap: onLeaderboardTap,
+                  onResultsTap: onResultsTap,
+                ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _placeholderBanner() {
+    return Container(
+      height: 80,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppTheme.primary,
+            AppTheme.primary.withValues(alpha: 0.7),
+          ],
+        ),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      child: const Center(
+        child: Icon(Icons.directions_run, color: Colors.white, size: 36),
       ),
     );
   }
@@ -378,10 +352,9 @@ class _EventCard extends StatelessWidget {
               onPressed: () => Navigator.pop(dialogCtx),
               child: const Text('Cancel')),
           TextButton(
-            onPressed: () async {
+            onPressed: () {
               Navigator.pop(dialogCtx);
-              await AdminService.instance.deleteEvent(event.id);
-              onDeleted();
+              AdminService.instance.deleteEvent(event.id);
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Delete'),
@@ -423,7 +396,13 @@ class _ActionIcon extends StatelessWidget {
 
 class _LiveLeaderboardButton extends StatefulWidget {
   final EventModel event;
-  const _LiveLeaderboardButton({required this.event});
+  final void Function(EventModel event)? onLiveTap;
+  final void Function(EventModel event)? onResultsTap;
+  const _LiveLeaderboardButton({
+    required this.event,
+    this.onLiveTap,
+    this.onResultsTap,
+  });
 
   @override
   State<_LiveLeaderboardButton> createState() => _LiveLeaderboardButtonState();
@@ -476,61 +455,57 @@ class _LiveLeaderboardButtonState extends State<_LiveLeaderboardButton> {
     super.dispose();
   }
 
-  void _open(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => OrganizerLiveLeaderboardScreen(event: widget.event),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final event = widget.event;
-    final isEnded = event.isResultsReady;
+    final onLiveTap = widget.onLiveTap;
+    final onResultsTap = widget.onResultsTap;
+    final isFinished = event.isResultsReady;
     final isRunning = event.isRunning;
 
-    if (isEnded) {
+    // Event over → green "View Results"
+    if (isFinished) {
       return _buildButton(
-        context,
         gradient: const LinearGradient(
-            colors: [Color(0xFF2E7D32), Color(0xFF1B5E20)]),
+          colors: [Color(0xFF2E7D32), Color(0xFF1B5E20)],
+        ),
         icon: Icons.emoji_events_outlined,
-        label: 'View Final Results',
+        label: 'View Results',
+        onTap: () => onResultsTap?.call(event),
       );
     }
 
+    // Actively running (between startTime and endTime) → red LIVE
     if (isRunning) {
       return StreamBuilder(
         stream: AdminService.instance.watchLiveRunnersForEvent(event.id),
         builder: (_, snap) {
           final count = snap.data?.length ?? 0;
           return _buildButton(
-            context,
             gradient: const LinearGradient(
-                colors: [Color(0xFFE53935), Color(0xFFB71C1C)]),
+              colors: [Color(0xFFE53935), Color(0xFFB71C1C)],
+            ),
             liveDot: true,
             label:
                 'LIVE — View Leaderboard${count > 0 ? '  ($count running)' : ''}',
+            onTap: () => onLiveTap?.call(event),
           );
         },
       );
     }
 
+    // Not yet started or future → disabled gray
     return _buildButton(
-      context,
       color: Colors.grey.shade200,
       icon: Icons.leaderboard_outlined,
       iconColor: Colors.grey.shade400,
       label: 'Leaderboard (upcoming)',
       labelColor: Colors.grey.shade500,
-      enabled: false,
+      onTap: null,
     );
   }
 
-  Widget _buildButton(
-    BuildContext context, {
+  Widget _buildButton({
     LinearGradient? gradient,
     Color? color,
     IconData? icon,
@@ -538,7 +513,7 @@ class _LiveLeaderboardButtonState extends State<_LiveLeaderboardButton> {
     bool liveDot = false,
     required String label,
     Color? labelColor,
-    bool enabled = true,
+    VoidCallback? onTap,
   }) {
     return SizedBox(
       width: double.infinity,
@@ -554,7 +529,7 @@ class _LiveLeaderboardButtonState extends State<_LiveLeaderboardButton> {
           borderRadius: BorderRadius.circular(10),
           child: InkWell(
             borderRadius: BorderRadius.circular(10),
-            onTap: enabled ? () => _open(context) : null,
+            onTap: onTap,
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 16),
               child: Row(
@@ -565,7 +540,9 @@ class _LiveLeaderboardButtonState extends State<_LiveLeaderboardButton> {
                       width: 7,
                       height: 7,
                       decoration: const BoxDecoration(
-                          color: Colors.white, shape: BoxShape.circle),
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
                     )
                   else if (icon != null)
                     Icon(icon, size: 16, color: iconColor ?? Colors.white),

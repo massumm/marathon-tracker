@@ -48,7 +48,8 @@ class _MapScreenState extends State<MapScreen> {
     if (!e.isToday) return false;
     final dt = e.eventDateTime;
     if (dt.year == 0) return false;
-    return dt.isBefore(DateTime.now());
+    if (!dt.isBefore(DateTime.now())) return false;
+    return !e.isResultsReady;
   }
 
   int _sortPriority(EventModel e) {
@@ -59,7 +60,11 @@ class _MapScreenState extends State<MapScreen> {
 
   List<EventModel> get _filtered {
     final events = _ctrl.events.toList()
-      ..sort((a, b) => _sortPriority(a).compareTo(_sortPriority(b)));
+      ..sort((a, b) {
+        final p = _sortPriority(a).compareTo(_sortPriority(b));
+        if (p != 0) return p;
+        return a.eventDateTime.compareTo(b.eventDateTime);
+      });
     if (_filter == 'live') return events.where(_isLive).toList();
     if (_filter == 'upcoming') {
       return events.where((e) => !e.isFinished).toList();
@@ -279,7 +284,7 @@ class _EventCardState extends State<_EventCard> {
   Widget build(BuildContext context) {
     final countdown = _countdown();
     final finished = _isFinished;
-    final isLive = countdown == 'finished' && !finished;
+    final isLive = countdown == 'finished' && !finished && !widget.event.isResultsReady;
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       clipBehavior: Clip.antiAlias,

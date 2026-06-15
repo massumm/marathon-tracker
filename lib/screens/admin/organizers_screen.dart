@@ -9,7 +9,7 @@ import '../../../firebase_options.dart';
 import '../../../models/admin_user_model.dart';
 import '../../../models/event_model.dart';
 import '../../../services/admin_service.dart';
-import '../events/event_form_screen.dart';
+import 'event_form_screen.dart';
 
 class OrganizersScreen extends StatelessWidget {
   final void Function(AdminUser organizer)? onOrganizerTap;
