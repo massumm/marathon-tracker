@@ -36,7 +36,7 @@ class _OrganizerLiveLeaderboardScreenState
   Set<String> _finishedCats = {};
 
   Set<String> _computeFinishedCats() => widget.event.categories.values
-      .where(widget.event.isCategoryFinished)
+      .where((c) => widget.event.isCategoryFinished(c))
       .map((c) => c.id)
       .toSet();
 
