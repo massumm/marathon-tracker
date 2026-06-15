@@ -25,7 +25,6 @@ class _EventFormScreenState extends State<EventFormScreen> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _dateCtrl;
   late final TextEditingController _timeCtrl;
-  late final TextEditingController _endTimeCtrl;
   late final TextEditingController _chipTimeCtrl; // display only, e.g. "10 min"
   int _chipTimeMinutes = 10;
   late final TextEditingController _graceTimeCtrl; // display only, e.g. "10 min"
@@ -53,7 +52,6 @@ class _EventFormScreenState extends State<EventFormScreen> {
     _nameCtrl = TextEditingController(text: e?.name ?? '');
     _dateCtrl = TextEditingController(text: e?.date ?? '');
     _timeCtrl = TextEditingController(text: e?.startTime ?? '');
-    _endTimeCtrl = TextEditingController(text: e?.endTime ?? '');
     _locationCtrl = TextEditingController(text: e?.location ?? '');
     _regStartCtrl = TextEditingController(text: e?.registrationStartDate ?? '');
     _regEndCtrl = TextEditingController(text: e?.registrationEndDate ?? '');
@@ -157,7 +155,6 @@ class _EventFormScreenState extends State<EventFormScreen> {
     _nameCtrl.dispose();
     _dateCtrl.dispose();
     _timeCtrl.dispose();
-    _endTimeCtrl.dispose();
     _locationCtrl.dispose();
     _regStartCtrl.dispose();
     _regEndCtrl.dispose();
@@ -190,6 +187,27 @@ class _EventFormScreenState extends State<EventFormScreen> {
     final d = int.tryParse(parts[2]);
     if (y == null || m == null || d == null) return null;
     return DateTime(y, m, d);
+  }
+
+  String _endTimeForCutoff(int cutoffMinutes) {
+    if (cutoffMinutes == 0) return '';
+    final tp = _timeCtrl.text.trim().split(':');
+    if (tp.length != 2) return '';
+    final startH = int.tryParse(tp[0]) ?? 0;
+    final startM = int.tryParse(tp[1]) ?? 0;
+    final total = startH * 60 + startM + cutoffMinutes;
+    final endH = (total ~/ 60) % 24;
+    final endM = total % 60;
+    return '${endH.toString().padLeft(2, '0')}:${endM.toString().padLeft(2, '0')}';
+  }
+
+  String _computeEndTime() {
+    int maxCutoff = 0;
+    for (final entry in _categories) {
+      final mins = RaceCategory.parseCutoffMinutes(entry.cutoffCtrl.text.trim());
+      if (mins > maxCutoff) maxCutoff = mins;
+    }
+    return _endTimeForCutoff(maxCutoff);
   }
 
   void _addCategory() {
@@ -318,11 +336,13 @@ class _EventFormScreenState extends State<EventFormScreen> {
               _tmpEventId, catId, entry.pickedFileName, entry.pickedBytes!);
         }
 
+        final catCutoffMins = RaceCategory.parseCutoffMinutes(entry.cutoffCtrl.text.trim());
         catMaps[catId] = {
           'label': entry.labelCtrl.text.trim(),
           'cutoff': entry.cutoffCtrl.text.trim(),
           'kmlPath': kmlPath,
           'kmlUrl': kmlUrl,
+          'endTime': _endTimeForCutoff(catCutoffMins),
         };
       }
 
@@ -330,8 +350,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
         'name': _nameCtrl.text.trim(),
         'date': _dateCtrl.text.trim(),
         'startTime': _timeCtrl.text.trim(),
-        if (_endTimeCtrl.text.trim().isNotEmpty)
-          'endTime': _endTimeCtrl.text.trim(),
+        'endTime': _computeEndTime(),
         'chipTimeMinutes': _chipTimeMinutes,
         'graceTimeMinutes': _graceTimeMinutes,
         'location': _locationCtrl.text.trim(),
@@ -556,35 +575,8 @@ class _EventFormScreenState extends State<EventFormScreen> {
                             ),
                           );
                           if (picked != null) {
-                            _timeCtrl.text =
-                                '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
-                          }
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: _buildField(
-                        controller: _endTimeCtrl,
-                        label: 'End Time',
-                        hint: 'e.g. 17:20',
-                        icon: Icons.timer_off_rounded,
-                        validator: (v) =>
-                            v == null || v.trim().isEmpty ? 'Required' : null,
-                        readOnly: true,
-                        onTap: () async {
-                          final picked = await showTimePicker(
-                            context: context,
-                            initialTime: TimeOfDay.now(),
-                            builder: (ctx, child) => MediaQuery(
-                              data: MediaQuery.of(ctx)
-                                  .copyWith(alwaysUse24HourFormat: true),
-                              child: child!,
-                            ),
-                          );
-                          if (picked != null) {
                             setState(() {
-                              _endTimeCtrl.text =
+                              _timeCtrl.text =
                                   '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
                             });
                           }
@@ -593,6 +585,31 @@ class _EventFormScreenState extends State<EventFormScreen> {
                     ),
                   ],
                 ),
+                if (_computeEndTime().isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary.withValues(alpha: 0.07),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.timer_off_rounded, size: 18, color: AppTheme.primary),
+                        const SizedBox(width: 8),
+                        Text(
+                          'End Time (auto): ${_computeEndTime()}',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 14),
                 _buildField(
                   controller: _chipTimeCtrl,

@@ -44,12 +44,12 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   bool _isLive(EventModel e) {
-    if (e.isFinished) return false;
-    if (!e.isToday) return false;
-    final dt = e.eventDateTime;
-    if (dt.year == 0) return false;
-    if (!dt.isBefore(DateTime.now())) return false;
-    return !e.isResultsReady;
+    final now = DateTime.now();
+    final start = e.eventDateTime;
+    if (start.year == 0) return false;
+    if (!start.isBefore(now)) return false;
+    final finish = e.finishDateTime;
+    return finish != null && now.isBefore(finish);
   }
 
   int _sortPriority(EventModel e) {
@@ -269,22 +269,13 @@ class _EventCardState extends State<_EventCard> {
     return '${h}h ${m}m remaining';
   }
 
-  bool get _isFinished {
-    final parts = widget.event.date.split('-');
-    if (parts.length != 3) return false;
-    final year = int.tryParse(parts[0]);
-    final month = int.tryParse(parts[1]);
-    final day = int.tryParse(parts[2]);
-    if (year == null || month == null || day == null) return false;
-    final endOfEvent = DateTime(year, month, day + 1);
-    return DateTime.now().isAfter(endOfEvent);
-  }
+  bool get _isFinished => widget.event.isFinished;
 
   @override
   Widget build(BuildContext context) {
     final countdown = _countdown();
     final finished = _isFinished;
-    final isLive = countdown == 'finished' && !finished && !widget.event.isResultsReady;
+    final isLive = countdown == 'finished' && !finished;
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       clipBehavior: Clip.antiAlias,
