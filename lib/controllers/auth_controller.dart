@@ -34,8 +34,7 @@ class AuthController extends GetxController {
         _pendingUsername = null;
         _pendingGender = null;
         FriendsService.instance.registerProfile(displayName: username);
-        UserStatsService.instance.registerOrUpdate(displayName: username);
-        if (gender != null) UserStatsService.instance.updateGender(gender);
+        UserStatsService.instance.registerOrUpdate(displayName: username, gender: gender);
         Get.offAllNamed(AppRoutes.home);
       } else {
         Get.offAllNamed(AppRoutes.login);
@@ -154,8 +153,7 @@ class AuthController extends GetxController {
       _pendingUsername = null;
       _pendingGender = null;
       FriendsService.instance.registerProfile(displayName: username);
-      UserStatsService.instance.registerOrUpdate(displayName: username);
-      if (gender != null) UserStatsService.instance.updateGender(gender);
+      UserStatsService.instance.registerOrUpdate(displayName: username, gender: gender);
       Get.offAllNamed(AppRoutes.home);
     }
     return verified;

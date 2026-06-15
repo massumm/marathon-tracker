@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme.dart';
 import '../../../models/event_model.dart';
 import '../../../models/runner_data.dart';
+import '../../../models/user_stats.dart';
 import '../../../services/admin_service.dart';
 import '../../../widgets/user_avatar.dart';
 
@@ -32,9 +33,10 @@ class _OrganizerLiveLeaderboardScreenState
   late Animation<double> _pulseAnim;
   late TabController _tabController;
   StreamSubscription<List<RunnerData>>? _runnersSub;
+  StreamSubscription<List<UserStats>>? _eventStatsSub;
   List<RunnerData> _runners = [];
+  List<UserStats> _eventStats = [];
   Set<String> _finishedCats = {};
-  // int? _genderFilter; // gender filter disabled
 
   Set<String> _computeFinishedCats() => widget.event.categories.values
       .where(widget.event.isCategoryFinished)
@@ -49,11 +51,17 @@ class _OrganizerLiveLeaderboardScreenState
         .listen((runners) {
       if (mounted) setState(() => _runners = runners);
     });
+    _eventStatsSub = AdminService.instance
+        .watchEventResults(widget.event.id)
+        .listen((stats) {
+      if (mounted) setState(() => _eventStats = stats);
+    });
     _remaining = ValueNotifier(Duration.zero);
     _cutoffRemaining = ValueNotifier(Duration.zero);
     _finishedCats = _computeFinishedCats();
 
-    debugPrint('[LEADERBOARD] Event: ${widget.event.name}, Categories count: ${widget.event.categories.length}');
+    debugPrint(
+        '[LEADERBOARD] Event: ${widget.event.name}, Categories count: ${widget.event.categories.length}');
     for (final cat in widget.event.categories.entries) {
       debugPrint('[LEADERBOARD] Category: ${cat.key} - ${cat.value.label}');
     }
@@ -127,6 +135,7 @@ class _OrganizerLiveLeaderboardScreenState
   void dispose() {
     _ticker?.cancel();
     _runnersSub?.cancel();
+    _eventStatsSub?.cancel();
     _pulse.dispose();
     _remaining.dispose();
     _cutoffRemaining.dispose();
@@ -148,7 +157,7 @@ class _OrganizerLiveLeaderboardScreenState
     if (_counting) return _buildCountdown();
 
     if (widget.event.categories.isEmpty) {
-      return _buildLeaderboard(null);
+      return Expanded(child: _buildLeaderboard(null));
     }
 
     final categoryList = widget.event.categories.entries.toList();
@@ -161,6 +170,8 @@ class _OrganizerLiveLeaderboardScreenState
           labelColor: AppTheme.primary,
           unselectedLabelColor: AppTheme.textSecondary,
           indicatorColor: AppTheme.primary,
+          indicatorSize: TabBarIndicatorSize.tab,
+          indicator: BoxDecoration(color: AppTheme.primary.withValues(alpha: 0.10)),
           tabs: categoryList.map((e) => Tab(text: e.value.label)).toList(),
         ),
         Expanded(
@@ -176,10 +187,36 @@ class _OrganizerLiveLeaderboardScreenState
   }
 
   Widget _buildEnded() {
+    if (widget.event.categories.isEmpty) {
+      return Column(
+        children: [
+          _finalStandingsBanner(widget.event.name),
+          Expanded(child: _buildLeaderboard(null)),
+        ],
+      );
+    }
+
+    final categoryList = widget.event.categories.entries.toList();
     return Column(
       children: [
-        _finalStandingsBanner(widget.event.name),
-        Expanded(child: _buildLeaderboard(null)),
+        TabBar(
+          controller: _tabController,
+          isScrollable: categoryList.length > 3,
+          labelColor: AppTheme.primary,
+          unselectedLabelColor: AppTheme.textSecondary,
+          indicatorColor: AppTheme.primary,
+          indicatorSize: TabBarIndicatorSize.tab,
+          indicator: BoxDecoration(color: AppTheme.primary.withValues(alpha: 0.10)),
+          tabs: categoryList.map((e) => Tab(text: e.value.label)).toList(),
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: categoryList
+                .map((catEntry) => _buildLeaderboard(catEntry.value))
+                .toList(),
+          ),
+        ),
       ],
     );
   }
@@ -194,7 +231,7 @@ class _OrganizerLiveLeaderboardScreenState
           const Icon(Icons.flag_rounded, size: 20, color: Colors.grey),
           const SizedBox(width: 8),
           Text(
-            'Cutoff reached — Final Standings · $label',
+            ' Final Standings · $label',
             style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
@@ -218,149 +255,160 @@ class _OrganizerLiveLeaderboardScreenState
         final timeStr =
             showHours ? '${pad(h)}:${pad(m)}:${pad(s)}' : '${pad(m)}:${pad(s)}';
 
-    final eventDate = widget.event.date;
-    final eventTime = widget.event.startTime;
+        final eventDate = widget.event.date;
+        final eventTime = widget.event.startTime;
 
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.red.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(20),
-              border:
-                  Border.all(color: Colors.red.withValues(alpha: 0.35)),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.schedule_outlined, size: 12, color: Colors.red),
-                SizedBox(width: 5),
-                Text(
-                  'NOT STARTED YET',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.red,
-                    letterSpacing: 0.8,
-                  ),
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.red.withValues(alpha: 0.35)),
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            widget.event.name,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: AppTheme.textPrimary,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 6),
-          Text(
-            '$eventDate at $eventTime',
-            style: const TextStyle(
-              fontSize: 13,
-              color: AppTheme.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 40),
-          ScaleTransition(
-            scale: _pulseAnim,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Container(
-                  width: 200,
-                  height: 200,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [
-                        AppTheme.primary.withValues(alpha: 0.10),
-                        Colors.transparent,
-                      ],
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.schedule_outlined, size: 12, color: Colors.red),
+                    SizedBox(width: 5),
+                    Text(
+                      'NOT STARTED YET',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.red,
+                        letterSpacing: 0.8,
+                      ),
                     ),
-                    border: Border.all(
-                      color: AppTheme.primary.withValues(alpha: 0.45),
-                      width: 2,
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                widget.event.name,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textPrimary,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '$eventDate at $eventTime',
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 40),
+              ScaleTransition(
+                scale: _pulseAnim,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Container(
+                      width: 200,
+                      height: 200,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            AppTheme.primary.withValues(alpha: 0.10),
+                            Colors.transparent,
+                          ],
+                        ),
+                        border: Border.all(
+                          color: AppTheme.primary.withValues(alpha: 0.45),
+                          width: 2,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                Container(
-                  width: 164,
-                  height: 164,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: AppTheme.primary.withValues(alpha: 0.20),
-                      width: 1.5,
+                    Container(
+                      width: 164,
+                      height: 164,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppTheme.primary.withValues(alpha: 0.20),
+                          width: 1.5,
+                        ),
+                      ),
                     ),
-                  ),
+                    Text(
+                      timeStr,
+                      style: TextStyle(
+                        fontSize: showHours ? 40 : 52,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.textPrimary,
+                        letterSpacing: showHours ? 2 : 4,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ],
                 ),
-                Text(
-                  timeStr,
-                  style: TextStyle(
-                    fontSize: showHours ? 40 : 52,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.textPrimary,
-                    letterSpacing: showHours ? 2 : 4,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Live leaderboard will activate automatically',
+                style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+              ),
+            ],
           ),
-          const SizedBox(height: 24),
-          const Text(
-            'Live leaderboard will activate automatically',
-            style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
-          ),
-        ],
-      ),
-    );
+        );
       },
     );
   }
 
-  /// [cat] is null for the no-categories and event-ended fallbacks,
-  /// which show all runners.
+  /// [cat] is null for the no-categories / event-ended fallback (all runners).
   Widget _buildLeaderboard(RaceCategory? cat) {
-    final finished = cat != null && _finishedCats.contains(cat.id);
-    final byCategory = cat == null
+    final finished = _ended || (cat != null && _finishedCats.contains(cat.id));
+
+    if (finished) {
+      // Show finalised event_stats for this category.
+      final firstCatId = widget.event.categories.isNotEmpty
+          ? widget.event.categories.entries.first.key
+          : null;
+      final results = cat == null
+          ? _eventStats
+          : _eventStats.where((s) {
+              if (s.categoryId == cat.id) return true;
+              // Old runs with no categoryId fall into the first tab.
+              if (s.categoryId.isEmpty && cat.id == firstCatId) return true;
+              return false;
+            }).toList();
+
+      return Column(
+        children: [
+          _finalStandingsBanner(cat?.label ?? widget.event.name),
+          Expanded(child: _GenderTabbedResults(stats: results)),
+        ],
+      );
+    }
+
+    // Still live — show live runners.
+    final runners = cat == null
         ? _runners
         : _runners.where((r) => r.categoryId == cat.id).toList();
-    final runners = byCategory;
-    // Gender filter disabled:
-    // final runners = _genderFilter == null
-    //     ? byCategory
-    //     : byCategory.where((r) => r.gender == _genderFilter).toList();
 
     return Column(
       children: [
-        if (finished)
-          _finalStandingsBanner(cat.label)
-        else
-          ValueListenableBuilder<Duration>(
-            valueListenable: _cutoffRemaining,
-            builder: (_, cutoff, __) {
-              final cutoffDisplay = (!_ended && widget.event.hasCutoff)
-                  ? _fmtDuration(cutoff)
-                  : null;
-              return _LiveBanner(
-                  eventName: widget.event.name,
-                  count: runners.length,
-                  cutoffRemaining: cutoffDisplay);
-            },
-          ),
-        // _GenderFilterBar(
-        //   selected: _genderFilter,
-        //   onChanged: (v) => setState(() => _genderFilter = v),
-        // ),
+        ValueListenableBuilder<Duration>(
+          valueListenable: _cutoffRemaining,
+          builder: (_, cutoff, __) {
+            final cutoffDisplay = (!_ended && widget.event.hasCutoff)
+                ? _fmtDuration(cutoff)
+                : null;
+            return _LiveBanner(
+                eventName: widget.event.name,
+                count: runners.length,
+                cutoffRemaining: cutoffDisplay);
+          },
+        ),
         if (runners.isEmpty)
           Expanded(
             child: Center(
@@ -388,7 +436,8 @@ class _OrganizerLiveLeaderboardScreenState
             child: ListView.builder(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
               itemCount: runners.length,
-              itemBuilder: (_, i) => _RunnerRow(runner: runners[i], rank: i + 1),
+              itemBuilder: (_, i) =>
+                  _RunnerRow(runner: runners[i], rank: i + 1),
             ),
           ),
       ],
@@ -396,39 +445,188 @@ class _OrganizerLiveLeaderboardScreenState
   }
 }
 
-// Gender filter widget — disabled for now; re-enable when runner gender data is
-// available in live broadcasts.
-// class _GenderFilterBar extends StatelessWidget {
-//   final int? selected;
-//   final ValueChanged<int?> onChanged;
-//   const _GenderFilterBar({required this.selected, required this.onChanged});
-//   @override
-//   Widget build(BuildContext context) {
-//     return Container(
-//       color: Colors.white,
-//       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-//       child: Row(children: [
-//         _chip(null, 'All'), const SizedBox(width: 8),
-//         _chip(0, 'Male'),  const SizedBox(width: 8),
-//         _chip(1, 'Female'),
-//       ]),
-//     );
-//   }
-//   Widget _chip(int? value, String label) {
-//     final active = selected == value;
-//     return ChoiceChip(
-//       label: Text(label), selected: active,
-//       onSelected: (_) => onChanged(value),
-//       selectedColor: AppTheme.primary.withValues(alpha: 0.15),
-//       labelStyle: TextStyle(color: active ? AppTheme.primary : AppTheme.textSecondary,
-//           fontWeight: active ? FontWeight.w700 : FontWeight.w500, fontSize: 12),
-//       side: BorderSide(color: active ? AppTheme.primary.withValues(alpha: 0.5) : Colors.grey.shade300),
-//       backgroundColor: Colors.white,
-//       padding: const EdgeInsets.symmetric(horizontal: 8),
-//       visualDensity: VisualDensity.compact,
-//     );
-//   }
-// }
+class _EventResultRow extends StatelessWidget {
+  final UserStats stat;
+  const _EventResultRow({required this.stat});
+
+  @override
+  Widget build(BuildContext context) {
+    final rank = stat.rank;
+    final medalColor = rank == 1
+        ? const Color(0xFFFFD700)
+        : rank == 2
+            ? const Color(0xFFC0C0C0)
+            : rank == 3
+                ? const Color(0xFFCD7F32)
+                : null;
+    final label = stat.displayName.isNotEmpty
+        ? stat.displayName
+        : stat.email.isNotEmpty
+            ? stat.email.split('@').first
+            : stat.uid.substring(0, 6);
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 36,
+            child: medalColor != null
+                ? Icon(Icons.emoji_events_rounded, size: 22, color: medalColor)
+                : Text(
+                    '#$rank',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+          ),
+          const SizedBox(width: 8),
+          UserAvatar(label: label, photoUrl: stat.photoUrl, size: 38),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.textPrimary,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                stat.distanceStr,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.primary,
+                ),
+              ),
+              Text(
+                stat.timeStr,
+                style: const TextStyle(
+                    fontSize: 11, color: AppTheme.textSecondary),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GenderTabbedResults extends StatefulWidget {
+  final List<UserStats> stats;
+  const _GenderTabbedResults({required this.stats});
+
+  @override
+  State<_GenderTabbedResults> createState() => _GenderTabbedResultsState();
+}
+
+class _GenderTabbedResultsState extends State<_GenderTabbedResults> {
+  int _selected = 0; // 0=All, 1=Male, 2=Female
+
+  List<UserStats> _ranked(Iterable<UserStats> src) {
+    final list = src.toList();
+    for (int i = 0; i < list.length; i++) {
+      list[i].rank = i + 1;
+    }
+    return list;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final displayed = _selected == 1
+        ? _ranked(widget.stats.where((s) => s.gender == 0))
+        : _selected == 2
+            ? _ranked(widget.stats.where((s) => s.gender == 1))
+            : _ranked(widget.stats);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          color: Colors.white,
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          child: Row(
+            children: [
+              _chip(0, 'All'),
+              const SizedBox(width: 6),
+              _chip(1, 'Male'),
+              const SizedBox(width: 6),
+              _chip(2, 'Female'),
+            ],
+          ),
+        ),
+        Expanded(child: _list(displayed)),
+      ],
+    );
+  }
+
+  Widget _chip(int value, String label) {
+    final active = _selected == value;
+    return GestureDetector(
+      onTap: () => setState(() => _selected = value),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+        decoration: BoxDecoration(
+          color: active ? AppTheme.primary.withValues(alpha: 0.12) : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: active ? AppTheme.primary.withValues(alpha: 0.5) : Colors.grey.shade300,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+            color: active ? AppTheme.primary : AppTheme.textSecondary,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _list(List<UserStats> ranked) {
+    if (ranked.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.leaderboard_outlined, size: 64, color: Colors.grey.shade300),
+            const SizedBox(height: 16),
+            const Text('No results', style: TextStyle(fontSize: 16, color: AppTheme.textSecondary)),
+          ],
+        ),
+      );
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      itemCount: ranked.length,
+      itemBuilder: (_, i) => _EventResultRow(stat: ranked[i]),
+    );
+  }
+}
 
 class _LiveBanner extends StatelessWidget {
   final String eventName;
@@ -524,8 +722,7 @@ class _RunnerRowState extends State<_RunnerRow> {
       DateTime.now().millisecondsSinceEpoch - widget.runner.lastSeen < 120000;
 
   String _lastSeenText() {
-    final ms =
-        DateTime.now().millisecondsSinceEpoch - widget.runner.lastSeen;
+    final ms = DateTime.now().millisecondsSinceEpoch - widget.runner.lastSeen;
     if (ms < 60000) return 'just now';
     if (ms < 3600000) return '${ms ~/ 60000}m ago';
     final h = ms ~/ 3600000;
@@ -541,9 +738,8 @@ class _RunnerRowState extends State<_RunnerRow> {
         : runner.email.split('@').first;
     final online = _isOnline;
 
-    final elapsedMs =
-        (DateTime.now().millisecondsSinceEpoch - runner.startedAt)
-            .clamp(0, double.maxFinite.toInt());
+    final elapsedMs = (DateTime.now().millisecondsSinceEpoch - runner.startedAt)
+        .clamp(0, double.maxFinite.toInt());
     final hours = elapsedMs ~/ 3600000;
     final minutes = (elapsedMs % 3600000) ~/ 60000;
     final seconds = (elapsedMs % 60000) ~/ 1000;

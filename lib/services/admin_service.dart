@@ -146,6 +146,8 @@ class AdminService {
             : (userStats is Map
                 ? (userStats['photoUrl'] as String? ?? '')
                 : '');
+        final resolvedGender = (m['gender'] as num?)?.toInt() ??
+            (userStats is Map ? (userStats['gender'] as num?)?.toInt() : null);
         return UserStats(
           uid: uid,
           displayName: resolvedName,
@@ -154,6 +156,8 @@ class AdminService {
           totalDistanceKm: (m['distanceKm'] as num?)?.toDouble() ?? 0.0,
           totalRuns: 1,
           totalSeconds: (m['seconds'] as num?)?.toInt() ?? 0,
+          categoryId: m['categoryId'] as String? ?? '',
+          gender: resolvedGender,
         );
       }).toList()
         ..sort((a, b) {

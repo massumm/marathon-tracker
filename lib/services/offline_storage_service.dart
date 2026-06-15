@@ -126,6 +126,7 @@ class OfflineStorageService {
     required String eventId,
     required String displayName,
     required String photoUrl,
+    String categoryId = '',
   }) async {
     final runs = await _loadPendingRuns();
     if (runs.any((r) => r['runId'] == runId)) return;
@@ -138,6 +139,7 @@ class OfflineStorageService {
       'eventId': eventId,
       'displayName': displayName,
       'photoUrl': photoUrl,
+      'categoryId': categoryId,
     });
     await _writePendingRuns(runs);
     pendingRunCount.value = runs.length;
@@ -174,6 +176,7 @@ class OfflineStorageService {
         final eventId = run['eventId'] as String? ?? '';
         final displayName = run['displayName'] as String? ?? '';
         final photoUrl = run['photoUrl'] as String? ?? '';
+        final categoryId = run['categoryId'] as String? ?? '';
 
         // 1. Upload route JSON to Firebase Storage
         final file = File('${_root.path}/data/$uid/$fileName');
@@ -196,11 +199,19 @@ class OfflineStorageService {
 
         // 3. Event-scoped stats (if applicable)
         if (eventId.isNotEmpty) {
+          int? gender;
+          try {
+            final gSnap = await db.ref('user_stats/$uid/gender').get();
+            gender = gSnap.exists ? (gSnap.value as num?)?.toInt() : null;
+          } catch (_) {}
+
           await db.ref('event_stats/$eventId/$uid').update({
             'distanceKm': distanceKm,
             'seconds': seconds,
             'displayName': displayName,
             'photoUrl': photoUrl,
+            'categoryId': categoryId,
+            if (gender != null) 'gender': gender,
             'updatedAt': ServerValue.timestamp,
           });
         }

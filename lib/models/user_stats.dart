@@ -9,6 +9,7 @@ class UserStats {
   final int age;
   // 0 = male, 1 = female, null = not set
   final int? gender;
+  final String categoryId;
   int rank;
 
   UserStats({
@@ -21,6 +22,7 @@ class UserStats {
     required this.totalSeconds,
     this.age = 0,
     this.gender,
+    this.categoryId = '',
     this.rank = 0,
   });
 
