@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -33,6 +34,7 @@ import 'screens/settings_screen.dart';
 import 'screens/user_profile_screen.dart';
 import 'screens/group_management_screen.dart';
 import 'screens/group_detail_screen.dart';
+import 'screens/free_run_screen.dart';
 import 'controllers/group_controller.dart';
 
 @pragma('vm:entry-point')
@@ -136,6 +138,7 @@ class MapApp extends StatelessWidget {
           page: () => const GroupDetailScreen(),
           binding: BindingsBuilder(() => Get.lazyPut(() => GroupDetailController())),
         ),
+        GetPage(name: AppRoutes.freeRun, page: () => const FreeRunScreen()),
       ],
     );
   }

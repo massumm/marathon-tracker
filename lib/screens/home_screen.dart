@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:liquid_glass_bar/liquid_glass_bar.dart';
 
 import '../../app/routes/app_routes.dart';
+import '../../controllers/free_run_controller.dart';
 import '../../controllers/home_controller.dart';
 import '../../controllers/kml_map_controller.dart';
 import '../../core/theme.dart';
@@ -56,6 +57,59 @@ class _RunningBanner extends StatelessWidget {
   }
 }
 
+class _FreeRunBanner extends StatelessWidget {
+  const _FreeRunBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final ctrl = Get.find<FreeRunController>();
+    return Obx(() {
+      final state = ctrl.runState.value;
+      if (state == FreeRunState.idle || state == FreeRunState.stopped) {
+        return const SizedBox.shrink();
+      }
+      return GestureDetector(
+        onTap: () => Get.toNamed(AppRoutes.freeRun),
+        child: Container(
+          color: AppTheme.primary,
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+          child: SafeArea(
+            bottom: false,
+            child: Row(
+              children: [
+                const Icon(Icons.directions_run_rounded,
+                    color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    state == FreeRunState.paused
+                        ? 'Free Run – Paused'
+                        : 'Free Run in progress',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13),
+                  ),
+                ),
+                Obx(() => Text(
+                      ctrl.formattedTime,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                          letterSpacing: 1),
+                    )),
+                const SizedBox(width: 6),
+                const Icon(Icons.chevron_right, color: Colors.white, size: 18),
+              ],
+            ),
+          ),
+        ),
+      );
+    });
+  }
+}
+
 class HomeScreen extends GetView<HomeController> {
   const HomeScreen({super.key});
 
@@ -63,9 +117,14 @@ class HomeScreen extends GetView<HomeController> {
   Widget build(BuildContext context) {
     return Obx(() => Scaffold(
           extendBody: true,
+          floatingActionButton: controller.tabIndex.value == 0
+              ? const _FreeRunFab()
+              : null,
+          floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
           body: Column(
             children: [
               const _RunningBanner(),
+              const _FreeRunBanner(),
               Expanded(
                 child: IndexedStack(
                   index: controller.tabIndex.value,
@@ -104,5 +163,80 @@ class HomeScreen extends GetView<HomeController> {
             ],
           ),
         ));
+  }
+}
+
+class _FreeRunFab extends StatefulWidget {
+  const _FreeRunFab();
+
+  @override
+  State<_FreeRunFab> createState() => _FreeRunFabState();
+}
+
+class _FreeRunFabState extends State<_FreeRunFab>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulse;
+  late Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    )..repeat(reverse: true);
+    _scale = Tween<double>(begin: 1.0, end: 1.07)
+        .animate(CurvedAnimation(parent: _pulse, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: _scale,
+      child: GestureDetector(
+        onTap: () => Get.toNamed(AppRoutes.freeRun),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [AppTheme.primary, Color(0xFFFF9A5C)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(32),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.primary.withValues(alpha: 0.5),
+                blurRadius: 18,
+                spreadRadius: 2,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.directions_run_rounded, color: Colors.white, size: 22),
+              SizedBox(width: 8),
+              Text(
+                'Free Run',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

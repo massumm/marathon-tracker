@@ -40,32 +40,10 @@ class FirebaseService {
         .toList()
       ..sort((a, b) => TrackedRoute.parseDateTimeFromFileName(b.name)
           .compareTo(TrackedRoute.parseDateTimeFromFileName(a.name)));
-    // Deduplicate: keep only the most recent run per event+date combo.
-    // Handles the case where a user starts, stops early, then starts again.
-    final seen = <String>{};
-    final deduped = <fs.Reference>[];
-    for (final ref in sorted) {
-      final key = _runDayKey(ref.name);
-      if (seen.add(key)) deduped.add(ref);
-    }
-    return deduped;
+    return sorted;
   }
 
-  /// Extracts a deduplication key: slug + date, dropping the HH-mm time part.
-  /// Files with the same event name and calendar date collapse to one record.
-  static String _runDayKey(String fileName) {
-    final base = fileName.replaceAll('.json', '');
-    final parts = base.split('_');
-    if (parts.length >= 2) {
-      final datePart = parts[parts.length - 2];
-      if (RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(datePart)) {
-        return parts.sublist(0, parts.length - 1).join('_');
-      }
-    }
-    return fileName;
-  }
-
-  /// Saves a photo taken during a run.
+/// Saves a photo taken during a run.
   /// [runStartMs] must match the timestamp in the route filename.
   Future<void> saveRunPhoto(int runStartMs, Uint8List bytes) async {
     final photoTs = DateTime.now().millisecondsSinceEpoch;

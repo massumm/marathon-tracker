@@ -39,7 +39,7 @@ class _OrganizerLiveLeaderboardScreenState
   Set<String> _finishedCats = {};
 
   Set<String> _computeFinishedCats() => widget.event.categories.values
-      .where(widget.event.isCategoryFinished)
+      .where((c) => widget.event.isCategoryFinished(c))
       .map((c) => c.id)
       .toSet();
 
@@ -784,20 +784,70 @@ class _RunnerRowState extends State<_RunnerRow> {
             ),
           ),
           const SizedBox(width: 8),
-          UserAvatar(label: label, photoUrl: runner.photoUrl, size: 38),
+          Stack(
+            children: [
+              UserAvatar(label: label, photoUrl: runner.photoUrl, size: 38),
+              if (runner.isVehicle)
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    width: 16,
+                    height: 16,
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.directions_car,
+                        color: Colors.white, size: 10),
+                  ),
+                ),
+            ],
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.textPrimary,
-                  ),
-                  overflow: TextOverflow.ellipsis,
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        label,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textPrimary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (runner.isVehicle) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 5, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade50,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: Colors.red.shade300),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.directions_car,
+                                color: Colors.red.shade600, size: 11),
+                            const SizedBox(width: 2),
+                            Text('Vehicle',
+                                style: TextStyle(
+                                    fontSize: 9,
+                                    color: Colors.red.shade600,
+                                    fontWeight: FontWeight.w700)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 Text(
                   online ? runner.email : 'offline · ${_lastSeenText()}',

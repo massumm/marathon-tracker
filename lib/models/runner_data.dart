@@ -12,6 +12,7 @@ class RunnerData {
   final String categoryId;
   // 0 = male, 1 = female, null = not set
   final int? gender;
+  final bool isVehicle;
 
   RunnerData({
     required this.uid,
@@ -26,6 +27,7 @@ class RunnerData {
     this.eventId = '',
     this.categoryId = '',
     this.gender,
+    this.isVehicle = false,
   }) : lastSeen = lastSeen ?? startedAt;
 
   factory RunnerData.fromMap(String uid, Map<dynamic, dynamic> map) {
@@ -44,6 +46,7 @@ class RunnerData {
       eventId: map['eventId'] as String? ?? '',
       categoryId: map['categoryId'] as String? ?? '',
       gender: (map['gender'] as num?)?.toInt(),
+      isVehicle: map['isVehicle'] == true,
     );
   }
 
@@ -59,5 +62,6 @@ class RunnerData {
         'eventId': eventId,
         'categoryId': categoryId,
         if (gender != null) 'gender': gender,
+        'isVehicle': isVehicle,
       };
 }

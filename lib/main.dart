@@ -34,6 +34,7 @@ import 'screens/settings_screen.dart';
 import 'screens/user_profile_screen.dart';
 import 'screens/group_management_screen.dart';
 import 'screens/group_detail_screen.dart';
+import 'screens/free_run_screen.dart';
 import 'controllers/group_controller.dart';
 
 @pragma('vm:entry-point')
@@ -174,6 +175,7 @@ class MapApp extends StatelessWidget {
             Get.lazyPut(() => GroupDetailController());
           }),
         ),
+        GetPage(name: AppRoutes.freeRun, page: () => const FreeRunScreen()),
       ],
     );
   }

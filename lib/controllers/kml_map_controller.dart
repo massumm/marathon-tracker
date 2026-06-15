@@ -147,6 +147,13 @@ class KmlMapController extends GetxController {
   static const int _offRouteConsecutiveNeeded = 5; // require 5 consecutive fixes
   int _offRouteCount = 0;
   bool _offRouteWarningActive = false;
+
+  // ── Vehicle detection ─────────────────────────────────────────────────────
+  // Speed sustained above this threshold = vehicle (elite runner peak ~21 km/h)
+  static const double _vehicleSpeedKmh = 30.0;
+  static const int _vehicleConsecutiveNeeded = 3;
+  int _vehicleCount = 0;
+  bool _isVehicleFlagged = false;
   Timer? _offRouteTimer;
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
@@ -857,6 +864,8 @@ class KmlMapController extends GetxController {
     finishCountdown.value = 60;
     _offRouteCount = 0;
     _offRouteWarningActive = false;
+    _vehicleCount = 0;
+    _isVehicleFlagged = false;
     _stopOffRouteWarning();
     _smoothingBuffer.clear();
     elapsedSeconds.value = 0;
@@ -975,11 +984,32 @@ class KmlMapController extends GetxController {
       snappedPoints.add(smoothed);
       if (_lbTickCount % 4 == 0) _rebuildLeaderboard();
 
+      // ── Vehicle detection ────────────────────────────────────────────
+      if (!_isVehicleFlagged && trackingPoints.length >= 2) {
+        final prev = trackingPoints[trackingPoints.length - 2];
+        final distM = Geolocator.distanceBetween(
+          prev.latitude, prev.longitude,
+          smoothed.latitude, smoothed.longitude,
+        );
+        // position stream fires ~every 2s; distM/2s → m/s → km/h
+        final speedKmh = (distM / 2.0) * 3.6;
+        if (speedKmh > _vehicleSpeedKmh) {
+          _vehicleCount++;
+          if (_vehicleCount >= _vehicleConsecutiveNeeded) {
+            _isVehicleFlagged = true;
+            debugPrint('[VEHICLE] flagged — speed=${speedKmh.toStringAsFixed(1)} km/h');
+          }
+        } else {
+          _vehicleCount = 0;
+        }
+      }
+
       if (isLive.value) {
         LiveTrackingService.instance.updateLocation(
           position.latitude,
           position.longitude,
           currentDistanceKm,
+          isVehicle: _isVehicleFlagged,
         );
       }
     });
