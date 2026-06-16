@@ -16,6 +16,7 @@ class AppStrings extends Translations {
           'filter_all': 'All',
           'filter_live': 'Live',
           'filter_upcoming': 'Upcoming',
+          'filter_finished': 'Finished',
           'view_map': 'View Map',
 
           // Comments
@@ -294,6 +295,7 @@ class AppStrings extends Translations {
           'filter_all': '全て',
           'filter_live': 'ライブ',
           'filter_upcoming': '予定',
+          'filter_finished': '終了',
           'view_map': '地図を見る',
 
           // Comments

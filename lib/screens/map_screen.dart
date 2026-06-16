@@ -53,9 +53,9 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   int _sortPriority(EventModel e) {
-    if (e.isToday) return 0;
-    if (!e.isFinished) return 1;
-    return 2;
+    if (_isLive(e)) return 0;       // live first
+    if (!e.isFinished) return 1;    // upcoming second
+    return 2;                        // finished last
   }
 
   List<EventModel> get _filtered {
@@ -82,6 +82,7 @@ class _MapScreenState extends State<MapScreen> {
       appBar: AppBar(title: Text('events_title'.tr)),
       body: Column(
         children: [
+          const _FreeRunBanner(),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
             child: Row(
@@ -1017,6 +1018,92 @@ class _CategoryPickerSheet extends StatelessWidget {
           ),
           const SizedBox(height: 8),
         ],
+      ),
+    );
+  }
+}
+
+// ── Free Run daily challenge banner ──────────────────────────────────────────
+class _FreeRunBanner extends StatelessWidget {
+  const _FreeRunBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Get.toNamed(AppRoutes.freeRun),
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 10, 16, 2),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFFF6B35), Color(0xFFFF9A5C)],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Color(0xFFFF6B35).withValues(alpha: 0.28),
+              blurRadius: 14,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.local_fire_department_rounded,
+                  color: Colors.white, size: 26),
+            ),
+            const SizedBox(width: 14),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Free Run',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Your daily challenge — burn calories, go far!',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Text(
+                'Start',
+                style: TextStyle(
+                  color: Color(0xFFFF6B35),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
