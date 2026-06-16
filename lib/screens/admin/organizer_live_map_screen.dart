@@ -418,6 +418,9 @@ class _OrganizerLiveMapScreenState extends State<OrganizerLiveMapScreen>
     final categoryList = widget.event.categories.entries.toList();
     final filtered = _filteredRunners;
     final onlineCount = filtered.where(_isOnline).length;
+    final catIdx = categoryList.isEmpty ? 0 : _tabController.index.clamp(0, categoryList.length - 1);
+    final catKey = categoryList.isEmpty ? '' : categoryList[catIdx].key;
+    final isCatFinished = _ended || (catKey.isNotEmpty && _finishedCats.contains(catKey));
 
     return Column(
       children: [
@@ -506,216 +509,39 @@ class _OrganizerLiveMapScreenState extends State<OrganizerLiveMapScreen>
 
         const Divider(height: 1, thickness: 1),
 
-        // Main body: map fills the full area; left panel floats over it.
+        // Main body: standings-only when finished, map+panel when live.
         Expanded(
-          child: Stack(
-            children: [
-              // ── Map — full area ────────────────────────────────────────
-              GoogleMap(
-                initialCameraPosition: const CameraPosition(
-                  target: LatLng(0, 0),
-                  zoom: 2,
-                ),
-                polylines: _currentPolylines,
-                markers: {
-                  ..._kmlMarkers,
-                  ..._runnerMarkers(filtered),
-                },
-                onMapCreated: (ctrl) {
-                  _mapController = ctrl;
-                  _mapReady = true;
-                  Future.delayed(const Duration(milliseconds: 350), () {
-                    if (!mounted) return;
-                    final pending = _pendingFitPolylines;
-                    if (pending != null && pending.isNotEmpty) {
-                      _pendingFitPolylines = null;
-                      _doFit(pending);
-                    } else if (_currentPolylines.isNotEmpty) {
-                      _doFit(_currentPolylines);
-                    } else if (_runners.isNotEmpty) {
-                      _autoCenterOnRunners(_runners);
-                    }
-                  });
-                },
-                myLocationButtonEnabled: false,
-                zoomControlsEnabled: true,
-                mapToolbarEnabled: false,
-              ),
+          child: isCatFinished
 
-              // "No runners" toast — bottom-centre, clear of the panel.
-              if (filtered.isEmpty)
-                Positioned(
-                  bottom: 24,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: Colors.black54,
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.directions_run_outlined,
-                              size: 16, color: Colors.white),
-                          SizedBox(width: 8),
-                          Text(
-                            'No runners broadcasting yet',
-                            style:
-                                TextStyle(fontSize: 13, color: Colors.white),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-
-              // ── Floating left panel ────────────────────────────────────
-              Positioned(
-                top: 8,
-                left: 8,
-                bottom: 8,
-                width: 290,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: BackdropFilter(
-                    filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.88),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.6)),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.10),
-                            blurRadius: 20,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Builder(builder: (context) {
-                  // Determine current category key.
+            // ── Final standings: GoogleMap not loaded ──────────────────────
+            ? Container(
+                color: Colors.white,
+                child: Builder(builder: (context) {
                   final cats = widget.event.categories.entries.toList();
                   final tabIdx = cats.isEmpty
                       ? 0
                       : _tabController.index.clamp(0, cats.length - 1);
                   final catKey = cats.isEmpty ? '' : cats[tabIdx].key;
-                  final isCatFinished = _ended ||
-                      (catKey.isNotEmpty && _finishedCats.contains(catKey));
-
-                  // ── Final standings mode ──────────────────────────────
-                  if (isCatFinished) {
-                    final firstCatId =
-                        cats.isNotEmpty ? cats.first.key : null;
-                    var results = catKey.isEmpty
-                        ? _eventStats
-                        : _eventStats.where((s) {
-                            if (s.categoryId == catKey) return true;
-                            if (s.categoryId.isEmpty &&
-                                catKey == firstCatId) return true;
-                            return false;
-                          }).toList();
-                    if (_genderFilter != 0) {
-                      results = results
-                          .where((s) => s.gender == _genderFilter - 1)
-                          .toList();
-                    }
-                    for (int i = 0; i < results.length; i++) {
-                      results[i].rank = i + 1;
-                    }
-
-                    return Column(
-                      children: [
-                        // Final standings header
-                        Container(
-                          color: const Color(0xFFF8F9FA),
-                          padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  const Icon(Icons.flag_rounded,
-                                      size: 14, color: AppTheme.textSecondary),
-                                  const SizedBox(width: 5),
-                                  const Text(
-                                    'Final Standings',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppTheme.textSecondary,
-                                    ),
-                                  ),
-                                  const Spacer(),
-                                  Text(
-                                    '${results.length} finisher${results.length == 1 ? '' : 's'}',
-                                    style: const TextStyle(
-                                        fontSize: 10,
-                                        color: AppTheme.textSecondary),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              _GenderFilterRow(
-                                selected: _genderFilter,
-                                onChanged: (v) =>
-                                    setState(() => _genderFilter = v),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Divider(height: 1, thickness: 1),
-                        Expanded(
-                          child: results.isEmpty
-                              ? Center(
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(Icons.leaderboard_outlined,
-                                          size: 48,
-                                          color: Colors.grey.shade300),
-                                      const SizedBox(height: 12),
-                                      const Text('No results yet',
-                                          style: TextStyle(
-                                              fontSize: 14,
-                                              color: AppTheme.textSecondary)),
-                                    ],
-                                  ),
-                                )
-                              : ListView.builder(
-                                  padding:
-                                      const EdgeInsets.fromLTRB(10, 10, 10, 16),
-                                  itemCount: results.length,
-                                  itemBuilder: (_, i) =>
-                                      _FinalStandingsTile(stat: results[i]),
-                                ),
-                        ),
-                      ],
-                    );
-                  }
-
-                  // ── Live mode ─────────────────────────────────────────
-                  var display = filtered.toList();
+                  final firstCatId = cats.isNotEmpty ? cats.first.key : null;
+                  var results = catKey.isEmpty
+                      ? _eventStats
+                      : _eventStats.where((s) {
+                          if (s.categoryId == catKey) return true;
+                          if (s.categoryId.isEmpty && catKey == firstCatId) {
+                            return true;
+                          }
+                          return false;
+                        }).toList();
                   if (_genderFilter != 0) {
-                    display = display
-                        .where((r) => r.gender == _genderFilter - 1)
+                    results = results
+                        .where((s) => s.gender == _genderFilter - 1)
                         .toList();
                   }
-
-                  final pageCount =
-                      ((display.length - 1) ~/ _pageSize + 1).clamp(1, 9999);
-                  final page = _runnerPage.clamp(0, pageCount - 1);
-                  final pageRunners =
-                      display.skip(page * _pageSize).take(_pageSize).toList();
-                  final rankOffset = page * _pageSize;
-
+                  for (int i = 0; i < results.length; i++) {
+                    results[i].rank = i + 1;
+                  }
                   return Column(
                     children: [
-                      // Header
                       Container(
                         color: const Color(0xFFF8F9FA),
                         padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
@@ -724,21 +550,21 @@ class _OrganizerLiveMapScreenState extends State<OrganizerLiveMapScreen>
                           children: [
                             Row(
                               children: [
-                                const Icon(Icons.people_outline,
-                                    size: 15, color: AppTheme.textSecondary),
-                                const SizedBox(width: 6),
-                                Text(
-                                  '${display.length} runner${display.length == 1 ? '' : 's'}',
-                                  style: const TextStyle(
+                                const Icon(Icons.flag_rounded,
+                                    size: 14, color: AppTheme.textSecondary),
+                                const SizedBox(width: 5),
+                                const Text(
+                                  'Final Standings',
+                                  style: TextStyle(
                                     fontSize: 12,
-                                    fontWeight: FontWeight.w600,
+                                    fontWeight: FontWeight.w700,
                                     color: AppTheme.textSecondary,
                                   ),
                                 ),
                                 const Spacer(),
-                                const Text(
-                                  'tap to locate',
-                                  style: TextStyle(
+                                Text(
+                                  '${results.length} finisher${results.length == 1 ? '' : 's'}',
+                                  style: const TextStyle(
                                       fontSize: 10,
                                       color: AppTheme.textSecondary),
                                 ),
@@ -754,19 +580,17 @@ class _OrganizerLiveMapScreenState extends State<OrganizerLiveMapScreen>
                         ),
                       ),
                       const Divider(height: 1, thickness: 1),
-
-                      // List
                       Expanded(
-                        child: display.isEmpty
+                        child: results.isEmpty
                             ? Center(
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.directions_run_outlined,
+                                    Icon(Icons.leaderboard_outlined,
                                         size: 48,
                                         color: Colors.grey.shade300),
                                     const SizedBox(height: 12),
-                                    const Text('No runners yet',
+                                    const Text('No results yet',
                                         style: TextStyle(
                                             fontSize: 14,
                                             color: AppTheme.textSecondary)),
@@ -775,79 +599,255 @@ class _OrganizerLiveMapScreenState extends State<OrganizerLiveMapScreen>
                               )
                             : ListView.builder(
                                 padding:
-                                    const EdgeInsets.fromLTRB(10, 10, 10, 10),
-                                itemCount: pageRunners.length,
-                                itemBuilder: (_, i) => _MapRunnerTile(
-                                  runner: pageRunners[i],
-                                  rank: rankOffset + i + 1,
-                                  selected:
-                                      pageRunners[i].uid == _selectedUid,
-                                  onTap: () => _focusRunner(pageRunners[i]),
-                                ),
+                                    const EdgeInsets.fromLTRB(10, 10, 10, 16),
+                                itemCount: results.length,
+                                itemBuilder: (_, i) =>
+                                    _FinalStandingsTile(stat: results[i]),
                               ),
                       ),
+                    ],
+                  );
+                }),
+              )
 
-                      // Pagination footer
-                      if (display.length > _pageSize) ...[
-                        const Divider(height: 1, thickness: 1),
-                        Container(
-                          color: const Color(0xFFF8F9FA),
+            // ── Live: map + floating panel ─────────────────────────────────
+            : Stack(
+                children: [
+                  GoogleMap(
+                    initialCameraPosition: const CameraPosition(
+                      target: LatLng(0, 0),
+                      zoom: 2,
+                    ),
+                    polylines: _currentPolylines,
+                    markers: {
+                      ..._kmlMarkers,
+                      ..._runnerMarkers(filtered),
+                    },
+                    onMapCreated: (ctrl) {
+                      _mapController = ctrl;
+                      _mapReady = true;
+                      Future.delayed(const Duration(milliseconds: 350), () {
+                        if (!mounted) return;
+                        final pending = _pendingFitPolylines;
+                        if (pending != null && pending.isNotEmpty) {
+                          _pendingFitPolylines = null;
+                          _doFit(pending);
+                        } else if (_currentPolylines.isNotEmpty) {
+                          _doFit(_currentPolylines);
+                        } else if (_runners.isNotEmpty) {
+                          _autoCenterOnRunners(_runners);
+                        }
+                      });
+                    },
+                    myLocationButtonEnabled: false,
+                    zoomControlsEnabled: true,
+                    mapToolbarEnabled: false,
+                  ),
+
+                  if (filtered.isEmpty)
+                    Positioned(
+                      bottom: 24,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 6),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                              horizontal: 16, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              IconButton(
-                                icon: const Icon(Icons.chevron_left),
-                                iconSize: 20,
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(
-                                    minWidth: 32, minHeight: 32),
-                                color: page > 0
-                                    ? AppTheme.primary
-                                    : Colors.grey.shade300,
-                                onPressed: page > 0
-                                    ? () =>
-                                        setState(() => _runnerPage = page - 1)
-                                    : null,
-                              ),
-                              const SizedBox(width: 6),
+                              Icon(Icons.directions_run_outlined,
+                                  size: 16, color: Colors.white),
+                              SizedBox(width: 8),
                               Text(
-                                '${page + 1} / $pageCount',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppTheme.textSecondary,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              IconButton(
-                                icon: const Icon(Icons.chevron_right),
-                                iconSize: 20,
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(
-                                    minWidth: 32, minHeight: 32),
-                                color: page < pageCount - 1
-                                    ? AppTheme.primary
-                                    : Colors.grey.shade300,
-                                onPressed: page < pageCount - 1
-                                    ? () =>
-                                        setState(() => _runnerPage = page + 1)
-                                    : null,
+                                'No runners broadcasting yet',
+                                style:
+                                    TextStyle(fontSize: 13, color: Colors.white),
                               ),
                             ],
                           ),
                         ),
-                      ],
-                    ],
-                  );
-                }),
-                    ),  // Container
-                  ),    // BackdropFilter
-                ),      // ClipRRect
-              ),        // Positioned (floating panel)
-            ],          // Stack children
-          ),            // Stack
+                      ),
+                    ),
+
+                  // ── Floating live panel ─────────────────────────────────
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    bottom: 8,
+                    width: 208,
+                    child: Container(
+                      clipBehavior: Clip.antiAlias,
+                      decoration: BoxDecoration(
+                        color: const Color(0xBB121212),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.08)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.30),
+                            blurRadius: 20,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Builder(builder: (context) {
+                        var display = filtered.toList();
+                        if (_genderFilter != 0) {
+                          display = display
+                              .where((r) => r.gender == _genderFilter - 1)
+                              .toList();
+                        }
+
+                        final pageCount =
+                            ((display.length - 1) ~/ _pageSize + 1)
+                                .clamp(1, 9999);
+                        final page = _runnerPage.clamp(0, pageCount - 1);
+                        final pageRunners = display
+                            .skip(page * _pageSize)
+                            .take(_pageSize)
+                            .toList();
+                        final rankOffset = page * _pageSize;
+
+                        return Column(
+                          children: [
+                            Container(
+                              color: const Color(0xFF1A1A2E),
+                              padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.people_outline,
+                                          size: 15, color: Colors.white60),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        '${display.length} runner${display.length == 1 ? '' : 's'}',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      const Spacer(),
+                                      const Text(
+                                        'tap to locate',
+                                        style: TextStyle(
+                                            fontSize: 10,
+                                            color: Colors.white60),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
+                                  _GenderFilterRow(
+                                    selected: _genderFilter,
+                                    onChanged: (v) =>
+                                        setState(() => _genderFilter = v),
+                                    dark: true,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Divider(
+                                height: 1,
+                                thickness: 1,
+                                color: Colors.white12),
+                            Expanded(
+                              child: display.isEmpty
+                                  ? const Center(
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.directions_run_outlined,
+                                              size: 48, color: Colors.white24),
+                                          SizedBox(height: 12),
+                                          Text('No runners yet',
+                                              style: TextStyle(
+                                                  fontSize: 14,
+                                                  color: Colors.white60)),
+                                        ],
+                                      ),
+                                    )
+                                  : ListView.builder(
+                                      padding: const EdgeInsets.fromLTRB(
+                                          10, 10, 10, 10),
+                                      itemCount: pageRunners.length,
+                                      itemBuilder: (_, i) => _MapRunnerTile(
+                                        runner: pageRunners[i],
+                                        rank: rankOffset + i + 1,
+                                        selected: pageRunners[i].uid ==
+                                            _selectedUid,
+                                        onTap: () =>
+                                            _focusRunner(pageRunners[i]),
+                                      ),
+                                    ),
+                            ),
+                            if (display.length > _pageSize) ...[
+                              const Divider(
+                                  height: 1,
+                                  thickness: 1,
+                                  color: Colors.white12),
+                              Container(
+                                color: const Color(0xFF1A1A2E),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 6),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.chevron_left),
+                                      iconSize: 20,
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(
+                                          minWidth: 32, minHeight: 32),
+                                      color: page > 0
+                                          ? AppTheme.primary
+                                          : Colors.white24,
+                                      onPressed: page > 0
+                                          ? () => setState(
+                                              () => _runnerPage = page - 1)
+                                          : null,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      '${page + 1} / $pageCount',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    IconButton(
+                                      icon: const Icon(Icons.chevron_right),
+                                      iconSize: 20,
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(
+                                          minWidth: 32, minHeight: 32),
+                                      color: page < pageCount - 1
+                                          ? AppTheme.primary
+                                          : Colors.white24,
+                                      onPressed: page < pageCount - 1
+                                          ? () => setState(
+                                              () => _runnerPage = page + 1)
+                                          : null,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ],
+                        );
+                      }),
+                    ),
+                  ),
+                ],
+              ),
         ),              // Expanded
       ],
     );
@@ -929,7 +929,9 @@ class _MapRunnerTile extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 6),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
         decoration: BoxDecoration(
-          color: selected ? AppTheme.primary.withValues(alpha: 0.08) : Colors.white,
+          color: selected
+              ? AppTheme.primary.withValues(alpha: 0.20)
+              : Colors.white.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: selected
@@ -955,7 +957,7 @@ class _MapRunnerTile extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
-                  color: AppTheme.textSecondary,
+                  color: Colors.white60,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -981,14 +983,14 @@ class _MapRunnerTile extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
-                      color: AppTheme.textPrimary,
+                      color: Colors.white,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
                     _elapsed(),
                     style: const TextStyle(
-                        fontSize: 10, color: AppTheme.textSecondary),
+                        fontSize: 10, color: Colors.white60),
                   ),
                 ],
               ),
@@ -1012,7 +1014,12 @@ class _MapRunnerTile extends StatelessWidget {
 class _GenderFilterRow extends StatelessWidget {
   final int selected; // 0=All 1=Male 2=Female
   final ValueChanged<int> onChanged;
-  const _GenderFilterRow({required this.selected, required this.onChanged});
+  final bool dark;
+  const _GenderFilterRow({
+    required this.selected,
+    required this.onChanged,
+    this.dark = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1041,7 +1048,7 @@ class _GenderFilterRow extends StatelessWidget {
           border: Border.all(
             color: active
                 ? AppTheme.primary.withValues(alpha: 0.5)
-                : Colors.grey.shade300,
+                : dark ? Colors.white30 : Colors.grey.shade300,
           ),
         ),
         child: Text(
@@ -1049,7 +1056,9 @@ class _GenderFilterRow extends StatelessWidget {
           style: TextStyle(
             fontSize: 10,
             fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-            color: active ? AppTheme.primary : AppTheme.textSecondary,
+            color: active
+                ? AppTheme.primary
+                : dark ? Colors.white60 : AppTheme.textSecondary,
           ),
         ),
       ),
