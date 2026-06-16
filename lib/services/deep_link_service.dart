@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -12,11 +14,23 @@ class DeepLinkService {
   static const _method = MethodChannel('app/deep_link');
   static const _events = EventChannel('app/deep_link/events');
 
+  // Holds a URI received before auth was ready, to retry after login.
+  String? _pendingUri;
+
   void init() {
     _checkInitialLink();
     _events.receiveBroadcastStream().listen((uri) {
       if (uri is String) _handleUri(uri);
     });
+  }
+
+  /// Call this from AuthController after a successful login so any deep link
+  /// that arrived before auth was ready gets processed.
+  void retryPending() {
+    final uri = _pendingUri;
+    if (uri == null) return;
+    _pendingUri = null;
+    _handleUri(uri);
   }
 
   Future<void> _checkInitialLink() async {
@@ -28,8 +42,13 @@ class DeepLinkService {
 
   Future<void> _handleUri(String uri) async {
     if (!uri.startsWith('marathon-map://group/')) return;
+
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    if (user == null) {
+      // Auth not ready yet — park the URI and retry after login.
+      _pendingUri = uri;
+      return;
+    }
 
     final groupId = uri.replaceFirst('marathon-map://group/', '').trim();
     if (groupId.isEmpty) return;

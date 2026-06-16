@@ -8,6 +8,7 @@ import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../app/routes/app_routes.dart';
+import '../services/deep_link_service.dart';
 import '../services/friends_service.dart';
 import '../services/user_stats_service.dart';
 
@@ -36,6 +37,7 @@ class AuthController extends GetxController {
         FriendsService.instance.registerProfile(displayName: username);
         UserStatsService.instance.registerOrUpdate(displayName: username, gender: gender);
         Get.offAllNamed(AppRoutes.home);
+        DeepLinkService.instance.retryPending();
       } else {
         Get.offAllNamed(AppRoutes.login);
       }
@@ -155,6 +157,7 @@ class AuthController extends GetxController {
       FriendsService.instance.registerProfile(displayName: username);
       UserStatsService.instance.registerOrUpdate(displayName: username, gender: gender);
       Get.offAllNamed(AppRoutes.home);
+      DeepLinkService.instance.retryPending();
     }
     return verified;
   }
