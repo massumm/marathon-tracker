@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
 import '../models/group_model.dart';
@@ -115,6 +116,10 @@ class GroupDetailController extends GetxController {
     if (args is GroupModel) {
       group = args;
       groupName.value = args.name;
+    } else {
+      // No valid GroupModel passed — cannot initialize. Pop immediately.
+      WidgetsBinding.instance.addPostFrameCallback((_) => Get.back());
+      return;
     }
     _membersSub =
         GroupService.instance.watchGroupMembers(group.id).listen((list) {

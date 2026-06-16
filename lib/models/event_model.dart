@@ -4,6 +4,7 @@ class RaceCategory {
   final String cutoff; // display string, e.g. "03:45" or legacy "90 Minutes"
   final String kmlPath;
   final String kmlUrl;
+  final double distanceKm; // total route distance calculated from KML points; 0 = unknown
 
   const RaceCategory({
     required this.id,
@@ -11,6 +12,7 @@ class RaceCategory {
     required this.cutoff,
     required this.kmlPath,
     required this.kmlUrl,
+    this.distanceKm = 0.0,
   });
 
   /// Total cutoff minutes derived from [cutoff]; 0 = no cutoff.
@@ -45,6 +47,7 @@ class RaceCategory {
       cutoff: map['cutoff'] as String? ?? '',
       kmlPath: map['kmlPath'] as String? ?? '',
       kmlUrl: map['kmlUrl'] as String? ?? '',
+      distanceKm: (map['distanceKm'] as num?)?.toDouble() ?? 0.0,
     );
   }
 
@@ -53,6 +56,7 @@ class RaceCategory {
         'cutoff': cutoff,
         'kmlPath': kmlPath,
         'kmlUrl': kmlUrl,
+        if (distanceKm > 0) 'distanceKm': distanceKm,
       };
 }
 

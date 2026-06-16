@@ -19,7 +19,12 @@ import '../../../services/admin_service.dart';
 class RouteEditorResult {
   final String kmlUrl;
   final String kmlPath;
-  const RouteEditorResult({required this.kmlUrl, required this.kmlPath});
+  final double distanceKm;
+  const RouteEditorResult({
+    required this.kmlUrl,
+    required this.kmlPath,
+    this.distanceKm = 0.0,
+  });
 }
 
 // ── Marker types ──────────────────────────────────────────────────────────────
@@ -546,9 +551,13 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
         kmlBytes,
       );
       final kmlPath = 'events/${widget.eventId}/kml/${widget.categoryId}.kml';
+      final cumDists = _computeCumulativeDistances();
+      final distanceKm = cumDists.isNotEmpty ? cumDists.last / 1000.0 : 0.0;
       if (mounted) {
         Navigator.pop(
-            context, RouteEditorResult(kmlUrl: kmlUrl, kmlPath: kmlPath));
+          context,
+          RouteEditorResult(kmlUrl: kmlUrl, kmlPath: kmlPath, distanceKm: distanceKm),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -609,10 +618,32 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
       .replaceAll('>', '&gt;')
       .replaceAll('"', '&quot;');
 
+  // ── Distance helpers ──────────────────────────────────────────────────────
+
+  List<double> _computeCumulativeDistances() {
+    if (_routePoints.isEmpty) return [];
+    final out = <double>[0.0];
+    for (int i = 1; i < _routePoints.length; i++) {
+      final prev = _routePoints[i - 1];
+      final curr = _routePoints[i];
+      out.add(out.last + Geolocator.distanceBetween(
+        prev.latitude, prev.longitude,
+        curr.latitude, curr.longitude,
+      ));
+    }
+    return out;
+  }
+
+  String _fmtDist(double m) =>
+      m < 1000 ? '${m.toStringAsFixed(0)} m' : '${(m / 1000).toStringAsFixed(2)} km';
+
+
+
   // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
+    final cumDists = _computeCumulativeDistances();
     final polylines = _routePoints.isNotEmpty
         ? {
             Polyline(
@@ -642,7 +673,12 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
         icon: _routeDotIcon ??
             BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
         anchor: const Offset(0.5, 0.5),
-        infoWindow: InfoWindow(title: 'Point ${e.key + 1}'),
+        infoWindow: InfoWindow(
+          title: 'Point ${e.key + 1}',
+          snippet: cumDists.isNotEmpty
+              ? 'From start: ${_fmtDist(cumDists[e.key])}'
+              : null,
+        ),
         // In marker mode the dot consumes the tap, so forward it manually.
         onTap: _mode == _EditMode.marker ? () => _onMapTap(e.value) : null,
       );
@@ -745,8 +781,9 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
                     ),
                     const Spacer(),
                     Text(
-                      '${_routePoints.length} pts · '
-                      '${_markers.length} markers',
+                      '${_routePoints.length} pts'
+                      '${cumDists.isNotEmpty ? ' · ${_fmtDist(cumDists.last)}' : ''}'
+                      ' · ${_markers.length} markers',
                       style: const TextStyle(
                           fontSize: 12, color: AppTheme.textSecondary),
                     ),

@@ -73,6 +73,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
           cutoffCtrl: TextEditingController(text: cat.cutoff),
           existingKmlPath: cat.kmlPath,
           existingKmlUrl: cat.kmlUrl,
+          distanceKm: cat.distanceKm,
         ));
       }
     }
@@ -268,6 +269,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
       setState(() {
         _categories[index].existingKmlPath = result.kmlPath;
         _categories[index].existingKmlUrl = result.kmlUrl;
+        _categories[index].distanceKm = result.distanceKm;
         _categories[index].pickedBytes = null;
         _categories[index].pickedFileName = '';
       });
@@ -348,6 +350,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
           'kmlPath': kmlPath,
           'kmlUrl': kmlUrl,
           'endTime': _endTimeForCutoff(catCutoffMins),
+          if (entry.distanceKm > 0) 'distanceKm': entry.distanceKm,
         };
       }
 
@@ -1190,6 +1193,7 @@ class _CategoryEntry {
   final TextEditingController cutoffCtrl;
   String existingKmlPath;
   String existingKmlUrl;
+  double distanceKm;
   String pickedFileName = '';
   Uint8List? pickedBytes;
 
@@ -1198,5 +1202,6 @@ class _CategoryEntry {
     required this.cutoffCtrl,
     this.existingKmlPath = '',
     this.existingKmlUrl = '',
+    this.distanceKm = 0.0,
   });
 }

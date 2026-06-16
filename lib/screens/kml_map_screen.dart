@@ -706,6 +706,7 @@ class _KmlMapScreenState extends State<KmlMapScreen>
             time: _ctrl.formatTime(elapsedSecs),
             distance: _ctrl.currentDistanceKm,
             pace: _ctrl.currentPaceKmH,
+            routeDistanceKm: _ctrl.routeDistanceKm,
           ),
         ),
 
@@ -1056,12 +1057,21 @@ class _StatsPanel extends StatelessWidget {
   final String time;
   final double distance;
   final double pace;
+  final double routeDistanceKm;
 
-  const _StatsPanel(
-      {required this.time, required this.distance, required this.pace});
+  const _StatsPanel({
+    required this.time,
+    required this.distance,
+    required this.pace,
+    this.routeDistanceKm = 0.0,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final distLabel = routeDistanceKm > 0
+        ? '${distance.toStringAsFixed(2)} / ${routeDistanceKm.toStringAsFixed(2)} km'
+        : '${distance.toStringAsFixed(2)} km';
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(14),
       child: BackdropFilter(
@@ -1077,8 +1087,7 @@ class _StatsPanel extends StatelessWidget {
             children: [
               _col(Icons.timer, time, 'time_label'.tr),
               _divider(),
-              _col(Icons.straighten, '${distance.toStringAsFixed(2)} km',
-                  'distance_label'.tr),
+              _col(Icons.straighten, distLabel, 'distance_label'.tr),
               _divider(),
               _col(Icons.speed, '${pace.toStringAsFixed(1)} km/h',
                   'pace_label'.tr),
