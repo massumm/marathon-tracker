@@ -399,6 +399,7 @@ class _EventCardState extends State<_EventCard> {
         'chipTimeMinutes': widget.event.chipTimeMinutes,
         'graceTimeMinutes': widget.event.graceTimeMinutes,
         'categoryCutoff': cat.cutoff,
+        'distanceKm': cat.distanceKm,
       },
     );
   }

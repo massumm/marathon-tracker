@@ -108,6 +108,7 @@ class KmlMapController extends GetxController {
   String kmlFilePath = '';
   String? kmlDirectUrl;
   String routeLabel = '';
+  double routeDistanceKm = 0.0;
   final isUserPanned = false.obs;
   bool _programmaticCamera = false;
   double _lastHeading = 0.0;
@@ -171,6 +172,7 @@ class KmlMapController extends GetxController {
       kmlDirectUrl = args['kmlUrl'] as String? ?? '';
       kmlFilePath = args['storagePath'] as String? ?? '';
       routeLabel = args['label'] as String? ?? '';
+      routeDistanceKm = (args['distanceKm'] as num?)?.toDouble() ?? 0.0;
       currentEventId = args['eventId'] as String? ?? '';
       selectedCategoryId = args['categoryId'] as String? ?? '';
       debugPrint('[KML_CONTROLLER] prepareRoute - categoryId: "$selectedCategoryId", eventId: "$currentEventId"');
@@ -207,6 +209,7 @@ class KmlMapController extends GetxController {
       kmlFilePath = args;
       kmlDirectUrl = null;
       routeLabel = '';
+      routeDistanceKm = 0.0;
       currentEventId = '';
       selectedCategoryId = '';
       eventStartTime = null;
