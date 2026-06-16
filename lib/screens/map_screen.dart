@@ -63,6 +63,10 @@ class _MapScreenState extends State<MapScreen> {
       ..sort((a, b) {
         final p = _sortPriority(a).compareTo(_sortPriority(b));
         if (p != 0) return p;
+        // Finished events: most recent date first.
+        if (a.isFinished && b.isFinished) {
+          return b.eventDateTime.compareTo(a.eventDateTime);
+        }
         return a.eventDateTime.compareTo(b.eventDateTime);
       });
     if (_filter == 'live') return events.where(_isLive).toList();

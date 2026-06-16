@@ -9,13 +9,13 @@ import 'event_form_screen.dart';
 
 class OrganizerEventsScreen extends StatelessWidget {
   final String organizerUid;
-  final void Function(EventModel event)? onLeaderboardTap;
   final void Function(EventModel event)? onResultsTap;
+  final void Function(EventModel event)? onLiveMapTap;
   const OrganizerEventsScreen({
     super.key,
     required this.organizerUid,
-    this.onLeaderboardTap,
     this.onResultsTap,
+    this.onLiveMapTap,
   });
 
   @override
@@ -69,8 +69,8 @@ class OrganizerEventsScreen extends StatelessWidget {
               itemBuilder: (_, i) => _EventCard(
                 event: events[i],
                 organizerUid: organizerUid,
-                onLeaderboardTap: onLeaderboardTap,
                 onResultsTap: onResultsTap,
+                onLiveMapTap: onLiveMapTap,
               ),
             );
           },
@@ -97,13 +97,13 @@ class OrganizerEventsScreen extends StatelessWidget {
 class _EventCard extends StatelessWidget {
   final EventModel event;
   final String organizerUid;
-  final void Function(EventModel event)? onLeaderboardTap;
   final void Function(EventModel event)? onResultsTap;
+  final void Function(EventModel event)? onLiveMapTap;
   const _EventCard({
     required this.event,
     required this.organizerUid,
-    this.onLeaderboardTap,
     this.onResultsTap,
+    this.onLiveMapTap,
   });
 
   @override
@@ -312,8 +312,8 @@ class _EventCard extends StatelessWidget {
                 const SizedBox(height: 14),
                 _LiveLeaderboardButton(
                   event: event,
-                  onLiveTap: onLeaderboardTap,
                   onResultsTap: onResultsTap,
+                  onLiveMapTap: onLiveMapTap,
                 ),
               ],
             ),
@@ -396,12 +396,12 @@ class _ActionIcon extends StatelessWidget {
 
 class _LiveLeaderboardButton extends StatefulWidget {
   final EventModel event;
-  final void Function(EventModel event)? onLiveTap;
   final void Function(EventModel event)? onResultsTap;
+  final void Function(EventModel event)? onLiveMapTap;
   const _LiveLeaderboardButton({
     required this.event,
-    this.onLiveTap,
     this.onResultsTap,
+    this.onLiveMapTap,
   });
 
   @override
@@ -458,7 +458,6 @@ class _LiveLeaderboardButtonState extends State<_LiveLeaderboardButton> {
   @override
   Widget build(BuildContext context) {
     final event = widget.event;
-    final onLiveTap = widget.onLiveTap;
     final onResultsTap = widget.onResultsTap;
     final isFinished = event.isResultsReady;
     final isRunning = event.isRunning;
@@ -475,7 +474,7 @@ class _LiveLeaderboardButtonState extends State<_LiveLeaderboardButton> {
       );
     }
 
-    // Actively running (between startTime and endTime) → red LIVE
+    // Actively running → single red LIVE button opening the combined map+standings
     if (isRunning) {
       return StreamBuilder(
         stream: AdminService.instance.watchLiveRunnersForEvent(event.id),
@@ -486,9 +485,8 @@ class _LiveLeaderboardButtonState extends State<_LiveLeaderboardButton> {
               colors: [Color(0xFFE53935), Color(0xFFB71C1C)],
             ),
             liveDot: true,
-            label:
-                'LIVE — View Leaderboard${count > 0 ? '  ($count running)' : ''}',
-            onTap: () => onLiveTap?.call(event),
+            label: 'LIVE — View Leaderboard${count > 0 ? '  ($count running)' : ''}',
+            onTap: () => widget.onLiveMapTap?.call(event),
           );
         },
       );
@@ -513,6 +511,7 @@ class _LiveLeaderboardButtonState extends State<_LiveLeaderboardButton> {
     bool liveDot = false,
     required String label,
     Color? labelColor,
+    Border? border,
     VoidCallback? onTap,
   }) {
     return SizedBox(
@@ -523,6 +522,7 @@ class _LiveLeaderboardButtonState extends State<_LiveLeaderboardButton> {
           borderRadius: BorderRadius.circular(10),
           gradient: gradient,
           color: color,
+          border: border,
         ),
         child: Material(
           color: Colors.transparent,

@@ -6,7 +6,7 @@ import '../../../models/event_model.dart';
 import 'organizer_dashboard.dart';
 import 'organizer_events_screen.dart';
 import 'organizer_event_leaderboard_screen.dart';
-import 'organizer_live_leaderboard_screen.dart';
+import 'organizer_live_map_screen.dart';
 import 'organizer_profile_screen.dart';
 
 class OrganizerShell extends StatefulWidget {
@@ -47,20 +47,20 @@ class _OrganizerShellState extends State<OrganizerShell> {
     });
   }
 
-  void _pushLeaderboard(EventModel event) {
-    setState(() => _subPageTitle = 'Live Leaderboard');
-    _innerNavKey.currentState?.push(
-      MaterialPageRoute(
-        builder: (_) => OrganizerLiveLeaderboardScreen(event: event),
-      ),
-    );
-  }
-
   void _pushEventLeaderboard(EventModel event) {
     setState(() => _subPageTitle = 'Results — ${event.name}');
     _innerNavKey.currentState?.push(
       MaterialPageRoute(
         builder: (_) => OrganizerEventLeaderboardScreen(event: event),
+      ),
+    );
+  }
+
+  void _pushLiveMap(EventModel event) {
+    setState(() => _subPageTitle = 'Live Map — ${event.name}');
+    _innerNavKey.currentState?.push(
+      MaterialPageRoute(
+        builder: (_) => OrganizerLiveMapScreen(event: event),
       ),
     );
   }
@@ -359,8 +359,8 @@ class _OrganizerShellState extends State<OrganizerShell> {
                           OrganizerDashboard(organizer: widget.organizer),
                           OrganizerEventsScreen(
                             organizerUid: widget.organizer.uid,
-                            onLeaderboardTap: _pushLeaderboard,
                             onResultsTap: _pushEventLeaderboard,
+                            onLiveMapTap: _pushLiveMap,
                           ),
                           OrganizerProfileScreen(
                             organizer: widget.organizer,
