@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
@@ -45,6 +46,10 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await _initFirebase();
+
+  // Route all uncaught Flutter errors to Crashlytics.
+  FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   // Don't await — getToken() is a network call that blocks the splash screen
   NotificationService.instance.init();
@@ -53,7 +58,13 @@ void main() async {
   OfflineStorageService.instance.init();
   WakelockPlus.enable();
   _initForegroundTask();
-  runApp(const MapApp());
+
+  // Wrap runApp so async errors outside Flutter are also captured.
+  runZonedGuarded(
+    () => runApp(const MapApp()),
+    (error, stack) =>
+        FirebaseCrashlytics.instance.recordError(error, stack, fatal: true),
+  );
 }
 
 void _initForegroundTask() {
