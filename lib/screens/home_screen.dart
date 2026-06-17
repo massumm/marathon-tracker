@@ -83,8 +83,8 @@ class _FreeRunBanner extends StatelessWidget {
                 Expanded(
                   child: Text(
                     state == FreeRunState.paused
-                        ? 'Free Run – Paused'
-                        : 'Free Run in progress',
+                        ? 'Daily Challenge – Paused'
+                        : 'Daily Challenge in progress',
                     style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w600,
