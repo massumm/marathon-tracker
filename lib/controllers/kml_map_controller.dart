@@ -137,10 +137,10 @@ class KmlMapController extends GetxController {
   static const double _finishArmAfterM = 70.0;
 
   // ── GPS smoothing & jump filter ───────────────────────────────────────────
-  // Ignore sudden GPS jumps impossible at running speed (~30 m in one fix).
-  static const double _maxJumpMetres = 30.0;
+  // Ignore sudden GPS jumps impossible at running speed (~50 m in one fix).
+  static const double _maxJumpMetres = 50.0;
   // Moving-average window: average the last N raw positions before recording.
-  static const int _smoothingWindow = 3;
+  static const int _smoothingWindow = 2;
   final _smoothingBuffer = <LatLng>[];
 
   // ── Off-route / cheat detection ───────────────────────────────────────────
@@ -827,20 +827,23 @@ class KmlMapController extends GetxController {
 
   void _showOffRouteWarning() {
     _offRouteTimer?.cancel();
-    // Show immediately, then repeat every 5 s until runner returns to route.
-    void show() => Get.snackbar(
-          'off_route_title'.tr,
-          'off_route_msg'.tr,
-          snackPosition: SnackPosition.TOP,
-          backgroundColor: Colors.orange.shade700,
-          colorText: Colors.white,
-          duration: const Duration(seconds: 4),
-          margin: const EdgeInsets.all(12),
-          borderRadius: 14,
-          icon: const Icon(Icons.warning_amber_rounded, color: Colors.white),
-        );
+    // Only show when the KML map is the active screen — avoid spamming other screens.
+    void show() {
+      if (Get.currentRoute != AppRoutes.kmlMap) return;
+      Get.snackbar(
+        'off_route_title'.tr,
+        'off_route_msg'.tr,
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.orange.shade700,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 4),
+        margin: const EdgeInsets.all(12),
+        borderRadius: 14,
+        icon: const Icon(Icons.warning_amber_rounded, color: Colors.white),
+      );
+    }
     show();
-    _offRouteTimer = Timer.periodic(const Duration(seconds: 5), (_) => show());
+    _offRouteTimer = Timer.periodic(const Duration(seconds: 30), (_) => show());
   }
 
   void _stopOffRouteWarning() {
@@ -886,6 +889,15 @@ class KmlMapController extends GetxController {
       gpsAccuracy.value = pos.accuracy;
       _animateNavCamera(LatLng(pos.latitude, pos.longitude), _lastHeading);
     }
+
+    // Start the foreground service BEFORE the GPS stream so the Dart isolate is
+    // kept alive immediately — if the screen turns off before the stream emits
+    // its first fix, Android won't throttle the event loop.
+    await FlutterForegroundTask.startService(
+      serviceId: 256,
+      notificationTitle: 'RunMate – Run in progress',
+      notificationText: 'Your run is being tracked in the background.',
+    );
 
     debugPrint('[TRACKING] starting elapsed timer + position stream');
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -970,8 +982,8 @@ class KmlMapController extends GetxController {
           debugPrint('[GPS] jump ${moved.toStringAsFixed(1)}m ignored');
           return;
         }
-        // Minimum movement filter — ignore sub-5m updates.
-        if (moved < 5.0) return;
+        // Minimum movement filter — ignore sub-2m updates.
+        if (moved < 2.0) return;
         _cachedDistanceKm += moved / 1000;
       }
 
@@ -1062,14 +1074,6 @@ class KmlMapController extends GetxController {
     if (!(await FlutterForegroundTask.isIgnoringBatteryOptimizations)) {
       await FlutterForegroundTask.requestIgnoreBatteryOptimization();
     }
-
-    await FlutterForegroundTask.startService(
-      serviceId: 256,
-      notificationTitle: 'RunMate – Run in progress',
-      notificationText: 'Your run is being tracked in the background.',
-      // no callback — we only need the service to exist so Android keeps the
-      // process alive; a background Dart isolate would conflict on relaunch
-    );
   }
 
 

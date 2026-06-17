@@ -1067,21 +1067,12 @@ class _FreeRunBanner extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Free Run',
+                    'Your Daily Challenge',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 15,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.3,
-                    ),
-                  ),
-                  SizedBox(height: 2),
-                  Text(
-                    'Your daily challenge — burn calories, go far!',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],

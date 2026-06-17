@@ -67,11 +67,17 @@ class LiveTrackingService {
       if (data == null) return <RunnerData>[];
 
       final map = data as Map<dynamic, dynamic>;
-      return map.entries
-          .where((e) => e.key != _uid)
-          .map((e) =>
-              RunnerData.fromMap(e.key as String, e.value as Map<dynamic, dynamic>))
-          .toList();
+      final runners = <RunnerData>[];
+      for (final e in map.entries) {
+        if (e.key == _uid) continue;
+        try {
+          runners.add(RunnerData.fromMap(
+              e.key as String, e.value as Map<dynamic, dynamic>));
+        } catch (_) {
+          // Skip corrupt records — one bad entry must not crash the stream for everyone.
+        }
+      }
+      return runners;
     });
   }
 }

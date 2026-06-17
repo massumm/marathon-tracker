@@ -263,11 +263,42 @@ class FreeRunController extends GetxController {
 
       await OfflineStorageService.instance.saveRouteLocally(uid, fileName, jsonBody);
 
+      final user = FirebaseAuth.instance.currentUser;
+      final displayName =
+          user?.displayName ?? user?.email?.split('@').first ?? 'Runner';
+      final photoUrl = user?.photoURL ?? '';
+
       final isOnline = OfflineStorageService.instance.isOnline.value == true;
-      if (isOnline) {
+      if (!isOnline) {
+        // Enqueue so the sync job uploads to Firebase when connectivity returns.
+        await OfflineStorageService.instance.enqueuePendingRun(
+          runId: runId,
+          uid: uid,
+          fileName: fileName,
+          distanceKm: _cachedDistanceKm,
+          seconds: elapsedSeconds.value,
+          eventId: '',
+          displayName: displayName,
+          photoUrl: photoUrl,
+          categoryId: '',
+        );
+      } else {
         try {
           await FirebaseService.instance.saveTrackedRoute(fileName, jsonBody);
-        } catch (_) {}
+        } catch (_) {
+          // Upload failed — enqueue so it retries when online again.
+          await OfflineStorageService.instance.enqueuePendingRun(
+            runId: runId,
+            uid: uid,
+            fileName: fileName,
+            distanceKm: _cachedDistanceKm,
+            seconds: elapsedSeconds.value,
+            eventId: '',
+            displayName: displayName,
+            photoUrl: photoUrl,
+            categoryId: '',
+          );
+        }
         await UserStatsService.instance.addRunStats(
           _cachedDistanceKm,
           elapsedSeconds.value,
