@@ -137,11 +137,15 @@ class KmlMapController extends GetxController {
   static const double _finishArmAfterM = 70.0;
 
   // ── GPS smoothing & jump filter ───────────────────────────────────────────
-  // Ignore sudden GPS jumps impossible at running speed (~50 m in one fix).
   static const double _maxJumpMetres = 50.0;
-  // Moving-average window: average the last N raw positions before recording.
   static const int _smoothingWindow = 2;
+  // Minimum movement to add a point to the polyline (keeps drawing smooth).
+  static const double _minPolylineM = 2.0;
+  // Minimum movement between distance checkpoints — higher threshold prevents
+  // GPS drift (3–5 m natural jitter) from accumulating as fake distance.
+  static const double _minDistanceM = 8.0;
   final _smoothingBuffer = <LatLng>[];
+  LatLng? _lastDistancePoint;
 
   // ── Off-route / cheat detection ───────────────────────────────────────────
   static const double _offRouteThresholdM = 50.0; // warn if >50m from route
@@ -874,6 +878,7 @@ class KmlMapController extends GetxController {
     _isVehicleFlagged = false;
     _stopOffRouteWarning();
     _smoothingBuffer.clear();
+    _lastDistancePoint = null;
     elapsedSeconds.value = 0;
     isSharing.value = true;
     _runStartMs = DateTime.now().millisecondsSinceEpoch;
@@ -971,29 +976,43 @@ class KmlMapController extends GetxController {
         }
       }
 
-      // GPS jump filter — skip impossible jumps (>30 m in one fix at running speed).
-      if (trackingPoints.isNotEmpty) {
-        final prev = trackingPoints.last;
-        final moved = Geolocator.distanceBetween(
-          prev.latitude, prev.longitude,
-          latLng.latitude, latLng.longitude,
-        );
-        if (moved > _maxJumpMetres) {
-          debugPrint('[GPS] jump ${moved.toStringAsFixed(1)}m ignored');
-          return;
-        }
-        // Minimum movement filter — ignore sub-2m updates.
-        if (moved < 2.0) return;
-        _cachedDistanceKm += moved / 1000;
-      }
-
-      // Moving-average smoothing — average last N raw positions to reduce zig-zag.
+      // Smooth first, then filter — so distance is always smoothed-to-smoothed.
       _smoothingBuffer.add(latLng);
       if (_smoothingBuffer.length > _smoothingWindow) _smoothingBuffer.removeAt(0);
       final smoothed = LatLng(
         _smoothingBuffer.map((p) => p.latitude).reduce((a, b) => a + b) / _smoothingBuffer.length,
         _smoothingBuffer.map((p) => p.longitude).reduce((a, b) => a + b) / _smoothingBuffer.length,
       );
+
+      // Jump filter on smoothed point.
+      if (trackingPoints.isNotEmpty) {
+        final prev = trackingPoints.last;
+        final moved = Geolocator.distanceBetween(
+          prev.latitude, prev.longitude,
+          smoothed.latitude, smoothed.longitude,
+        );
+        if (moved > _maxJumpMetres) {
+          debugPrint('[GPS] jump ${moved.toStringAsFixed(1)}m ignored');
+          return;
+        }
+        // Polyline density filter — keeps drawing smooth.
+        if (moved < _minPolylineM) return;
+      }
+
+      // Distance checkpoint — only accumulate when we've genuinely moved 8 m+
+      // from the last confirmed position, preventing GPS drift from inflating distance.
+      if (_lastDistancePoint == null) {
+        _lastDistancePoint = smoothed;
+      } else {
+        final distMoved = Geolocator.distanceBetween(
+          _lastDistancePoint!.latitude, _lastDistancePoint!.longitude,
+          smoothed.latitude, smoothed.longitude,
+        );
+        if (distMoved >= _minDistanceM) {
+          _cachedDistanceKm += distMoved / 1000;
+          _lastDistancePoint = smoothed;
+        }
+      }
 
       trackingPoints.add(smoothed);
       snappedPoints.add(smoothed);
@@ -1120,9 +1139,15 @@ class KmlMapController extends GetxController {
         '${startTime.hour.toString().padLeft(2, '0')}-${startTime.minute.toString().padLeft(2, '0')}';
     final fileName = '${slug}_${dateStr}_$timeStr2.json';
     final totalDistance = LocationService.instance.totalDistanceKm(routePoints);
-    final pace = elapsedSeconds.value > 0
+    final paceKmh = elapsedSeconds.value > 0
         ? totalDistance / (elapsedSeconds.value / 3600)
         : 0.0;
+    final paceMinKm = paceKmh > 0 ? 60.0 / paceKmh : 0.0;
+    final paceMins = paceMinKm.floor();
+    final paceSecs = ((paceMinKm - paceMins) * 60).round();
+    final paceStr = paceKmh > 0
+        ? '$paceMins:${paceSecs.toString().padLeft(2, '0')}/km'
+        : '—';
 
     final data = {
       'event': eventLabel,
@@ -1134,7 +1159,7 @@ class KmlMapController extends GetxController {
           '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}:${startTime.second.toString().padLeft(2, '0')}',
       'time': formatTime(elapsedSeconds.value),
       'distance': '${totalDistance.toStringAsFixed(1)} km',
-      'pace': '${pace.toStringAsFixed(1)} km/h',
+      'pace': paceStr,
       'route': routePoints
           .map((p) => {'lat': p.latitude, 'lng': p.longitude})
           .toList(),
@@ -1312,5 +1337,14 @@ class KmlMapController extends GetxController {
   double get currentPaceKmH {
     if (elapsedSeconds.value == 0 || currentDistanceKm == 0) return 0;
     return currentDistanceKm / (elapsedSeconds.value / 3600);
+  }
+
+  String get formattedPace {
+    final kmh = currentPaceKmH;
+    if (kmh <= 0) return '—';
+    final minPerKm = 60.0 / kmh;
+    final mins = minPerKm.floor();
+    final secs = ((minPerKm - mins) * 60).round();
+    return '$mins:${secs.toString().padLeft(2, '0')}/km';
   }
 }

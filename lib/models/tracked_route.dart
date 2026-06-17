@@ -36,7 +36,7 @@ class TrackedRoute {
       startTime: json['start_time'] as String? ?? '',
       time: json['time'] as String? ?? '',
       distance: json['distance'] as String? ?? '',
-      pace: json['pace'] as String? ?? '',
+      pace: _normalisePace(json['pace'] as String? ?? ''),
       storagePath: storagePath,
       route: routeData
           .map((e) => LatLng(
@@ -45,6 +45,21 @@ class TrackedRoute {
               ))
           .toList(),
     );
+  }
+
+  /// Converts old "X.X km/h" pace strings to "m:ss/km" format.
+  /// Already-converted strings (contain "/km") are returned unchanged.
+  static String _normalisePace(String pace) {
+    if (pace.isEmpty || pace == '—') return pace;
+    if (pace.contains('/km')) return pace; // already correct format
+    final match = RegExp(r'([\d.]+)\s*km/h').firstMatch(pace);
+    if (match == null) return pace;
+    final kmh = double.tryParse(match.group(1) ?? '');
+    if (kmh == null || kmh <= 0) return '—';
+    final minPerKm = 60.0 / kmh;
+    final mins = minPerKm.floor();
+    final secs = ((minPerKm - mins) * 60).round();
+    return '$mins:${secs.toString().padLeft(2, '0')}/km';
   }
 
   /// Extracts a sortable DateTime from both old and new filename formats.
@@ -89,10 +104,10 @@ class TrackedRoute {
           RegExp(r'^\d{2}-\d{2}$').hasMatch(timePart)) {
         final eventName = parts.sublist(0, parts.length - 2).join(' ');
         // For Free Run, append the date so each card has a unique title.
-        if (eventName == 'Free Run') {
+        if (eventName == 'Free Run' || eventName == 'Daily Challenge') {
           final dp = datePart.split('-');
           final month = _months[int.parse(dp[1])];
-          return 'Free Run · $month ${int.parse(dp[2])}';
+          return 'Daily Challenge · $month ${int.parse(dp[2])}';
         }
         return eventName;
       }

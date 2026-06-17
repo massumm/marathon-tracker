@@ -8,6 +8,7 @@ import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../controllers/free_run_controller.dart';
 import '../../controllers/kml_map_controller.dart';
 import '../../core/image_utils.dart';
 import '../../core/theme.dart';
@@ -155,6 +156,22 @@ class _KmlMapScreenState extends State<KmlMapScreen>
   }
 
   Future<void> _onStartTap() async {
+    // Block starting an event run while Daily Challenge is active.
+    final freeRun = Get.find<FreeRunController>();
+    if (freeRun.runState.value == FreeRunState.running ||
+        freeRun.runState.value == FreeRunState.paused) {
+      Get.snackbar(
+        'Daily Challenge Active',
+        'Stop your Daily Challenge before starting an event run.',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.orange.shade700,
+        colorText: Colors.white,
+        margin: const EdgeInsets.all(12),
+        borderRadius: 14,
+        duration: const Duration(seconds: 3),
+      );
+      return;
+    }
     final eventStart = _ctrl.eventStartTime;
     if (eventStart != null && DateTime.now().isBefore(eventStart)) {
       final minsLeft = eventStart.difference(DateTime.now()).inMinutes;
@@ -705,7 +722,7 @@ class _KmlMapScreenState extends State<KmlMapScreen>
           child: _StatsPanel(
             time: _ctrl.formatTime(elapsedSecs),
             distance: _ctrl.currentDistanceKm,
-            pace: _ctrl.currentPaceKmH,
+            pace: _ctrl.formattedPace,
             routeDistanceKm: _ctrl.routeDistanceKm,
           ),
         ),
@@ -1056,7 +1073,7 @@ class _TrackingButtonState extends State<_TrackingButton> {
 class _StatsPanel extends StatelessWidget {
   final String time;
   final double distance;
-  final double pace;
+  final String pace;
   final double routeDistanceKm;
 
   const _StatsPanel({
@@ -1089,8 +1106,7 @@ class _StatsPanel extends StatelessWidget {
               _divider(),
               _col(Icons.straighten, distLabel, 'distance_label'.tr),
               _divider(),
-              _col(Icons.speed, '${pace.toStringAsFixed(1)} km/h',
-                  'pace_label'.tr),
+              _col(Icons.speed, pace, 'pace_label'.tr),
             ],
           ),
         ),

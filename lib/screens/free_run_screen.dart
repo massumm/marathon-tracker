@@ -162,12 +162,7 @@ class _StatsCard extends StatelessWidget {
               _divider(),
               _Stat(label: 'Time', value: ctrl.formattedTime),
               _divider(),
-              _Stat(
-                label: 'Pace',
-                value: ctrl.paceKmH > 0
-                    ? '${ctrl.paceKmH.toStringAsFixed(1)} km/h'
-                    : '—',
-              ),
+              _Stat(label: 'Pace', value: ctrl.formattedPace),
             ],
           )),
     );
@@ -450,9 +445,7 @@ class _SummaryCard extends StatelessWidget {
                 _SummaryStat(
                   icon: Icons.speed_rounded,
                   label: 'Pace',
-                  value: ctrl.paceKmH > 0
-                      ? '${ctrl.paceKmH.toStringAsFixed(1)} km/h'
-                      : '—',
+                  value: ctrl.formattedPace,
                 ),
               ],
             ),

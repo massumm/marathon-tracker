@@ -171,7 +171,7 @@ class _StatsHeader extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            route.event.isNotEmpty ? route.event : 'event'.tr,
+            route.event == 'Free Run' ? 'Daily Challenge' : (route.event.isNotEmpty ? route.event : 'event'.tr),
             style: const TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.w700,
@@ -271,6 +271,29 @@ class _MapTabState extends State<_MapTab>
         ? route.route.first
         : const LatLng(35.6895, 139.6917);
 
+    final markers = <Marker>{};
+    if (route.route.isNotEmpty) {
+      markers.add(Marker(
+        markerId: const MarkerId('start'),
+        position: route.route.first,
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+        infoWindow: const InfoWindow(title: 'Start'),
+      ));
+    }
+    if (route.route.length >= 2) {
+      markers.add(Marker(
+        markerId: const MarkerId('finish'),
+        position: route.route.last,
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        infoWindow: const InfoWindow(title: 'Finish'),
+      ));
+    }
+
+    void openFullScreen() => Get.toNamed(
+          AppRoutes.myPageMap,
+          arguments: widget.storagePath,
+        );
+
     return Stack(
       children: [
         GoogleMap(
@@ -283,6 +306,7 @@ class _MapTabState extends State<_MapTab>
                   CameraUpdate.newLatLngBounds(bounds, 48));
             }
           },
+          onTap: (_) => openFullScreen(),
           polylines: route.route.length >= 2
               ? {
                   Polyline(
@@ -294,9 +318,14 @@ class _MapTabState extends State<_MapTab>
                   ),
                 }
               : {},
+          markers: markers,
           myLocationEnabled: true,
           myLocationButtonEnabled: false,
-          zoomControlsEnabled: true,
+          zoomControlsEnabled: false,
+          scrollGesturesEnabled: false,
+          zoomGesturesEnabled: false,
+          rotateGesturesEnabled: false,
+          tiltGesturesEnabled: false,
         ),
         Positioned(
           top: 12,
@@ -305,10 +334,7 @@ class _MapTabState extends State<_MapTab>
             heroTag: 'fullmap',
             backgroundColor: Colors.white,
             foregroundColor: AppTheme.primary,
-            onPressed: () => Get.toNamed(
-              AppRoutes.myPageMap,
-              arguments: widget.storagePath,
-            ),
+            onPressed: openFullScreen,
             child: const Icon(Icons.fullscreen),
           ),
         ),

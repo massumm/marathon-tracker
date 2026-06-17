@@ -10,6 +10,7 @@ import 'package:geolocator/geolocator.dart';
 
 import '../services/firebase_service.dart';
 import '../services/location_service.dart';
+import 'kml_map_controller.dart';
 import '../services/offline_storage_service.dart';
 import '../services/user_stats_service.dart';
 
@@ -35,9 +36,11 @@ class FreeRunController extends GetxController {
   int _runStartMs = 0;
 
   static const double _maxJumpMetres = 50.0;
-  static const double _minMovementM = 2.0;
+  static const double _minPolylineM = 2.0;
+  static const double _minDistanceM = 8.0;
   static const int _smoothingWindow = 2;
   final _smoothingBuffer = <LatLng>[];
+  LatLng? _lastDistancePoint;
 
   // ── lifecycle ─────────────────────────────────────────────────────────────
   @override
@@ -67,6 +70,21 @@ class FreeRunController extends GetxController {
 
   // ── run controls ──────────────────────────────────────────────────────────
   Future<void> startRun() async {
+    // Block if an event run is already in progress.
+    final kml = Get.find<KmlMapController>();
+    if (kml.isTracking.value) {
+      Get.snackbar(
+        'Event Run Active',
+        'Stop your event run before starting a Daily Challenge.',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.orange.shade700,
+        colorText: Colors.white,
+        margin: const EdgeInsets.all(12),
+        borderRadius: 14,
+        duration: const Duration(seconds: 3),
+      );
+      return;
+    }
     final ok = await _checkPermissions();
     if (!ok) return;
 
@@ -131,7 +149,8 @@ class FreeRunController extends GetxController {
 
   void _startPositionStream({required bool newSegment}) {
     _positionSub?.cancel();
-    _smoothingBuffer.clear(); // always fresh baseline on (re)start
+    _smoothingBuffer.clear();
+    _lastDistancePoint = null; // reset so first point doesn't count phantom distance
 
     if (newSegment) {
       segments.add(<LatLng>[].obs); // new segment; jump filter uses this list's .last
@@ -149,20 +168,7 @@ class FreeRunController extends GetxController {
 
       final current = segments.last;
 
-      // GPS jump filter — against last accepted point in the current segment.
-      if (current.isNotEmpty) {
-        final prev = current.last;
-        final moved = Geolocator.distanceBetween(
-          prev.latitude, prev.longitude,
-          point.latitude, point.longitude,
-        );
-        if (moved > _maxJumpMetres) return; // impossible jump — discard
-        if (moved < _minMovementM) return;  // standing still — skip
-        _cachedDistanceKm += moved / 1000.0;
-        distanceKm.value = _cachedDistanceKm;
-      }
-
-      // Moving-average smoothing over last N raw points (reduces zig-zag).
+      // Smooth first, then filter — so distance is always smoothed-to-smoothed.
       _smoothingBuffer.add(point);
       if (_smoothingBuffer.length > _smoothingWindow) _smoothingBuffer.removeAt(0);
       final smoothed = LatLng(
@@ -172,7 +178,32 @@ class FreeRunController extends GetxController {
             _smoothingBuffer.length,
       );
 
-      // Add directly to the RxList — triggers reactive update without copying.
+      // Jump + polyline density filter on smoothed point.
+      if (current.isNotEmpty) {
+        final prev = current.last;
+        final moved = Geolocator.distanceBetween(
+          prev.latitude, prev.longitude,
+          smoothed.latitude, smoothed.longitude,
+        );
+        if (moved > _maxJumpMetres) return;
+        if (moved < _minPolylineM) return;
+      }
+
+      // Distance checkpoint — only accumulate after 8 m+ of genuine movement.
+      if (_lastDistancePoint == null) {
+        _lastDistancePoint = smoothed;
+      } else {
+        final distMoved = Geolocator.distanceBetween(
+          _lastDistancePoint!.latitude, _lastDistancePoint!.longitude,
+          smoothed.latitude, smoothed.longitude,
+        );
+        if (distMoved >= _minDistanceM) {
+          _cachedDistanceKm += distMoved / 1000.0;
+          distanceKm.value = _cachedDistanceKm;
+          _lastDistancePoint = smoothed;
+        }
+      }
+
       current.add(smoothed);
     });
   }
@@ -233,13 +264,19 @@ class FreeRunController extends GetxController {
           '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
       final timeStr =
           '${now.hour.toString().padLeft(2, '0')}-${now.minute.toString().padLeft(2, '0')}';
-      const eventLabel = 'Free Run';
+      const eventLabel = 'Daily Challenge';
       const slug = 'Free_Run';
       final fileName = '${slug}_${dateStr}_$timeStr.json';
 
-      final pace = elapsedSeconds.value > 0
+      final paceKmh = elapsedSeconds.value > 0
           ? _cachedDistanceKm / (elapsedSeconds.value / 3600)
           : 0.0;
+      final paceMinKm = paceKmh > 0 ? 60.0 / paceKmh : 0.0;
+      final paceMins = paceMinKm.floor();
+      final paceSecs = ((paceMinKm - paceMins) * 60).round();
+      final paceStr = paceKmh > 0
+          ? '$paceMins:${paceSecs.toString().padLeft(2, '0')}/km'
+          : '—';
 
       final data = {
         'event': eventLabel,
@@ -251,7 +288,7 @@ class FreeRunController extends GetxController {
             '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}',
         'time': _formatTime(elapsedSeconds.value),
         'distance': '${_cachedDistanceKm.toStringAsFixed(2)} km',
-        'pace': '${pace.toStringAsFixed(1)} km/h',
+        'pace': paceStr,
         'route': allPoints
             .map((p) => {'lat': p.latitude, 'lng': p.longitude})
             .toList(),
@@ -326,5 +363,15 @@ class FreeRunController extends GetxController {
   double get paceKmH {
     if (elapsedSeconds.value == 0 || _cachedDistanceKm == 0) return 0;
     return _cachedDistanceKm / (elapsedSeconds.value / 3600);
+  }
+
+  // Returns pace as "m:ss/km" — the standard running format.
+  String get formattedPace {
+    final kmh = paceKmH;
+    if (kmh <= 0) return '—';
+    final minPerKm = 60.0 / kmh;
+    final mins = minPerKm.floor();
+    final secs = ((minPerKm - mins) * 60).round();
+    return '$mins:${secs.toString().padLeft(2, '0')}/km';
   }
 }

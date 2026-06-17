@@ -58,9 +58,13 @@ class UserStats {
   double get avgPaceKmH =>
       totalSeconds > 0 ? totalDistanceKm / (totalSeconds / 3600) : 0;
 
-  String get avgPaceStr => avgPaceKmH > 0
-      ? '${avgPaceKmH.toStringAsFixed(1)} km/h'
-      : '-';
+  String get avgPaceStr {
+    if (avgPaceKmH <= 0) return '-';
+    final minPerKm = 60.0 / avgPaceKmH;
+    final mins = minPerKm.floor();
+    final secs = ((minPerKm - mins) * 60).round();
+    return '$mins:${secs.toString().padLeft(2, '0')}/km';
+  }
 
   int get totalSteps => (totalDistanceKm * 1000 / 0.762).round();
 
