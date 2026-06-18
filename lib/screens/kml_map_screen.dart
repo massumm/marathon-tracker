@@ -724,6 +724,34 @@ class _KmlMapScreenState extends State<KmlMapScreen>
         child: _GpsSignalBadge(accuracy: gpsAccuracy),
       ),
 
+      // ── Category name label ───────────────────────────────────────────────
+      if (_ctrl.routeLabel.isNotEmpty)
+        Positioned(
+          top: topPad + 8,
+          left: 62,
+          right: 62,
+          child: Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.30),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                _ctrl.routeLabel,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+        ),
+
       // ── Stats panel (tracking active) ─────────────────────────────────────
       if (isTracking)
         Positioned(
@@ -779,23 +807,12 @@ class _KmlMapScreenState extends State<KmlMapScreen>
           ),
         ),
 
-      // ── Bottom-left: leaderboard + share FABs ─────────────────────────────
+      // ── Bottom-left: leaderboard ──────────────────────────────────────────
+      if (lb.isNotEmpty)
       Positioned(
-        bottom: lbShift ? 208 : 40,
+        bottom: lbShift ? 204 : 52,
         left: 16,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (isTracking) ...[
-              SizedBox(
-                width: 40,
-                height: 40,
-                child: Center(child: _GpsSignalBadge(accuracy: gpsAccuracy)),
-              ),
-              const SizedBox(height: 8),
-            ],
-            if (lb.isNotEmpty)
-              Stack(
+        child: Stack(
                 clipBehavior: Clip.none,
                 children: [
                   GestureDetector(
@@ -836,8 +853,6 @@ class _KmlMapScreenState extends State<KmlMapScreen>
                     ),
                 ],
               ),
-          ],
-        ),
       ),
 
       // ── Start / Stop button ───────────────────────────────────────────────
@@ -1132,7 +1147,7 @@ class _StatsPanel extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.72),
+        color: Colors.black.withValues(alpha: 0.50),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
       ),
