@@ -170,8 +170,10 @@ flutter build web --release -t lib/main_live.dart
 
 #### Staging
 ```bash
-# Replace /admin/ with your actual subdomain path
 flutter build web --release -t lib/main_admin.dart --base-href /admin/
+
+# Run locally
+flutter run -t lib/main_admin.dart -d chrome
 
 # Zip for upload
 cd build/web && zip -r archive-stage.zip . --exclude "*.zip"
@@ -179,7 +181,11 @@ cd build/web && zip -r archive-stage.zip . --exclude "*.zip"
 
 #### Production (Live)
 ```bash
-flutter build web --release -t lib/main_admin_live.dart --base-href /admin/
+# --dart-define=LIVE=true is required — it routes organizer creation to runmate-live
+flutter build web --release -t lib/main_admin_live.dart --base-href /admin/ --dart-define=LIVE=true
+
+# Run locally
+flutter run -t lib/main_admin_live.dart -d chrome --dart-define=LIVE=true
 
 # Zip for upload
 cd build/web && zip -r archive-live.zip . --exclude "*.zip"

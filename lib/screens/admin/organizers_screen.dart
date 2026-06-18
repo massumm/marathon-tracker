@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme.dart';
 import '../../../firebase_options.dart';
+import '../../../firebase_options_live.dart';
 import '../../../models/admin_user_model.dart';
 import '../../../models/event_model.dart';
 import '../../../services/admin_service.dart';
@@ -203,17 +204,17 @@ class _OrganizerCard extends StatelessWidget {
   void _confirmRevoke(BuildContext context) {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
         title: const Text('Revoke Access'),
         content: Text(
             'Remove organizer access for "${organizer.displayName}"?\nThey will no longer be able to log in to this panel.'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogCtx),
               child: const Text('Cancel')),
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.pop(dialogCtx);
               AdminService.instance.deleteOrganizer(organizer.uid);
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
@@ -533,16 +534,16 @@ class _EventCard extends StatelessWidget {
   void _confirmDelete(BuildContext context) {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
         title: const Text('Delete Event'),
         content: Text('Delete "${event.name}"? This cannot be undone.'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogCtx),
               child: const Text('Cancel')),
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.pop(dialogCtx);
               AdminService.instance.deleteEvent(event.id);
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
@@ -771,9 +772,12 @@ class _CreateOrganizerDialogState extends State<_CreateOrganizerDialog> {
 
     FirebaseApp? secondaryApp;
     try {
+      const isLive = bool.fromEnvironment('LIVE');
       secondaryApp = await Firebase.initializeApp(
         name: 'organizer_creation',
-        options: DefaultFirebaseOptions.currentPlatform,
+        options: isLive
+            ? LiveFirebaseOptions.currentPlatform
+            : DefaultFirebaseOptions.currentPlatform,
       );
       final secondaryAuth = FirebaseAuth.instanceFor(app: secondaryApp);
 
@@ -784,6 +788,11 @@ class _CreateOrganizerDialogState extends State<_CreateOrganizerDialog> {
       final uid = credential.user!.uid;
       await credential.user!.updateDisplayName(_nameCtrl.text.trim());
       await secondaryAuth.signOut();
+
+      // Send password reset email so the organizer receives login instructions.
+      await FirebaseAuth.instance.sendPasswordResetEmail(
+        email: _emailCtrl.text.trim(),
+      );
 
       await AdminService.instance.registerOrganizerRecord(
         uid,
@@ -796,8 +805,9 @@ class _CreateOrganizerDialogState extends State<_CreateOrganizerDialog> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-                'Organizer "${_nameCtrl.text.trim()}" created successfully.'),
+                'Organizer "${_nameCtrl.text.trim()}" created. A login email has been sent to ${_emailCtrl.text.trim()}.'),
             backgroundColor: Colors.green,
+            duration: const Duration(seconds: 5),
           ),
         );
       }
