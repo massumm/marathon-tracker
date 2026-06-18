@@ -83,6 +83,7 @@ class KmlMapController extends GetxController {
   Timer? _timer;
   StreamSubscription? _positionSub;
   int _runStartMs = 0;
+  bool _isStarting = false;
 
   int get runStartMs => _runStartMs;
 
@@ -857,10 +858,11 @@ class KmlMapController extends GetxController {
 
   Future<void> startTracking() async {
     debugPrint('[TRACKING] startTracking called. isTracking=${isTracking.value}');
-    if (isTracking.value) {
-      debugPrint('[TRACKING] already tracking — skipped');
+    if (isTracking.value || _isStarting) {
+      debugPrint('[TRACKING] already tracking/starting — skipped');
       return;
     }
+    _isStarting = true;
     _countdownTimer?.cancel();
     _countdownTimer = null;
     EventNotificationService.instance.cancelCountdownAutoStart();
@@ -884,21 +886,26 @@ class KmlMapController extends GetxController {
     _runStartMs = DateTime.now().millisecondsSinceEpoch;
     _timer?.cancel();
 
-    // Use a short timeout so a slow GPS fix (common when screen is off) does
-    // not block the stream subscription from starting.
-    debugPrint('[TRACKING] awaiting getCurrentPosition (5 s timeout)');
-    final pos = await LocationService.instance.getCurrentPosition()
-        .timeout(const Duration(seconds: 5), onTimeout: () => null);
-    debugPrint('[TRACKING] getCurrentPosition returned: ${pos?.latitude}, ${pos?.longitude}');
-    if (pos != null) {
-      gpsAccuracy.value = pos.accuracy;
-      _animateNavCamera(LatLng(pos.latitude, pos.longitude), _lastHeading);
+    // Use the already-known position if GPS is warm (avoids up to 5 s wait).
+    // Fall back to a fresh fix only when we have nothing cached yet.
+    debugPrint('[TRACKING] resolving start position');
+    final cachedPos = currentPosition.value;
+    if (cachedPos != null) {
+      if (!isUserPanned.value) _animateNavCamera(cachedPos, _lastHeading);
+      debugPrint('[TRACKING] using cached position ${cachedPos.latitude}, ${cachedPos.longitude}');
+    } else {
+      final pos = await LocationService.instance.getCurrentPosition()
+          .timeout(const Duration(seconds: 5), onTimeout: () => null);
+      debugPrint('[TRACKING] getCurrentPosition returned: ${pos?.latitude}, ${pos?.longitude}');
+      if (pos != null) {
+        gpsAccuracy.value = pos.accuracy;
+        _animateNavCamera(LatLng(pos.latitude, pos.longitude), _lastHeading);
+      }
     }
 
-    // Start the foreground service BEFORE the GPS stream so the Dart isolate is
-    // kept alive immediately — if the screen turns off before the stream emits
-    // its first fix, Android won't throttle the event loop.
-    await FlutterForegroundTask.startService(
+    // Fire the foreground service without awaiting — it only needs to be up
+    // before the screen turns off, not before recording starts.
+    FlutterForegroundTask.startService(
       serviceId: 256,
       notificationTitle: 'RunMate – Run in progress',
       notificationText: 'Your run is being tracked in the background.',
@@ -1049,8 +1056,9 @@ class KmlMapController extends GetxController {
     });
 
     // Auto-broadcast when tracking starts
-    final lat = pos?.latitude ?? initialLocation.latitude;
-    final lng = pos?.longitude ?? initialLocation.longitude;
+    final startPos = currentPosition.value;
+    final lat = startPos?.latitude ?? initialLocation.latitude;
+    final lng = startPos?.longitude ?? initialLocation.longitude;
     debugPrint('[TRACKING] calling startBroadcasting with categoryId: $selectedCategoryId, eventId: $currentEventId');
     await LiveTrackingService.instance
         .startBroadcasting(lat, lng, eventId: currentEventId, categoryId: selectedCategoryId)
@@ -1059,6 +1067,7 @@ class KmlMapController extends GetxController {
     isLive.value = true;
 
     isTracking.value = true;
+    _isStarting = false;
     debugPrint('[TRACKING] isTracking set to true — run started');
 
     // Arm the cutoff timer — auto-stop tracking when the event closes.
@@ -1112,6 +1121,7 @@ class KmlMapController extends GetxController {
     _positionSub = null;
     _timer?.cancel();
     _timer = null;
+    _isStarting = false;
     isTracking.value = false;
     _rebuildLeaderboard();
 

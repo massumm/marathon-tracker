@@ -703,36 +703,67 @@ class _KmlMapScreenState extends State<KmlMapScreen>
       Positioned(
         top: topPad + 8,
         left: 12,
-        child: FloatingActionButton.small(
-          heroTag: 'back',
-          backgroundColor: Colors.white,
-          foregroundColor: AppTheme.textSecondary,
-          elevation: 3,
-          onPressed: () => Get.back(),
-          child: const Icon(Icons.arrow_back, size: 20),
+        child: GestureDetector(
+          onTap: () => Get.back(),
+          child: Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.55),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
+          ),
         ),
       ),
+
+      // ── GPS signal indicator ─────────────────────────────────────────────
+      Positioned(
+        top: topPad + 8,
+        right: 12,
+        child: _GpsSignalBadge(accuracy: gpsAccuracy),
+      ),
+
+      // ── Category name label ───────────────────────────────────────────────
+      if (_ctrl.routeLabel.isNotEmpty)
+        Positioned(
+          top: topPad + 8,
+          left: 62,
+          right: 62,
+          child: Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.30),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                _ctrl.routeLabel,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+        ),
 
       // ── Stats panel (tracking active) ─────────────────────────────────────
       if (isTracking)
         Positioned(
-          top: topPad + 8,
-          left: 62,
-          right: 12,
+          top: topPad + 62,
+          left: 16,
+          right: 16,
           child: _StatsPanel(
             time: _ctrl.formatTime(elapsedSecs),
             distance: _ctrl.currentDistanceKm,
             pace: _ctrl.formattedPace,
             routeDistanceKm: _ctrl.routeDistanceKm,
           ),
-        ),
-
-      // ── GPS signal indicator (pre-run only — moves to bottom-left during tracking) ──
-      if (!isTracking)
-        Positioned(
-          top: topPad + 8,
-          right: 12,
-          child: _GpsSignalBadge(accuracy: gpsAccuracy),
         ),
 
       // ── Camera + recenter buttons (visible during tracking) ──────────────
@@ -743,59 +774,62 @@ class _KmlMapScreenState extends State<KmlMapScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              FloatingActionButton.small(
-                heroTag: 'recenter',
-                backgroundColor:
-                    _ctrl.isUserPanned.value ? Colors.white : AppTheme.primary,
-                foregroundColor:
-                    _ctrl.isUserPanned.value ? AppTheme.primary : Colors.white,
-                onPressed: _ctrl.recenterCamera,
-                child: Icon(_ctrl.isUserPanned.value
-                    ? Icons.my_location
-                    : Icons.navigation),
+              GestureDetector(
+                onTap: _ctrl.recenterCamera,
+                child: Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.55),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    _ctrl.isUserPanned.value ? Icons.my_location : Icons.navigation,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
               ),
               const SizedBox(height: 8),
-              FloatingActionButton.small(
-                heroTag: 'camera',
-                backgroundColor: Colors.white,
-                foregroundColor: AppTheme.primary,
-                onPressed: () => _takePhoto(),
-                child: const Icon(Icons.camera_alt),
+              GestureDetector(
+                onTap: () => _takePhoto(),
+                child: Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.55),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
+                ),
               ),
             ],
           ),
         ),
 
-      // ── Bottom-left: leaderboard + share FABs ─────────────────────────────
+      // ── Bottom-left: leaderboard ──────────────────────────────────────────
+      if (lb.isNotEmpty)
       Positioned(
-        bottom: lbShift ? 208 : 40,
+        bottom: lbShift ? 204 : 52,
         left: 16,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (isTracking) ...[
-              SizedBox(
-                width: 40,
-                height: 40,
-                child: Center(child: _GpsSignalBadge(accuracy: gpsAccuracy)),
-              ),
-              const SizedBox(height: 8),
-            ],
-            if (lb.isNotEmpty)
-              Stack(
+        child: Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  FloatingActionButton.small(
-                    heroTag: 'leaderboard',
-                    backgroundColor:
-                        _leaderOpen ? Colors.amberAccent : Colors.white,
-                    foregroundColor:
-                        _leaderOpen ? Colors.black87 : AppTheme.primary,
-                    elevation: 3,
-                    onPressed: () => setState(() => _leaderOpen = !_leaderOpen),
-                    child: Icon(_leaderOpen
-                        ? Icons.leaderboard
-                        : Icons.leaderboard_outlined),
+                  GestureDetector(
+                    onTap: () => setState(() => _leaderOpen = !_leaderOpen),
+                    child: Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.55),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        _leaderOpen ? Icons.leaderboard : Icons.leaderboard_outlined,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
                   ),
                   if (myRank != null && !_leaderOpen)
                     Positioned(
@@ -819,8 +853,6 @@ class _KmlMapScreenState extends State<KmlMapScreen>
                     ),
                 ],
               ),
-          ],
-        ),
       ),
 
       // ── Start / Stop button ───────────────────────────────────────────────
@@ -990,14 +1022,6 @@ class _TrackingButtonState extends State<_TrackingButton> {
 
   @override
   Widget build(BuildContext context) {
-    final isStart = !widget.isTracking;
-    final gradientA =
-        isStart ? const Color(0xFF48BB78) : const Color(0xFFE53E3E);
-    final gradientB =
-        isStart ? const Color(0xFF276749) : const Color(0xFF9B1C1C);
-    final icon = isStart ? Icons.play_arrow_rounded : Icons.stop_rounded;
-    final label = isStart ? 'start_run'.tr : 'stop_run'.tr;
-
     return GestureDetector(
       onTapDown: (_) => setState(() => _pressed = true),
       onTapUp: (_) {
@@ -1008,64 +1032,95 @@ class _TrackingButtonState extends State<_TrackingButton> {
       child: AnimatedScale(
         scale: _pressed ? 0.93 : 1.0,
         duration: const Duration(milliseconds: 100),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 82,
-              height: 82,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [gradientA, gradientB],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                border: Border.all(color: Colors.white, width: 3.5),
-                boxShadow: [
-                  BoxShadow(
-                    color: gradientA.withValues(alpha: 0.55),
-                    blurRadius: 28,
-                    spreadRadius: 3,
-                  ),
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.30),
-                    blurRadius: 10,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: Icon(icon, color: Colors.white, size: 40),
-            ),
-            const SizedBox(height: 9),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.42),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    label,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.8,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+        child: widget.isTracking ? _buildStop() : _buildStart(),
       ),
     );
   }
+
+  Widget _buildStart() => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 82,
+            height: 82,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                colors: [Color(0xFF48BB78), Color(0xFF276749)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              border: Border.all(color: Colors.white, width: 3.5),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF48BB78).withValues(alpha: 0.55),
+                  blurRadius: 28,
+                  spreadRadius: 3,
+                ),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.30),
+                  blurRadius: 10,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: const Icon(Icons.play_arrow_rounded,
+                color: Colors.white, size: 40),
+          ),
+          const SizedBox(height: 9),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.42),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  'start_run'.tr,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.8,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+
+  Widget _buildStop() => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: Colors.red.shade600,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.red.shade600.withValues(alpha: 0.4),
+                  blurRadius: 16,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: const Icon(Icons.stop_rounded,
+                color: Colors.white, size: 29),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'stop_run'.tr,
+            style: const TextStyle(color: Colors.white70, fontSize: 12),
+          ),
+        ],
+      );
 }
 
 // ── Stats panel ───────────────────────────────────────────────────────────────
@@ -1089,48 +1144,47 @@ class _StatsPanel extends StatelessWidget {
         ? '${distance.toStringAsFixed(2)} / ${routeDistanceKm.toStringAsFixed(2)} km'
         : '${distance.toStringAsFixed(2)} km';
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(14),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.45),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _col(Icons.timer, time, 'time_label'.tr),
-              _divider(),
-              _col(Icons.straighten, distLabel, 'distance_label'.tr),
-              _divider(),
-              _col(Icons.speed, pace, 'pace_label'.tr),
-            ],
-          ),
-        ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.50),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _stat(time, 'time_label'.tr),
+          _divider(),
+          _stat(distLabel, 'distance_label'.tr),
+          _divider(),
+          _stat(pace, 'pace_label'.tr),
+        ],
       ),
     );
   }
 
-  Widget _col(IconData icon, String value, String label) => Column(
+  Widget _stat(String value, String label) => Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: Colors.white70, size: 17),
-          const SizedBox(height: 3),
           Text(value,
               style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
-                  color: Colors.white)),
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              )),
+          const SizedBox(height: 2),
           Text(label,
-              style: const TextStyle(fontSize: 10, color: Colors.white60)),
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.6),
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+              )),
         ],
       );
 
   Widget _divider() => Container(
-      height: 32, width: 1, color: Colors.white.withValues(alpha: 0.25));
+      width: 1, height: 36, color: Colors.white.withValues(alpha: 0.2));
 }
 
 // ── Live leaderboard panel ────────────────────────────────────────────────────
@@ -1539,9 +1593,8 @@ class _GpsSignalBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.black.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(10),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 4)],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1555,7 +1608,7 @@ class _GpsSignalBadge extends StatelessWidget {
                 height: height,
                 margin: const EdgeInsets.only(right: 2),
                 decoration: BoxDecoration(
-                  color: i < bars ? color : Colors.grey.shade300,
+                  color: i < bars ? color : Colors.white24,
                   borderRadius: BorderRadius.circular(1),
                 ),
               );
