@@ -108,7 +108,8 @@ class _FreeRunScreenState extends State<FreeRunScreen> {
                     color: Colors.black.withValues(alpha: 0.55),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
+                  child: const Icon(Icons.arrow_back,
+                      color: Colors.white, size: 20),
                 ),
               ),
             ),
@@ -137,7 +138,6 @@ class _FreeRunScreenState extends State<FreeRunScreen> {
       ),
     );
   }
-
 }
 
 // ── Stats card ───────────────────────────────────────────────────────────────
@@ -250,9 +250,8 @@ class _BottomControls extends StatelessWidget {
               iconColor: Colors.black,
               size: 64,
               label: state == FreeRunState.paused ? 'Resume' : 'Pause',
-              onTap: state == FreeRunState.paused
-                  ? ctrl.resumeRun
-                  : ctrl.pauseRun,
+              onTap:
+                  state == FreeRunState.paused ? ctrl.resumeRun : ctrl.pauseRun,
             ),
             const SizedBox(width: 32),
             // Stop
@@ -286,8 +285,7 @@ class _BottomControls extends StatelessWidget {
               Navigator.pop(context);
               ctrl.stopRun();
             },
-            child: const Text('Finish',
-                style: TextStyle(color: Colors.red)),
+            child: const Text('Finish', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -463,8 +461,8 @@ class _SummaryCard extends StatelessWidget {
                   Get.back();
                 },
                 child: const Text('Done',
-                    style: TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.w700)),
+                    style:
+                        TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
               ),
             ),
           ],
@@ -552,16 +550,16 @@ class _GpsSignalBadge extends StatelessWidget {
             }),
           ),
           const SizedBox(width: 4),
-          Text(
-            accuracy < 0
-                ? 'No fix'
-                : '±${accuracy.toStringAsFixed(0)}m',
-            style: TextStyle(
-              color: _color,
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          // Text(
+          //   accuracy < 0
+          //       ? 'No fix'
+          //       : '±${accuracy.toStringAsFixed(0)}m',
+          //   style: TextStyle(
+          //     color: _color,
+          //     fontSize: 10,
+          //     fontWeight: FontWeight.w600,
+          //   ),
+          // ),
         ],
       ),
     );
