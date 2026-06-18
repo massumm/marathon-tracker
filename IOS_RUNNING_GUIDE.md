@@ -9,7 +9,7 @@
 | CocoaPods | 1.14+ | `pod --version` |
 | Apple Developer Account | Enrolled | developer.apple.com |
 
-Bundle ID: `com.xor.runmate`  
+Bundle ID: `com.xorgeek.runmate`  
 Team IDs in project: `3YRPP5KTT5`, `2TCRW7HYCR`
 
 ---
@@ -63,7 +63,7 @@ In Xcode:
 - Select **Runner** in the project navigator
 - Go to **Signing & Capabilities** tab
 - Set **Team** to your Apple Developer account
-- Confirm **Bundle Identifier** is `com.xor.runmate`
+- Confirm **Bundle Identifier** is `com.xorgeek.runmate`
 
 ### 3. Trust the device
 On your iPhone: **Settings → General → VPN & Device Management → Trust [your Mac]**

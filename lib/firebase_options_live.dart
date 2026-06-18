@@ -41,6 +41,6 @@ class LiveFirebaseOptions {
     projectId: 'runmate-live',
     databaseURL: 'https://runmate-live-default-rtdb.firebaseio.com',
     storageBucket: 'runmate-live.firebasestorage.app',
-    iosBundleId: 'com.xor.runmate',
+    iosBundleId: 'com.xorgeek.runmate',
   );
 }
