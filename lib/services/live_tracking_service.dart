@@ -22,7 +22,8 @@ class LiveTrackingService {
 
     final genderSnap =
         await _db.ref('user_stats/${user.uid}/gender').get();
-    final gender = (genderSnap.value as num?)?.toInt();
+    final rawGender = genderSnap.value;
+    final gender = rawGender is num ? rawGender.toInt() : null;
 
     final data = RunnerData(
       uid: user.uid,

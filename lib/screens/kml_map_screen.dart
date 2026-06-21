@@ -438,6 +438,42 @@ class _KmlMapScreenState extends State<KmlMapScreen>
     }
   }
 
+  // Informs the user that "Always" location improves background tracking.
+  // "Start Anyway" is the primary action so the run is never hard-blocked.
+  Future<bool> _showIosAlwaysLocationDialog() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        icon: const Icon(Icons.location_on, color: AppTheme.primary, size: 40),
+        title: Text('ios_bg_title'.tr,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+        content: Text('ios_bg_body'.tr,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 13, height: 1.5)),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context, false);
+              Geolocator.openAppSettings();
+            },
+            child: Text('open_settings'.tr),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                foregroundColor: Colors.white),
+            child: Text('continue_anyway'.tr),
+          ),
+        ],
+      ),
+    );
+    return result ?? true;
+  }
+
   void _showLocationOffDialog() {
     showDialog(
       context: context,
@@ -505,45 +541,6 @@ class _KmlMapScreenState extends State<KmlMapScreen>
         ],
       ),
     );
-  }
-
-  Future<bool> _showIosAlwaysLocationDialog() async {
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        icon: const Icon(Icons.location_on, color: AppTheme.primary, size: 40),
-        title: Text('ios_bg_title'.tr,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-        content: Text('ios_bg_body'.tr,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 13, height: 1.5)),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('cancel'.tr),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context, false);
-              Geolocator.openAppSettings();
-            },
-            style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primary,
-                foregroundColor: Colors.white),
-            child: Text('open_settings'.tr),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text('continue_anyway'.tr,
-                style: const TextStyle(color: AppTheme.textSecondary)),
-          ),
-        ],
-      ),
-    );
-    return result ?? false;
   }
 
   void _showTooFarDialog(double distKm) {

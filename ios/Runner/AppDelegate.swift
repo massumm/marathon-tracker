@@ -1,6 +1,7 @@
 import Flutter
 import UIKit
 import GoogleMaps
+import flutter_foreground_task
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
@@ -18,6 +19,9 @@ import GoogleMaps
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     AppDelegate.shared = self
+    FlutterForegroundTaskPlugin.setPluginRegistrantCallback { registry in
+      GeneratedPluginRegistrant.register(with: registry)
+    }
     GMSServices.provideAPIKey("AIzaSyC8-H020Uul_SNcekGeVnr0uESLg713rEA")
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
