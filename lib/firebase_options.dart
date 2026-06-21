@@ -63,7 +63,7 @@ class DefaultFirebaseOptions {
     projectId: 'runmate-252e5',
     databaseURL: 'https://runmate-252e5-default-rtdb.firebaseio.com',
     storageBucket: 'runmate-252e5.firebasestorage.app',
-    iosBundleId: 'com.xor.runmate',
+    iosBundleId: 'com.xorgeek.runmate',
   );
 
   static const FirebaseOptions android = FirebaseOptions(

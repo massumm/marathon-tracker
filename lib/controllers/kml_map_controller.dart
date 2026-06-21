@@ -272,12 +272,16 @@ class KmlMapController extends GetxController {
         .scheduleCountdownAutoStart(eventStart.millisecondsSinceEpoch);
     debugPrint('[COUNTDOWN] AlarmManager alarm scheduled at $eventStart');
 
-    await FlutterForegroundTask.startService(
-      serviceId: 256,
-      notificationTitle: 'RunMate – Starting Soon',
-      notificationText: 'Auto-starts when event begins. Keep notification visible.',
-    );
-    debugPrint('[COUNTDOWN] foreground service started');
+    try {
+      await FlutterForegroundTask.startService(
+        serviceId: 256,
+        notificationTitle: 'RunMate – Starting Soon',
+        notificationText: 'Auto-starts when event begins. Keep notification visible.',
+      );
+      debugPrint('[COUNTDOWN] foreground service started');
+    } catch (e) {
+      debugPrint('[COUNTDOWN] FGT startService skipped: $e');
+    }
 
     if (_countdownCancelled) {
       debugPrint('[COUNTDOWN] cancelled during FGT startup — aborting');
@@ -863,6 +867,7 @@ class KmlMapController extends GetxController {
       return;
     }
     _isStarting = true;
+    try {
     _countdownTimer?.cancel();
     _countdownTimer = null;
     EventNotificationService.instance.cancelCountdownAutoStart();
@@ -1101,6 +1106,9 @@ class KmlMapController extends GetxController {
     // while a foreground service is running.
     if (!(await FlutterForegroundTask.isIgnoringBatteryOptimizations)) {
       await FlutterForegroundTask.requestIgnoreBatteryOptimization();
+    }
+    } finally {
+      _isStarting = false;
     }
   }
 

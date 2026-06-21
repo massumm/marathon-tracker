@@ -60,9 +60,6 @@ dependencies:
   timezone: ^0.9.4
   liquid_glass_bar: ^0.1.1
   flutter_image_compress: ^2.3.0
-  sign_in_with_apple: ^6.1.4
-  crypto: ^3.0.3
-  
 
 
 
