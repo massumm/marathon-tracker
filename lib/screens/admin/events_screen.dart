@@ -6,7 +6,7 @@ import '../../../core/theme.dart';
 import '../../../models/event_model.dart';
 import '../../../services/admin_service.dart';
 import 'event_form_screen.dart';
-import 'organizer_live_leaderboard_screen.dart';
+import 'organizer_live_map_screen.dart';
 
 class AdminEventsScreen extends StatefulWidget {
   const AdminEventsScreen({super.key});
@@ -480,7 +480,7 @@ class _LiveLeaderboardButtonState extends State<_LiveLeaderboardButton> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => OrganizerLiveLeaderboardScreen(event: widget.event),
+        builder: (_) => OrganizerLiveMapScreen(event: widget.event),
       ),
     );
   }

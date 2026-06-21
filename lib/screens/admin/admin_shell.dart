@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme.dart';
 import '../../models/event_model.dart';
 import 'dashboard.dart';
-import 'organizer_live_leaderboard_screen.dart';
+import 'organizer_live_map_screen.dart';
 import 'organizers_screen.dart';
 import 'users_screen.dart';
 
@@ -374,9 +374,8 @@ class _AdminShellState extends State<AdminShell> {
                                   organizer: org,
                                   onLeaderboardTap: (EventModel event) {
                                     _pushPage(
-                                      OrganizerLiveLeaderboardScreen(
-                                          event: event),
-                                      'Live Leaderboard',
+                                      OrganizerLiveMapScreen(event: event),
+                                      'Live Leaderboard — ${event.name}',
                                     );
                                   },
                                 ),
