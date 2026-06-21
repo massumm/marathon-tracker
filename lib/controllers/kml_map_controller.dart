@@ -1254,10 +1254,21 @@ class KmlMapController extends GetxController {
       debugPrint('[STOP] isSaving=false, navigating home');
     }
 
-    await FlutterForegroundTask.stopService();
-    Get.find<HomeController>()
-        .changeTab(2); // MyPage is index 2 (0=Events,1=Friends,2=MyPage)
-    Get.offAllNamed(AppRoutes.home);
+    try {
+      await FlutterForegroundTask.stopService()
+          .timeout(const Duration(seconds: 5), onTimeout: () => const ServiceRequestFailure(error: 'timeout'));
+    } catch (e) {
+      debugPrint('[STOP] foreground service stop error: $e');
+    }
+    try {
+      if (Get.isRegistered<HomeController>()) {
+        Get.find<HomeController>().changeTab(0);
+      }
+      Get.until((route) => route.settings.name == AppRoutes.home);
+    } catch (e) {
+      debugPrint('[STOP] navigation error: $e');
+      Get.offAllNamed(AppRoutes.home);
+    }
   }
 
   // ── Live runners ──────────────────────────────────────────────────────────

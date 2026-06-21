@@ -37,7 +37,7 @@ class MapController extends GetxController {
   // ── Real-time first page ──────────────────────────────────────────────────
 
   void _startListen() {
-    isLoading.value = true;
+    if (events.isEmpty) isLoading.value = true;
     errorMsg.value = '';
     _liveSub?.cancel();
     _liveSub = FirebaseDatabase.instance
@@ -47,37 +47,42 @@ class MapController extends GetxController {
         .onValue
         .listen(
       (snap) {
-        var firstPage = <EventModel>[];
-        if (snap.snapshot.exists && snap.snapshot.value != null) {
-          final map = snap.snapshot.value as Map<dynamic, dynamic>;
-          firstPage = map.entries
-              .map((e) => EventModel.fromMap(
-                  e.key as String, e.value as Map<dynamic, dynamic>))
-              .toList()
-            ..sort((a, b) => b.date.compareTo(a.date));
+        try {
+          var firstPage = <EventModel>[];
+          if (snap.snapshot.exists && snap.snapshot.value != null) {
+            final map = snap.snapshot.value as Map<dynamic, dynamic>;
+            firstPage = map.entries
+                .map((e) => EventModel.fromMap(
+                    e.key as String, e.value as Map<dynamic, dynamic>))
+                .toList()
+              ..sort((a, b) => b.date.compareTo(a.date));
+          }
+
+          final newIds = {for (final e in firstPage) e.id};
+          // Preserve any extra events the user loaded via "load more".
+          final paginated =
+              events.where((e) => !_firstPageIds.contains(e.id) && !newIds.contains(e.id)).toList();
+
+          _firstPageIds
+            ..clear()
+            ..addAll(newIds);
+
+          events.value = [...firstPage, ...paginated];
+
+          // Initialise cursor for pagination only if not already set.
+          if (_cursor == null && firstPage.isNotEmpty) {
+            _cursor = firstPage.last;
+          }
+          hasMore.value = firstPage.length >= _pageSize;
+          errorMsg.value = '';
+
+          _debugPrint(events.toList());
+          EventNotificationService.instance.scheduleForEvents(events.toList());
+        } catch (e) {
+          debugPrint('[MapController] listener error: $e');
+        } finally {
+          isLoading.value = false;
         }
-
-        final newIds = {for (final e in firstPage) e.id};
-        // Preserve any extra events the user loaded via "load more".
-        final paginated =
-            events.where((e) => !_firstPageIds.contains(e.id) && !newIds.contains(e.id)).toList();
-
-        _firstPageIds
-          ..clear()
-          ..addAll(newIds);
-
-        events.value = [...firstPage, ...paginated];
-
-        // Initialise cursor for pagination only if not already set.
-        if (_cursor == null && firstPage.isNotEmpty) {
-          _cursor = firstPage.last;
-        }
-        hasMore.value = firstPage.length >= _pageSize;
-        errorMsg.value = '';
-        isLoading.value = false;
-
-        _debugPrint(events.toList());
-        EventNotificationService.instance.scheduleForEvents(events.toList());
       },
       onError: (_) {
         errorMsg.value = 'Error loading events';
