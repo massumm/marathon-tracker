@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'package:google_sign_in/google_sign_in.dart';
 import '../controllers/auth_controller.dart';
 import '../core/config.dart';
 import '../core/image_utils.dart';
@@ -176,12 +177,53 @@ class MyPageController extends GetxController {
     await UserStatsService.instance.registerOrUpdate();
   }
 
+  bool get isGoogleUser =>
+      FirebaseAuth.instance.currentUser?.providerData
+          .any((p) => p.providerId == 'google.com') ??
+      false;
+
   Future<void> deleteAccount(String password) async {
     final u = user;
     if (u == null || u.email == null) return;
-    final cred = EmailAuthProvider.credential(email: u.email!, password: password);
-    await u.reauthenticateWithCredential(cred);
-    await u.delete();
+    final authCtrl = Get.find<AuthController>();
+    authCtrl.suppressAuthNav = true;
+    try {
+      final cred = EmailAuthProvider.credential(email: u.email!, password: password);
+      await u.reauthenticateWithCredential(cred);
+      _cancelSubscriptions();
+      await u.delete();
+    } finally {
+      authCtrl.suppressAuthNav = false;
+    }
+  }
+
+  Future<void> deleteAccountWithGoogle() async {
+    final u = user;
+    if (u == null) return;
+    final authCtrl = Get.find<AuthController>();
+    authCtrl.suppressAuthNav = true;
+    try {
+      final googleSignIn = GoogleSignIn();
+      final googleUser = await googleSignIn.signIn();
+      if (googleUser == null) throw Exception('Google sign-in cancelled');
+      final googleAuth = await googleUser.authentication;
+      final cred = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      await u.reauthenticateWithCredential(cred);
+      _cancelSubscriptions();
+      await u.delete();
+    } finally {
+      authCtrl.suppressAuthNav = false;
+    }
+  }
+
+  void _cancelSubscriptions() {
+    _statsSub?.cancel();
+    _statsSub = null;
+    _groupsSub?.cancel();
+    _groupsSub = null;
   }
 
   Future<void> signOut() async {

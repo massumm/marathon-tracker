@@ -60,48 +60,28 @@
     },
     {
       "client_info": {
-        "mobilesdk_app_id": "1:24360852719:android:17be3b4f7226bc85f14f1a",
-        "android_client_info": {
-          "package_name": "com.xorgeek.runmate"
-        }
-      },
-      "oauth_client": [
-        {
-          "client_id": "24360852719-6rmddjuec2l0voomtv86fmpbhjg535nd.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
-      "api_key": [
-        {
-          "current_key": "AIzaSyDsx2E0wwBHup586l6AzpvC5ZG0EcbLFAw"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "24360852719-6rmddjuec2l0voomtv86fmpbhjg535nd.apps.googleusercontent.com",
-              "client_type": 3
-            },
-            {
-              "client_id": "24360852719-u81lom9qolba2lah6sj6jdtkkcejrm8u.apps.googleusercontent.com",
-              "client_type": 2,
-              "ios_info": {
-                "bundle_id": "com.xor.runmate"
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
-      "client_info": {
         "mobilesdk_app_id": "1:24360852719:android:dc2d2783a8e490c7f14f1a",
         "android_client_info": {
           "package_name": "com.xorgeek.runmate.stage"
         }
       },
       "oauth_client": [
+        {
+          "client_id": "24360852719-5ptgcu5kt6mpbeoeb88h6aelctn886ip.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.xorgeek.runmate.stage",
+            "certificate_hash": "594388d4fa629d28c189cf6f15e8efe29e840192"
+          }
+        },
+        {
+          "client_id": "24360852719-av5pfbe26l5k1irnoa0m6hks5b77g6ct.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.xorgeek.runmate.stage",
+            "certificate_hash": "6410817c646dbc044509817990a35c1288998357"
+          }
+        },
         {
           "client_id": "24360852719-6rmddjuec2l0voomtv86fmpbhjg535nd.apps.googleusercontent.com",
           "client_type": 3

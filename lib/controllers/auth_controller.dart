@@ -1,5 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../app/routes/app_routes.dart';
@@ -12,6 +12,7 @@ class AuthController extends GetxController {
   final _googleSignIn = GoogleSignIn();
 
   final isLoading = false.obs;
+  bool suppressAuthNav = false;
 
   String? _pendingUsername;
   int? _pendingGender;
@@ -23,7 +24,7 @@ class AuthController extends GetxController {
   void onReady() {
     super.onReady();
     _auth.authStateChanges().listen((user) {
-      if (_pendingVerification) return;
+      if (_pendingVerification || suppressAuthNav) return;
       if (user != null) {
         final username = _pendingUsername;
         final gender = _pendingGender;

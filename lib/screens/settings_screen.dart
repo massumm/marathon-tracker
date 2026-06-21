@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import '../../app/routes/app_routes.dart';
 import '../../controllers/map_controller.dart';
 import '../../controllers/my_page_controller.dart';
 import '../../core/theme.dart';
@@ -345,6 +346,38 @@ class SettingsScreen extends GetView<MyPageController> {
   }
 
   void _deleteAccount(BuildContext context) {
+    if (controller.isGoogleUser) {
+      _deleteAccountGoogle();
+    } else {
+      _deleteAccountEmail();
+    }
+  }
+
+  void _deleteAccountGoogle() {
+    Get.dialog(AlertDialog(
+      title: Text('delete_account'.tr),
+      content: Text('delete_account_google_confirm'.tr),
+      actions: [
+        TextButton(onPressed: Get.back, child: Text('cancel'.tr)),
+        TextButton(
+          onPressed: () async {
+            Get.back();
+            try {
+              await controller.deleteAccountWithGoogle();
+              Get.offAllNamed(AppRoutes.login);
+            } catch (e) {
+              Get.snackbar('delete_account'.tr, e.toString(),
+                  snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+            }
+          },
+          style: TextButton.styleFrom(foregroundColor: Colors.red),
+          child: Text('delete_account'.tr),
+        ),
+      ],
+    ));
+  }
+
+  void _deleteAccountEmail() {
     final passCtrl = TextEditingController();
     Get.dialog(AlertDialog(
       title: Text('delete_account'.tr),
@@ -369,7 +402,7 @@ class SettingsScreen extends GetView<MyPageController> {
             if (password.isEmpty) return;
             try {
               await controller.deleteAccount(password);
-              Get.back();
+              Get.offAllNamed(AppRoutes.login);
             } on FirebaseAuthException catch (e) {
               Get.back();
               final msg = (e.code == 'wrong-password' || e.code == 'invalid-credential')

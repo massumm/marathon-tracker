@@ -59,6 +59,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "43518990471-50mfauoa00t3nuc20s6nrb4ivcvlq5a9.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.xorgeek.runmate",
+            "certificate_hash": "859e1d84dc2b69184c3fc5745972c9a0ead28f24"
+          }
+        },
+        {
           "client_id": "43518990471-j96n54g0vp05f3276ghs9k9u1e5blo5r.apps.googleusercontent.com",
           "client_type": 3
         }
