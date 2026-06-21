@@ -7,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../app/routes/app_routes.dart';
 import '../../core/theme.dart';
 import '../../services/friends_service.dart';
+import '../../widgets/app_snackbar.dart';
 import '../../services/group_service.dart';
 import '../../services/user_stats_service.dart';
 
@@ -55,7 +56,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
         JoinResult.selfAdmin => 'group_self_admin'.tr,
         JoinResult.notFound => 'group_not_found'.tr,
       };
-      Get.snackbar('', msg, snackPosition: SnackPosition.BOTTOM);
+      showSnack('', msg);
     } else {
       if (!raw.startsWith('marathon-map://friend/')) return;
       _processed = true;
@@ -66,8 +67,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
       final myUid = FirebaseAuth.instance.currentUser?.uid;
       if (uid == myUid) {
         Get.back();
-        Get.snackbar('', 'self_friend_alert'.tr,
-            snackPosition: SnackPosition.BOTTOM);
+        showSnack('', 'self_friend_alert'.tr);
         return;
       }
 
@@ -75,8 +75,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
       if (!mounted) return;
       if (stats == null) {
         Get.back();
-        Get.snackbar('QR', 'user_not_found'.tr,
-            snackPosition: SnackPosition.BOTTOM);
+        showSnack('QR', 'user_not_found'.tr);
         return;
       }
 
@@ -88,8 +87,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
       if (isFriend) {
         Get.toNamed(AppRoutes.userProfile, arguments: uid);
       } else if (sent) {
-        Get.snackbar(stats.label, 'request_sent'.tr,
-            snackPosition: SnackPosition.BOTTOM);
+        showSnack(stats.label, 'request_sent'.tr);
       } else {
         _showAddDialog(uid, stats.email, stats.label);
       }
@@ -106,8 +104,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
           onPressed: () async {
             Get.back();
             await FriendsService.instance.sendRequest(uid, email, label);
-            Get.snackbar(label, 'request_sent'.tr,
-                snackPosition: SnackPosition.BOTTOM);
+            showSnack(label, 'request_sent'.tr);
           },
           child: Text('add_friend'.tr),
         ),

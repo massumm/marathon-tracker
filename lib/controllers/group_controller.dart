@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 
 import '../models/group_model.dart';
 import '../services/group_service.dart';
+import '../widgets/app_snackbar.dart';
 
 // ── Group Management Controller ───────────────────────────────────────────────
 
@@ -47,11 +48,7 @@ class GroupController extends GetxController {
     isLoading.value = false;
 
     if (group == null) {
-      Get.snackbar(
-        'group_limit_title'.tr,
-        'group_limit_body'.tr,
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      showSnack('group_limit_title'.tr, 'group_limit_body'.tr);
     }
     return group;
   }
@@ -63,36 +60,29 @@ class GroupController extends GetxController {
 
     switch (result) {
       case JoinResult.requestSent:
-        Get.snackbar('', 'join_request_sent'.tr,
-            snackPosition: SnackPosition.BOTTOM);
+        showSnack('', 'join_request_sent'.tr);
         break;
       case JoinResult.ok:
-        Get.snackbar('', 'group_joined'.tr,
-            snackPosition: SnackPosition.BOTTOM);
+        showSnack('', 'group_joined'.tr);
         break;
       case JoinResult.alreadyMember:
-        Get.snackbar('', 'group_already_member'.tr,
-            snackPosition: SnackPosition.BOTTOM);
+        showSnack('', 'group_already_member'.tr);
         break;
       case JoinResult.full:
-        Get.snackbar('', 'group_full'.tr,
-            snackPosition: SnackPosition.BOTTOM);
+        showSnack('', 'group_full'.tr);
         break;
       case JoinResult.selfAdmin:
-        Get.snackbar('', 'group_self_admin'.tr,
-            snackPosition: SnackPosition.BOTTOM);
+        showSnack('', 'group_self_admin'.tr);
         break;
       case JoinResult.notFound:
-        Get.snackbar('', 'group_not_found'.tr,
-            snackPosition: SnackPosition.BOTTOM);
+        showSnack('', 'group_not_found'.tr);
         break;
     }
   }
 
   Future<void> deleteGroup(GroupModel g) async {
     await GroupService.instance.deleteGroup(g.id, g.eventId);
-    Get.snackbar('', 'group_deleted'.tr,
-        snackPosition: SnackPosition.BOTTOM);
+    showSnack('', 'group_deleted'.tr);
   }
 
   String get myUid => FirebaseAuth.instance.currentUser?.uid ?? '';

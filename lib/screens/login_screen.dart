@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../controllers/auth_controller.dart';
 import '../../core/theme.dart';
+import '../../widgets/app_snackbar.dart';
 
 enum _AuthMode { signIn, signUp }
 
@@ -112,8 +113,7 @@ class _LoginBodyState extends State<_LoginBody> {
             try {
               await _auth.sendPasswordReset(email);
               Get.back();
-              Get.snackbar('Email Sent', 'Check your inbox for a reset link.',
-                  snackPosition: SnackPosition.BOTTOM);
+              showSnack('Email Sent', 'Check your inbox for a reset link.');
             } on FirebaseAuthException catch (e) {
               Get.back();
               _showError(_friendlyError(e.code));

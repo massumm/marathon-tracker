@@ -26,6 +26,7 @@ import '../services/kml_service.dart';
 import '../services/user_stats_service.dart';
 import '../services/live_tracking_service.dart';
 import '../services/location_service.dart';
+import '../widgets/app_snackbar.dart';
 import '../widgets/runner_info_sheet.dart';
 import 'home_controller.dart';
 
@@ -1302,9 +1303,7 @@ class KmlMapController extends GetxController {
         final msg = '$e'.contains('Permission denied')
             ? 'Live tracking: permission denied. Check Firebase RTDB rules.'
             : 'Live tracking error: $e';
-        Get.snackbar('Error', msg,
-            snackPosition: SnackPosition.BOTTOM,
-            duration: const Duration(seconds: 4));
+        showSnack('Error', msg, duration: const Duration(seconds: 4));
       },
     );
   }

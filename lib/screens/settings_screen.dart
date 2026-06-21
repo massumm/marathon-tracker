@@ -8,6 +8,7 @@ import '../../controllers/map_controller.dart';
 import '../../controllers/my_page_controller.dart';
 import '../../core/theme.dart';
 import '../../services/event_notification_service.dart';
+import '../../widgets/app_snackbar.dart';
 
 class SettingsScreen extends GetView<MyPageController> {
   const SettingsScreen({super.key});
@@ -175,12 +176,8 @@ class SettingsScreen extends GetView<MyPageController> {
   Future<void> _updateGender(int gender, String label) async {
     try {
       await controller.updateGender(gender);
-      Get.snackbar(
-        'gender'.tr,
-        'Gender updated to $label',
-        snackPosition: SnackPosition.BOTTOM,
-        duration: const Duration(seconds: 2),
-      );
+      showSnack('gender'.tr, 'Gender updated to $label',
+          duration: const Duration(seconds: 2));
     } catch (e) {
       Get.snackbar(
         'gender'.tr,
@@ -253,8 +250,8 @@ class SettingsScreen extends GetView<MyPageController> {
             try {
               await controller.updateEmail(email, password);
               Get.back();
-              Get.snackbar('change_email'.tr, 'email_verification_sent'.tr,
-                  snackPosition: SnackPosition.BOTTOM, duration: const Duration(seconds: 5));
+              showSnack('change_email'.tr, 'email_verification_sent'.tr,
+                  duration: const Duration(seconds: 5));
             } on FirebaseAuthException catch (e) {
               Get.back();
               final msg = (e.code == 'wrong-password' || e.code == 'invalid-credential')
@@ -324,8 +321,7 @@ class SettingsScreen extends GetView<MyPageController> {
             try {
               await controller.changePassword(current, newPass);
               Get.back();
-              Get.snackbar('change_password'.tr, 'password_updated'.tr,
-                  snackPosition: SnackPosition.BOTTOM);
+              showSnack('change_password'.tr, 'password_updated'.tr);
             } on FirebaseAuthException catch (e) {
               Get.back();
               final msg = (e.code == 'wrong-password' || e.code == 'invalid-credential')

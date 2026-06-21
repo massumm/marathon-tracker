@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 
 import '../../controllers/auth_controller.dart';
 import '../../core/theme.dart';
+import '../../widgets/app_snackbar.dart';
 
 class EmailVerificationScreen extends StatefulWidget {
   const EmailVerificationScreen({super.key});
@@ -53,14 +54,12 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     try {
       final verified = await _auth.checkEmailVerified();
       if (!verified && mounted) {
-        Get.snackbar('Not verified yet',
-            'Please open the link in your email then try again.',
-            snackPosition: SnackPosition.BOTTOM);
+        showSnack('Not verified yet',
+            'Please open the link in your email then try again.');
       }
     } catch (_) {
       if (mounted) {
-        Get.snackbar('Error', 'Something went wrong. Please try again.',
-            snackPosition: SnackPosition.BOTTOM);
+        showSnack('Error', 'Something went wrong. Please try again.');
       }
     } finally {
       if (mounted) setState(() => _checking = false);
@@ -72,12 +71,10 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     try {
       await _auth.resendVerificationEmail();
       _startCooldown();
-      Get.snackbar('Email sent', 'Check your inbox for a new verification link.',
-          snackPosition: SnackPosition.BOTTOM);
+      showSnack('Email sent', 'Check your inbox for a new verification link.');
     } catch (_) {
       if (mounted) {
-        Get.snackbar('Error', 'Could not resend email. Please try again.',
-            snackPosition: SnackPosition.BOTTOM);
+        showSnack('Error', 'Could not resend email. Please try again.');
       }
     } finally {
       if (mounted) setState(() => _resending = false);

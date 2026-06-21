@@ -11,6 +11,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../core/theme.dart';
 import '../../models/tracked_route.dart';
+import '../../widgets/app_snackbar.dart';
 
 class RunSelfieScreen extends StatefulWidget {
   final TrackedRoute route;
@@ -115,8 +116,7 @@ class _RunSelfieScreenState extends State<RunSelfieScreen> {
       );
     } catch (e) {
       debugPrint('Share error: $e');
-      Get.snackbar('Error', 'Could not share image',
-          snackPosition: SnackPosition.BOTTOM);
+      showSnack('Error', 'Could not share image');
     } finally {
       if (mounted) setState(() => _sharing = false);
     }

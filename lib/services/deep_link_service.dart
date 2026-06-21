@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 
 import '../app/routes/app_routes.dart';
 import 'group_service.dart';
+import '../widgets/app_snackbar.dart';
 
 class DeepLinkService {
   DeepLinkService._();
@@ -55,7 +56,7 @@ class DeepLinkService {
 
     final group = await GroupService.instance.getGroup(groupId);
     if (group == null) {
-      Get.snackbar('', 'group_not_found'.tr, snackPosition: SnackPosition.BOTTOM);
+      showSnack('', 'group_not_found'.tr);
       return;
     }
 
@@ -68,16 +69,16 @@ class DeepLinkService {
     final result = await GroupService.instance.requestJoin(groupId);
     switch (result) {
       case JoinResult.requestSent:
-        Get.snackbar('', 'join_request_sent'.tr, snackPosition: SnackPosition.BOTTOM);
+        showSnack('', 'join_request_sent'.tr);
         break;
       case JoinResult.full:
-        Get.snackbar('', 'group_full'.tr, snackPosition: SnackPosition.BOTTOM);
+        showSnack('', 'group_full'.tr);
         break;
       case JoinResult.notFound:
-        Get.snackbar('', 'group_not_found'.tr, snackPosition: SnackPosition.BOTTOM);
+        showSnack('', 'group_not_found'.tr);
         break;
       case JoinResult.ok:
-        Get.snackbar('', 'group_joined'.tr, snackPosition: SnackPosition.BOTTOM);
+        showSnack('', 'group_joined'.tr);
         break;
       default:
         break;
