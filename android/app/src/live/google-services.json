@@ -49,6 +49,42 @@
           ]
         }
       }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:43518990471:android:f06b312760e0042bdf0022",
+        "android_client_info": {
+          "package_name": "com.xorgeek.runmate"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "43518990471-j96n54g0vp05f3276ghs9k9u1e5blo5r.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBMkrxqgbO6cCW8h_L-D3I5HRysV1DvoJY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "43518990471-j96n54g0vp05f3276ghs9k9u1e5blo5r.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "43518990471-j3iao5uvc8ulgd0i76s88rgbp12j8up9.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.xor.runmate"
+              }
+            }
+          ]
+        }
+      }
     }
   ],
   "configuration_version": "1"

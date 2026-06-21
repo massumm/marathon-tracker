@@ -10,7 +10,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:24360852719:android:37a76adddc9c22f1f14f1a",
         "android_client_info": {
-          "package_name": "com.xor.runmate"
+          "package_name": "com.xorgeek.runmate"
         }
       },
       "oauth_client": [
@@ -18,7 +18,7 @@
           "client_id": "24360852719-0daref8aoar1kiqp4mirdv87qocarpgv.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.xor.runmate",
+            "package_name": "com.xorgeek.runmate",
             "certificate_hash": "6410817c646dbc044509817990a35c1288998357"
           }
         },
@@ -26,7 +26,7 @@
           "client_id": "24360852719-n2uo7qhtvl5gm6806pkp0ct00dvfnjhm.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.xor.runmate",
+            "package_name": "com.xorgeek.runmate",
             "certificate_hash": "594388d4fa629d28c189cf6f15e8efe29e840192"
           }
         },
@@ -51,7 +51,7 @@
               "client_id": "24360852719-u81lom9qolba2lah6sj6jdtkkcejrm8u.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.xor.runmate"
+                "bundle_id": "com.xorgeek.runmate"
               }
             }
           ]

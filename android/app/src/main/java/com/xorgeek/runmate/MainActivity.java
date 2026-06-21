@@ -1,4 +1,4 @@
-package com.xor.runmate;
+package com.xorgeek.runmate;
 
 import android.content.Intent;
 import android.net.Uri;
