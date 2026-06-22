@@ -90,9 +90,18 @@ class MyPageController extends GetxController {
     isLoading.value = true;
     try {
       final refs = await FirebaseService.instance.fetchSavedRouteRefs();
+      final refNames = refs.map((r) => r.name).toSet();
+      // Preserve any locally-saved files not yet returned by listAll()
+      // (Firebase Storage can take a few seconds to index a newly uploaded file)
+      final localOnly = cachedNames.where((n) => !refNames.contains(n)).toList();
+      final merged = [
+        ...refs,
+        ...localOnly.map((n) => fs.FirebaseStorage.instance
+            .ref('${AppConfig.routesStoragePath}/$uid/$n')),
+      ];
       await OfflineStorageService.instance
-          .cacheRouteNames(uid, refs.map((r) => r.name).toList());
-      routeRefs.value = refs;
+          .cacheRouteNames(uid, merged.map((r) => r.name).toList());
+      routeRefs.value = merged;
     } catch (_) {
       // Keep cached data — already shown above
     } finally {

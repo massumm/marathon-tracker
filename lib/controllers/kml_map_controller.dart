@@ -29,6 +29,7 @@ import '../services/location_service.dart';
 import '../widgets/app_snackbar.dart';
 import '../widgets/runner_info_sheet.dart';
 import 'home_controller.dart';
+import 'my_page_controller.dart';
 
 // ── Leaderboard entry ─────────────────────────────────────────────────────────
 
@@ -1280,6 +1281,9 @@ class KmlMapController extends GetxController {
       debugPrint('[STOP] foreground service stop error: $e');
     }
     try {
+      if (Get.isRegistered<MyPageController>()) {
+        Get.find<MyPageController>().fetchRoutes();
+      }
       if (Get.isRegistered<HomeController>()) {
         Get.find<HomeController>().changeTab(0);
       }

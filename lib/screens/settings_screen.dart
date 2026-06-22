@@ -17,9 +17,13 @@ class SettingsScreen extends GetView<MyPageController> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('settings'.tr)),
-      body: ListView(
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _sectionHeader('account_settings'.tr),
+          Expanded(
+            child: ListView(
+              children: [
+                _sectionHeader('account_settings'.tr),
           if (!controller.isGoogleUser && !controller.isAppleUser) ...[
             _tile(
               icon: Icons.email_outlined,
@@ -66,7 +70,9 @@ class SettingsScreen extends GetView<MyPageController> {
           const Divider(height: 1),
           _sectionHeader('notification_settings'.tr),
           const _NotificationToggleWidget(),
-          const Divider(height: 1),
+              ],
+            ),
+          ),
           _sectionHeader('version'.tr),
           FutureBuilder<PackageInfo>(
             future: PackageInfo.fromPlatform(),
@@ -96,6 +102,7 @@ class SettingsScreen extends GetView<MyPageController> {
               ),
             ),
           ),
+          const SizedBox(height: 16),
         ],
       ),
     );

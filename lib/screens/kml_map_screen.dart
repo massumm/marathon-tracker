@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -572,17 +573,24 @@ class _KmlMapScreenState extends State<KmlMapScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Obx(() {
-      final lb = _ctrl.leaderboard.toList();
-      final myRank = lb.where((e) => e.isSelf).firstOrNull?.rank;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
+      ),
+      child: Obx(() {
+        final lb = _ctrl.leaderboard.toList();
+        final myRank = lb.where((e) => e.isSelf).firstOrNull?.rank;
 
-      return PopScope(
-        canPop: !_ctrl.isSaving.value,
-        child: Scaffold(
-          body: _buildBody(context, lb, myRank),
-        ),
-      );
-    });
+        return PopScope(
+          canPop: !_ctrl.isSaving.value,
+          child: Scaffold(
+            body: _buildBody(context, lb, myRank),
+          ),
+        );
+      }),
+    );
   }
 
   Widget _buildBody(
@@ -715,12 +723,12 @@ class _KmlMapScreenState extends State<KmlMapScreen>
         child: _GpsSignalBadge(accuracy: gpsAccuracy),
       ),
 
-      // ── Category name label ───────────────────────────────────────────────
+      // ── Category name label (centred between back btn and GPS badge) ─────────
       if (_ctrl.routeLabel.isNotEmpty)
         Positioned(
           top: topPad + 8,
           left: 62,
-          right: 62,
+          right: 76,
           child: Center(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -735,8 +743,8 @@ class _KmlMapScreenState extends State<KmlMapScreen>
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                 ),
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                maxLines: 1,
                 textAlign: TextAlign.center,
               ),
             ),
@@ -746,7 +754,7 @@ class _KmlMapScreenState extends State<KmlMapScreen>
       // ── Stats panel (tracking active) ─────────────────────────────────────
       if (isTracking)
         Positioned(
-          top: topPad + 62,
+          top: topPad + 76,
           left: 16,
           right: 16,
           child: _StatsPanel(
@@ -1138,7 +1146,7 @@ class _StatsPanel extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.50),
+        color: Colors.black.withValues(alpha: 0.72),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
       ),
@@ -1564,17 +1572,17 @@ class _GpsSignalBadge extends StatelessWidget {
   int get _bars {
     if (accuracy < 0) return 0;
     if (accuracy <= 5) return 4;
-    if (accuracy <= 8) return 3;
-    if (accuracy <= 12) return 2;
+    if (accuracy <= 10) return 3;
+    if (accuracy <= 20) return 2;
     return 1;
   }
 
   Color get _color {
     if (accuracy < 0) return Colors.grey;
-    if (accuracy <= 5) return const Color(0xFF22C55E);
-    if (accuracy <= 8) return const Color(0xFF84CC16);
-    if (accuracy <= 12) return const Color(0xFFF59E0B);
-    return const Color(0xFFEF4444);
+    if (accuracy <= 5) return Colors.green;
+    if (accuracy <= 10) return Colors.lightGreen;
+    if (accuracy <= 20) return Colors.orange;
+    return Colors.red;
   }
 
   @override
@@ -1584,19 +1592,20 @@ class _GpsSignalBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(10),
+        color: Colors.black.withValues(alpha: 0.65),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          Icon(Icons.gps_fixed, color: color, size: 13),
+          const SizedBox(width: 4),
           Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
             children: List.generate(4, (i) {
-              final height = 6.0 + i * 3.0;
               return Container(
                 width: 4,
-                height: height,
+                height: 6 + i * 2.0,
                 margin: const EdgeInsets.only(right: 2),
                 decoration: BoxDecoration(
                   color: i < bars ? color : Colors.white24,

@@ -30,7 +30,7 @@ class FirebaseService {
 
   Future<void> saveTrackedRoute(String fileName, String jsonBody) async {
     final ref = _storage.ref('$_userRoutesPath/$fileName');
-    await ref.putString(jsonBody);
+    await ref.putString(jsonBody).timeout(const Duration(seconds: 15));
   }
 
   Future<List<fs.Reference>> fetchSavedRouteRefs() async {
