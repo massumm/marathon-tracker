@@ -133,7 +133,7 @@ class KmlMapController extends GetxController {
   bool _hasLeftFinishZone = false;
   Timer? _finishAutoStopTimer;
   final finishCountdown = 60.obs;
-  static const double _finishRadiusM = 40.0;
+  static const double _finishRadiusM = 15.0;
   // Arm finish detection after runner covers this much distance — avoids false
   // triggers when the start position happens to be near the finish line.
   static const double _finishArmAfterM = 70.0;
@@ -642,7 +642,7 @@ class KmlMapController extends GetxController {
 
   // ── Proximity check ───────────────────────────────────────────────────────
 
-  static const double proximityThresholdKm = 0.5; // 500 m
+  static const double proximityThresholdKm = 0.1; // 100 m
 
   /// Returns distance in km from current position to the route start.
   /// Returns -1 if location is unavailable (allow start in that case).

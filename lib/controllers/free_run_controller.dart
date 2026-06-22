@@ -12,6 +12,7 @@ import '../services/firebase_service.dart';
 import '../services/location_service.dart';
 import '../widgets/app_snackbar.dart';
 import 'kml_map_controller.dart';
+import 'my_page_controller.dart';
 import '../services/offline_storage_service.dart';
 import '../services/user_stats_service.dart';
 
@@ -125,6 +126,11 @@ class FreeRunController extends GetxController {
     runState.value = FreeRunState.stopped;
     await FlutterForegroundTask.stopService();
     await _saveRun();
+    // Refresh the completed-runs list so this run appears on My Page
+    // immediately (the screen returns via Get.back(), not a tab switch).
+    if (Get.isRegistered<MyPageController>()) {
+      Get.find<MyPageController>().fetchRoutes();
+    }
   }
 
   void resetRun() {
@@ -279,7 +285,7 @@ class FreeRunController extends GetxController {
 
       final data = {
         'event': eventLabel,
-        'type': 'free_run',
+        'type': 'daily challange',
         'run_start_ms': _runStartMs,
         'start_date':
             '${now.year}/${now.month.toString().padLeft(2, '0')}/${now.day.toString().padLeft(2, '0')}',

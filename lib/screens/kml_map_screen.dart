@@ -559,17 +559,11 @@ class _KmlMapScreenState extends State<KmlMapScreen>
             style: const TextStyle(fontSize: 14)),
         actionsAlignment: MainAxisAlignment.center,
         actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('cancel'.tr)),
           ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _ctrl.startTracking();
-            },
+            onPressed: () => Navigator.pop(context),
             style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange, foregroundColor: Colors.white),
-            child: Text('start_anyway'.tr),
+                backgroundColor: AppTheme.primary, foregroundColor: Colors.white),
+            child: Text('ok'.tr),
           ),
         ],
       ),
