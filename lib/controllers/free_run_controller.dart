@@ -357,10 +357,13 @@ class FreeRunController extends GetxController {
 
   String _formatTime(int seconds) {
     final d = Duration(seconds: seconds);
-    final h = d.inHours.toString().padLeft(2, '0');
     final m = (d.inMinutes % 60).toString().padLeft(2, '0');
     final s = (d.inSeconds % 60).toString().padLeft(2, '0');
-    return '$h:$m:$s';
+    if (d.inHours > 0) {
+      final h = d.inHours.toString().padLeft(2, '0');
+      return '$h:$m:$s';
+    }
+    return '$m:$s';
   }
 
   String get formattedTime => _formatTime(elapsedSeconds.value);

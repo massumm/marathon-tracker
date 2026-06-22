@@ -273,19 +273,38 @@ class _BottomControls extends StatelessWidget {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Finish Run?'),
-        content: const Text('Your route and stats will be saved.'),
+        title: const Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.flag_rounded, color: AppTheme.savedRouteRed, size: 36),
+            SizedBox(height: 8),
+            Text('Finish Run?', textAlign: TextAlign.center),
+          ],
+        ),
+        content: const Text(
+          'Your route and stats will be saved.',
+          textAlign: TextAlign.center,
+        ),
+        actionsAlignment: MainAxisAlignment.center,
         actions: [
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.pop(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.textSecondary,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Cancel'),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               ctrl.stopRun();
             },
-            child: const Text('Finish', style: TextStyle(color: Colors.red)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.savedRouteRed,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Finish'),
           ),
         ],
       ),

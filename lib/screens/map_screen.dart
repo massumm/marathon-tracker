@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../app/routes/app_routes.dart';
 import '../../controllers/kml_map_controller.dart';
 import '../../controllers/map_controller.dart';
+import '../../controllers/my_page_controller.dart';
 import '../../core/theme.dart';
 import '../../models/event_model.dart';
 import '../../services/group_service.dart';
@@ -347,6 +348,11 @@ class _EventCardState extends State<_EventCard> {
   }
 
   void _openMap(RaceCategory cat) {
+    final myPageCtrl = Get.find<MyPageController>();
+    if (myPageCtrl.myStats.value?.gender == null) {
+      _showGenderRequiredDialog(cat);
+      return;
+    }
     final runCtrl = Get.find<KmlMapController>();
     if (runCtrl.isTracking.value) {
       showDialog(
@@ -402,6 +408,34 @@ class _EventCardState extends State<_EventCard> {
         'categoryCutoff': cat.cutoff,
         'distanceKm': cat.distanceKm,
       },
+    );
+  }
+
+  void _showGenderRequiredDialog(RaceCategory cat) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        icon: const Icon(Icons.wc, color: AppTheme.primary, size: 40),
+        title: Text('gender'.tr,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+        content: Text('gender_required_to_run'.tr, textAlign: TextAlign.center),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('cancel'.tr),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Get.toNamed(AppRoutes.settings);
+            },
+            child: Text('set_gender'.tr),
+          ),
+        ],
+      ),
     );
   }
 }

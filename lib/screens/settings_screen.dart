@@ -20,17 +20,19 @@ class SettingsScreen extends GetView<MyPageController> {
       body: ListView(
         children: [
           _sectionHeader('account_settings'.tr),
-          _tile(
-            icon: Icons.email_outlined,
-            title: 'change_email'.tr,
-            subtitle: controller.user?.email ?? '',
-            onTap: () => _changeEmail(context),
-          ),
-          _tile(
-            icon: Icons.lock_outline,
-            title: 'change_password'.tr,
-            onTap: () => _resetPassword(context),
-          ),
+          if (!controller.isGoogleUser && !controller.isAppleUser) ...[
+            _tile(
+              icon: Icons.email_outlined,
+              title: 'change_email'.tr,
+              subtitle: controller.user?.email ?? '',
+              onTap: () => _changeEmail(context),
+            ),
+            _tile(
+              icon: Icons.lock_outline,
+              title: 'change_password'.tr,
+              onTap: () => _resetPassword(context),
+            ),
+          ],
           Obx(() {
             final gender = controller.myStats.value?.gender;
             final label = gender == 0
