@@ -65,7 +65,10 @@ class MyPageBody extends StatelessWidget {
             // ── My Completed Runs ─────────────────────────────────────
             _SectionHeader(
               title: 'my_completed_runs'.tr,
-              onSeeAll: () => Get.toNamed(AppRoutes.myRoutes),
+              onSeeAll: () {
+                controller.fetchRoutes(); // refresh records on open
+                Get.toNamed(AppRoutes.myRoutes);
+              },
             ),
             const SizedBox(height: 10),
             _CompletedRunsSection(controller: controller),
@@ -236,25 +239,29 @@ class _CompletedRunsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final refs = controller.routeRefs;
-    final pending = controller.localPendingNames;
-    if (refs.isEmpty && pending.isEmpty) {
+    // Own Obx so the grid reacts to routeRefs/localPendingNames changes —
+    // the parent Obx only tracks myStats and won't rebuild this otherwise.
+    return Obx(() {
+      final refs = controller.routeRefs;
+      final pending = controller.localPendingNames;
+      if (refs.isEmpty && pending.isEmpty) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: _EmptyHexPlaceholder(
+            icon: Icons.directions_run,
+            label: 'no_runs_yet'.tr,
+          ),
+        );
+      }
+      final tiles = <Widget>[
+        ...pending.map((name) => _LocalRouteHexTile(fileName: name)),
+        ...refs.map((ref) => _RouteHexTile(ref: ref)),
+      ];
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: _EmptyHexPlaceholder(
-          icon: Icons.directions_run,
-          label: 'no_runs_yet'.tr,
-        ),
+        child: _HexGrid(children: tiles.take(6).toList()),
       );
-    }
-    final tiles = <Widget>[
-      ...pending.map((name) => _LocalRouteHexTile(fileName: name)),
-      ...refs.map((ref) => _RouteHexTile(ref: ref)),
-    ];
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: _HexGrid(children: tiles.take(6).toList()),
-    );
+    });
   }
 }
 
