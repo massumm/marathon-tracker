@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../../app/routes/app_routes.dart';
 import '../../core/theme.dart';
+import '../../models/event_ranking.dart';
 import '../../models/group_model.dart';
 import '../../models/user_stats.dart';
 import '../../services/group_service.dart';
@@ -23,21 +24,9 @@ class LeaderboardScreen extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
           final groups = snap.data ?? [];
+          // No groups — fall back to the runner's own per-event rankings.
           if (groups.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.groups_outlined,
-                      size: 72, color: Colors.grey.shade300),
-                  const SizedBox(height: 16),
-                  Text('no_groups_leaderboard'.tr,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                          fontSize: 15, color: AppTheme.textSecondary)),
-                ],
-              ),
-            );
+            return const _SoloEventRankings();
           }
           return ListView.builder(
             padding: const EdgeInsets.only(bottom: 40),
@@ -46,6 +35,151 @@ class LeaderboardScreen extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+}
+
+// ── Solo per-event rankings (shown when the user has no groups) ─────────────────
+
+class _SoloEventRankings extends StatelessWidget {
+  const _SoloEventRankings();
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<EventRanking>>(
+      stream: UserStatsService.instance.watchMyEventRankings(),
+      builder: (ctx, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final rankings = snap.data ?? [];
+        if (rankings.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.emoji_events_outlined,
+                    size: 72, color: Colors.grey.shade300),
+                const SizedBox(height: 16),
+                Text('no_event_rankings'.tr,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        fontSize: 15, color: AppTheme.textSecondary)),
+              ],
+            ),
+          );
+        }
+        return ListView.builder(
+          padding: const EdgeInsets.only(bottom: 40),
+          itemCount: rankings.length,
+          itemBuilder: (_, i) => _SoloEventCard(ranking: rankings[i]),
+        );
+      },
+    );
+  }
+}
+
+class _SoloEventCard extends StatelessWidget {
+  final EventRanking ranking;
+  const _SoloEventCard({required this.ranking});
+
+  @override
+  Widget build(BuildContext context) {
+    final s = ranking.myStats;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Event name header
+        Container(
+          margin: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: const BoxDecoration(
+            color: AppTheme.primary,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(14),
+              topRight: Radius.circular(14),
+            ),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.flag_rounded, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  ranking.eventName,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+        // My ranking card
+        Container(
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(14),
+              bottomRight: Radius.circular(14),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              UserAvatar(label: s.label, photoUrl: s.photoUrl, size: 46),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(s.label,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textPrimary,
+                        ),
+                        overflow: TextOverflow.ellipsis),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${'your_rank'.tr}: #${ranking.myRank} / ${ranking.totalParticipants}',
+                      style: const TextStyle(
+                          fontSize: 12, color: AppTheme.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    s.distanceStr,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.primary,
+                    ),
+                  ),
+                  Text(s.timeStr,
+                      style: const TextStyle(
+                          fontSize: 12, color: AppTheme.textSecondary)),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

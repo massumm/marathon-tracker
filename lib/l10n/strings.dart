@@ -274,6 +274,8 @@ class AppStrings extends Translations {
           // My Page sections
           'add_friends_or_join_group': 'Add friends or join a group to see them here',
           'no_groups_leaderboard': 'Join or create a group to see rankings here',
+          'no_event_rankings': 'Run an event to see your ranking here',
+          'your_rank': 'Your rank',
           'no_run_data_yet': 'No run data yet',
           'my_completed_runs': 'My Completed Runs',
           'my_clubs': 'My Clubs',
@@ -560,6 +562,8 @@ class AppStrings extends Translations {
           // My Page sections
           'add_friends_or_join_group': '友達を追加するかグループに参加すると表示されます',
           'no_groups_leaderboard': 'グループに参加または作成するとランキングが表示されます',
+          'no_event_rankings': 'イベントに参加するとランキングが表示されます',
+          'your_rank': 'あなたの順位',
           'no_run_data_yet': 'まだランデータがありません',
           'my_completed_runs': '完了したラン',
           'my_clubs': 'マイクラブ',
