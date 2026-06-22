@@ -180,7 +180,6 @@ class _StatsHeader extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             [
-              if (route.type.isNotEmpty) route.type,
               if (route.startDate.isNotEmpty) route.startDate,
               if (route.startTime.isNotEmpty) route.startTime,
             ].join('  ·  '),

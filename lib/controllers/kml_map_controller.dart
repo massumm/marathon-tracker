@@ -134,9 +134,19 @@ class KmlMapController extends GetxController {
   Timer? _finishAutoStopTimer;
   final finishCountdown = 60.obs;
   static const double _finishRadiusM = 15.0;
-  // Arm finish detection after runner covers this much distance — avoids false
-  // triggers when the start position happens to be near the finish line.
-  static const double _finishArmAfterM = 70.0;
+  // Arm finish detection only after the runner has covered most of the route —
+  // prevents reaching the finish line via a shortcut. The threshold is a
+  // fraction of the official route distance, with a floor for short routes.
+  static const double _finishArmFraction = 0.95; // 95% of route distance
+  static const double _finishArmMinM = 70.0; // floor for very short routes
+
+  /// Distance (metres) the runner must cover before the finish alert can fire.
+  double get _finishArmAfterM {
+    final routeM = routeDistanceKm > 0 ? routeDistanceKm * 1000 : 0.0;
+    if (routeM <= 0) return _finishArmMinM;
+    final threshold = routeM * _finishArmFraction;
+    return threshold > _finishArmMinM ? threshold : _finishArmMinM;
+  }
 
   // ── GPS smoothing & jump filter ───────────────────────────────────────────
   static const double _maxJumpMetres = 50.0;
@@ -150,8 +160,12 @@ class KmlMapController extends GetxController {
   LatLng? _lastDistancePoint;
 
   // ── Off-route / cheat detection ───────────────────────────────────────────
-  static const double _offRouteThresholdM = 50.0; // warn if >50m from route
+  static const double _offRouteThresholdM = 20.0; // warn if >20m from route
   static const int _offRouteConsecutiveNeeded = 5; // require 5 consecutive fixes
+  // Off-route detection arms after this much covered — small buffer so the
+  // runner isn't warned while still lining up near the start. Independent of
+  // the (much larger) finish-arming threshold.
+  static const double _offRouteArmAfterM = 50.0;
   int _offRouteCount = 0;
   bool _offRouteWarningActive = false;
 
@@ -957,11 +971,14 @@ class KmlMapController extends GetxController {
             'pos=(${latLng.latitude.toStringAsFixed(6)},${latLng.longitude.toStringAsFixed(6)}) '
             'finish=(${finishPosition!.latitude.toStringAsFixed(6)},${finishPosition!.longitude.toStringAsFixed(6)})');
         if (!_hasLeftFinishZone) {
-          // Arm after runner has covered enough distance — avoids false trigger
-          // when the start happens to be near the finish (loop or short course).
+          // Arm only after the runner has covered most of the route distance —
+          // blocks shortcuts to the finish and avoids false triggers when the
+          // start is near the finish (loop or short course).
           if (coveredM >= _finishArmAfterM) {
             _hasLeftFinishZone = true;
-            debugPrint('[FINISH] ✅ Armed — runner covered ${coveredM.toStringAsFixed(0)}m');
+            debugPrint('[FINISH] ✅ Armed — covered ${coveredM.toStringAsFixed(0)}m '
+                'of ${_finishArmAfterM.toStringAsFixed(0)}m required '
+                '(route=${(routeDistanceKm * 1000).toStringAsFixed(0)}m)');
           }
         } else if (dist <= _finishRadiusM) {
           debugPrint('[FINISH] 🏁 TRIGGERED at ${dist.toStringAsFixed(1)}m');
@@ -970,8 +987,9 @@ class KmlMapController extends GetxController {
         }
       }
 
-      // Off-route cheat detection — armed after _finishArmAfterM covered.
-      if (_cachedDistanceKm * 1000 >= _finishArmAfterM && kmlPolylines.isNotEmpty) {
+      // Off-route cheat detection — armed after a small start buffer so it
+      // runs for the whole route, not just near the finish.
+      if (_cachedDistanceKm * 1000 >= _offRouteArmAfterM && kmlPolylines.isNotEmpty) {
         final routeDist = _distanceToRoute(latLng);
         if (routeDist > _offRouteThresholdM) {
           _offRouteCount++;
