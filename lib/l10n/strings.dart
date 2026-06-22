@@ -257,8 +257,9 @@ class AppStrings extends Translations {
 
           // Proximity check
           'too_far_title': 'Too Far from Start',
-          'too_far_body': 'You are @dist km from the event start point. Please move closer before starting.',
+          'too_far_body': 'You are @dist km from the event start point. You must be within 100 m of the start to begin.',
           'start_anyway': 'Start Anyway',
+          'ok': 'OK',
 
           // Route detail
           'my_route_tab': 'My Route',
@@ -539,8 +540,9 @@ class AppStrings extends Translations {
 
           // Proximity check
           'too_far_title': 'スタート地点から離れすぎです',
-          'too_far_body': 'イベントのスタート地点から @dist km 離れています。近づいてから開始してください。',
+          'too_far_body': 'イベントのスタート地点から @dist km 離れています。開始するにはスタート地点から100m以内にいる必要があります。',
           'start_anyway': 'このまま開始',
+          'ok': 'OK',
 
           // Route detail
           'my_route_tab': 'ルート',
