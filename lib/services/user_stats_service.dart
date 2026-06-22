@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 
+import '../models/event_ranking.dart';
 import '../models/user_stats.dart';
 
 class UserStatsService {
@@ -189,6 +190,10 @@ class UserStatsService {
       if (gender != null) 'gender': gender,
       'completedAt': ServerValue.timestamp,
     });
+
+    // Index this event under the user so we can show their solo per-event
+    // rankings without scanning the whole event_stats tree.
+    await _db.ref('user_stats/${user.uid}/events/$eventId').set(true);
   }
 
   /// Event-specific leaderboard filtered to [memberUids], sorted by distance.
@@ -247,4 +252,81 @@ class UserStatsService {
       return list;
     });
   }
+
+  /// The current user's standing in every event they have run, ranked against
+  /// all participants of that event. Used for the solo (no-group) leaderboard.
+  Stream<List<EventRanking>> watchMyEventRankings() {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return Stream.value([]);
+    return _db.ref('user_stats/$uid/events').onValue.asyncMap((event) async {
+      if (!event.snapshot.exists || event.snapshot.value == null) {
+        return <EventRanking>[];
+      }
+      final eventIds = (event.snapshot.value as Map<dynamic, dynamic>)
+          .keys
+          .cast<String>()
+          .toList();
+
+      final results = <EventRanking>[];
+      for (final eventId in eventIds) {
+        final esSnap = await _db.ref('event_stats/$eventId').get();
+        if (!esSnap.exists || esSnap.value == null) continue;
+        final map = esSnap.value as Map<dynamic, dynamic>;
+
+        // Rank all participants by distance (time as tiebreaker).
+        final entries = map.entries.map((e) {
+          final m = e.value as Map<dynamic, dynamic>;
+          return _RankRow(
+            uid: e.key as String,
+            distanceKm: (m['distanceKm'] as num?)?.toDouble() ?? 0.0,
+            seconds: (m['seconds'] as num?)?.toInt() ?? 0,
+          );
+        }).toList()
+          ..sort((a, b) {
+            final d = b.distanceKm.compareTo(a.distanceKm);
+            return d != 0 ? d : a.seconds.compareTo(b.seconds);
+          });
+
+        final myIndex = entries.indexWhere((e) => e.uid == uid);
+        if (myIndex < 0) continue; // no entry for this user in the event
+        final mine = map[uid] as Map<dynamic, dynamic>;
+
+        final nameSnap = await _db.ref('events/$eventId/name').get();
+        final eventName = nameSnap.exists
+            ? (nameSnap.value as String? ?? 'Event')
+            : 'Event';
+
+        final myStats = UserStats(
+          uid: uid,
+          displayName: mine['displayName'] as String? ?? '',
+          email: '',
+          photoUrl: mine['photoUrl'] as String? ?? '',
+          totalDistanceKm: (mine['distanceKm'] as num?)?.toDouble() ?? 0.0,
+          totalRuns: 1,
+          totalSeconds: (mine['seconds'] as num?)?.toInt() ?? 0,
+          rank: myIndex + 1,
+        );
+
+        results.add(EventRanking(
+          eventId: eventId,
+          eventName: eventName,
+          myRank: myIndex + 1,
+          totalParticipants: entries.length,
+          myStats: myStats,
+        ));
+      }
+      return results;
+    });
+  }
+}
+
+class _RankRow {
+  final String uid;
+  final double distanceKm;
+  final int seconds;
+  const _RankRow({
+    required this.uid,
+    required this.distanceKm,
+    required this.seconds,
+  });
 }
