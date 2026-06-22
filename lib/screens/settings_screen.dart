@@ -344,6 +344,8 @@ class SettingsScreen extends GetView<MyPageController> {
   void _deleteAccount(BuildContext context) {
     if (controller.isGoogleUser) {
       _deleteAccountGoogle();
+    } else if (controller.isAppleUser) {
+      _deleteAccountApple();
     } else {
       _deleteAccountEmail();
     }
@@ -360,6 +362,30 @@ class SettingsScreen extends GetView<MyPageController> {
             Get.back();
             try {
               await controller.deleteAccountWithGoogle();
+              Get.offAllNamed(AppRoutes.login);
+            } catch (e) {
+              Get.snackbar('delete_account'.tr, e.toString(),
+                  snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+            }
+          },
+          style: TextButton.styleFrom(foregroundColor: Colors.red),
+          child: Text('delete_account'.tr),
+        ),
+      ],
+    ));
+  }
+
+  void _deleteAccountApple() {
+    Get.dialog(AlertDialog(
+      title: Text('delete_account'.tr),
+      content: Text('delete_account_apple_confirm'.tr),
+      actions: [
+        TextButton(onPressed: Get.back, child: Text('cancel'.tr)),
+        TextButton(
+          onPressed: () async {
+            Get.back();
+            try {
+              await controller.deleteAccountWithApple();
               Get.offAllNamed(AppRoutes.login);
             } catch (e) {
               Get.snackbar('delete_account'.tr, e.toString(),

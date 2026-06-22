@@ -182,6 +182,11 @@ class MyPageController extends GetxController {
           .any((p) => p.providerId == 'google.com') ??
       false;
 
+  bool get isAppleUser =>
+      FirebaseAuth.instance.currentUser?.providerData
+          .any((p) => p.providerId == 'apple.com') ??
+      false;
+
   Future<void> deleteAccount(String password) async {
     final u = user;
     if (u == null || u.email == null) return;
@@ -212,6 +217,23 @@ class MyPageController extends GetxController {
         idToken: googleAuth.idToken,
       );
       await u.reauthenticateWithCredential(cred);
+      _cancelSubscriptions();
+      await u.delete();
+    } finally {
+      authCtrl.suppressAuthNav = false;
+    }
+  }
+
+  Future<void> deleteAccountWithApple() async {
+    final u = user;
+    if (u == null) return;
+    final authCtrl = Get.find<AuthController>();
+    authCtrl.suppressAuthNav = true;
+    try {
+      final appleProvider = OAuthProvider('apple.com')
+        ..addScope('email')
+        ..addScope('fullName');
+      await u.reauthenticateWithProvider(appleProvider);
       _cancelSubscriptions();
       await u.delete();
     } finally {
