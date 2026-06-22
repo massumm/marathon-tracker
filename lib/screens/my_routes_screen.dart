@@ -8,8 +8,23 @@ import '../../core/theme.dart';
 import '../../models/tracked_route.dart';
 import '../../widgets/route_list_card.dart';
 
-class MyRoutesScreen extends GetView<MyPageController> {
+class MyRoutesScreen extends StatefulWidget {
   const MyRoutesScreen({super.key});
+
+  @override
+  State<MyRoutesScreen> createState() => _MyRoutesScreenState();
+}
+
+class _MyRoutesScreenState extends State<MyRoutesScreen> {
+  final MyPageController controller = Get.find<MyPageController>();
+
+  @override
+  void initState() {
+    super.initState();
+    // Refresh on open so the list is current regardless of entry point
+    // (See All link or the Records action card).
+    controller.fetchRoutes();
+  }
 
   @override
   Widget build(BuildContext context) {

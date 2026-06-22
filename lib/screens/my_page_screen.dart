@@ -65,10 +65,7 @@ class MyPageBody extends StatelessWidget {
             // ── My Completed Runs ─────────────────────────────────────
             _SectionHeader(
               title: 'my_completed_runs'.tr,
-              onSeeAll: () {
-                controller.fetchRoutes(); // refresh records on open
-                Get.toNamed(AppRoutes.myRoutes);
-              },
+              onSeeAll: () => Get.toNamed(AppRoutes.myRoutes),
             ),
             const SizedBox(height: 10),
             _CompletedRunsSection(controller: controller),
