@@ -34,7 +34,7 @@ class _MyRoutesScreenState extends State<MyRoutesScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: controller.fetchRoutes,
+            onPressed: () => controller.fetchRoutes(),
             tooltip: 'refresh'.tr,
           ),
         ],
@@ -70,6 +70,7 @@ class _MyRoutesScreenState extends State<MyRoutesScreen> {
           children: [
             // Pending (local-only) routes at top with sync badge
             ...pending.map((name) => RouteListCard(
+                  key: ValueKey('pending_$name'),
                   title: TrackedRoute.parseEventFromFileName(name),
                   subtitle: TrackedRoute.parseDateFromFileName(name),
                   leadingIcon: Icons.cloud_upload_outlined,
@@ -94,6 +95,7 @@ class _MyRoutesScreenState extends State<MyRoutesScreen> {
                 )),
             // Cloud routes
             ...refs.map((ref) => RouteListCard(
+                  key: ValueKey(ref.fullPath),
                   title: TrackedRoute.parseEventFromFileName(ref.name),
                   subtitle: TrackedRoute.parseDateFromFileName(ref.name),
                   leadingIcon: Icons.flag_rounded,

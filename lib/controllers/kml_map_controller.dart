@@ -1243,6 +1243,9 @@ class KmlMapController extends GetxController {
       // 2b. Online — upload Storage, fall back to queue on failure
       try {
         await FirebaseService.instance.saveTrackedRoute(fileName, jsonBody);
+        if (Get.isRegistered<MyPageController>()) {
+          Get.find<MyPageController>().addRouteOptimistically(fileName, uid);
+        }
       } catch (_) {
         await OfflineStorageService.instance.enqueuePendingRun(
           runId: runId,

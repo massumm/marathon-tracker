@@ -36,7 +36,8 @@ class AppStrings extends Translations {
           'group_name_hint': 'Group name',
           'create': 'Create',
           'delete_group': 'Delete Group',
-          'delete_group_confirm': 'Delete "@name"? All members will be removed.',
+          'delete_group_confirm':
+              'Delete "@name"? All members will be removed.',
           'leave_group': 'Leave Group',
           'leave_group_confirm': 'Are you sure you want to leave this group?',
           'leave': 'Leave',
@@ -104,7 +105,8 @@ class AppStrings extends Translations {
           'accept': 'Accept',
           'reject': 'Reject',
           'reject_request': 'Reject Request',
-          'reject_confirm': 'Are you sure you want to reject this join request?',
+          'reject_confirm':
+              'Are you sure you want to reject this join request?',
           'remove_friend': 'Remove friend',
           'remove_friend_confirm': 'Remove @name from your friends?',
           'incoming_requests': 'Friend Requests',
@@ -147,22 +149,27 @@ class AppStrings extends Translations {
           'stop_run': 'STOP',
           'continue_run': 'Continue',
           'start_window_closed_title': 'Start Closed',
-          'start_window_closed_body': 'You can no longer start this event.\nThe allowed start period has ended.',
+          'start_window_closed_body':
+              'You can no longer start this event.\nThe allowed start period has ended.',
           'finish_line_title': 'Finish Line Reached!',
           'off_route_title': '⚠️ Off Route',
-          'off_route_msg': 'You appear to be off the official route. Please return to the marked path.',
+          'off_route_msg':
+              'You appear to be off the official route. Please return to the marked path.',
           'finish_reached': 'You\'ve finished! Run stopped automatically.',
-          'finish_line_body': 'You\'ve reached the finish line. Do you want to stop your run or keep going?',
+          'finish_line_body':
+              'You\'ve reached the finish line. Do you want to stop your run or keep going?',
           'finish_grace_body': 'Great job! Auto-stopping your run in @min min.',
           'terminate': 'Terminate',
           'share': 'Share location',
           'unshare': 'Hide location',
           'exit_run_title': 'Exit Run?',
-          'exit_run_body': 'Your run is in progress. Exiting will stop and save your session.',
+          'exit_run_body':
+              'Your run is in progress. Exiting will stop and save your session.',
           'exit_run_confirm': 'Exit & Save',
           'run_in_progress': 'Run in progress — tap to return',
           'already_running_title': 'Already Running',
-          'already_running_body': 'You have an active run. Stop your current run before starting a new one.',
+          'already_running_body':
+              'You have an active run. Stop your current run before starting a new one.',
           'return_to_run': 'Return to Run',
 
           // Leaderboard / Profile
@@ -191,7 +198,8 @@ class AppStrings extends Translations {
           'change_email': 'Change Email',
           'enter_new_email': 'Enter new email',
           'enter_current_password': 'Enter current password',
-          'email_verification_sent': 'Verification email sent to your new address. Please click the link to complete the change.',
+          'email_verification_sent':
+              'Verification email sent to your new address. Please click the link to complete the change.',
           'change_password': 'Change Password',
           'current_password': 'Current password',
           'new_password': 'New password',
@@ -205,11 +213,13 @@ class AppStrings extends Translations {
           'language_settings': 'Language',
           'gender': 'Gender',
           'gender_edit': 'Gender Edit',
-          'gender_required_to_run': 'Please set your gender before entering an event. It is used for the live leaderboard.',
+          'gender_required_to_run':
+              'Please set your gender before entering an event. It is used for the live leaderboard.',
           'set_gender': 'Set Gender',
           'notification_settings': 'Notifications',
           'event_notifications': 'Event Reminders',
-          'event_notifications_subtitle': 'Get notified 24 hours before, 5 minutes before, and at event start',
+          'event_notifications_subtitle':
+              'Get notified 24 hours before, 5 minutes before, and at event start',
           'event_starts_in': 'Event starts in',
           'auto_starting': 'Auto-starting...',
           'keep_app_alive': '⚠ Keep the app open. Do not close.',
@@ -217,24 +227,30 @@ class AppStrings extends Translations {
           'starts_on': 'Starts @date at @time',
           'delete_account': 'Delete Account',
           'delete_account_confirm': 'Are you sure? This cannot be undone.',
-          'delete_account_google_confirm': 'To confirm deletion, you\'ll be asked to sign in with Google again. This cannot be undone.',
-          'delete_account_apple_confirm': 'To confirm deletion, you\'ll be asked to sign in with Apple again. This cannot be undone.',
+          'delete_account_google_confirm':
+              'To confirm deletion, you\'ll be asked to sign in with Google again. This cannot be undone.',
+          'delete_account_apple_confirm':
+              'To confirm deletion, you\'ll be asked to sign in with Apple again. This cannot be undone.',
           'version': 'Version',
           'app_version': '1.0.0',
           'app_version_label': 'Version 1.0.0',
           'developed_by': 'Developed by XOR Geek',
-          'image_too_large': 'Image too large. Please choose an image under 3 MB.',
+          'image_too_large':
+              'Image too large. Please choose an image under 3 MB.',
           'offline_banner': 'No internet · showing cached data',
           'run_saved_offline': 'Run saved offline · will sync when connected',
           'route_cached': 'Offline · using cached route',
-          'route_unavailable_offline': 'Route not available offline · GPS tracking still works',
+          'route_unavailable_offline':
+              'Route not available offline · GPS tracking still works',
           'pending_sync': 'Pending sync',
           'share_run': 'Share Run',
           'retake': 'Retake',
           'share_action': 'Share',
           'camera_permission_denied': 'Camera Permission',
-          'camera_permission_msg': 'Please allow camera access to take a selfie.',
-          'camera_permission_settings_msg': 'Camera access was denied. Please enable it in Settings > Privacy > Camera.',
+          'camera_permission_msg':
+              'Please allow camera access to take a selfie.',
+          'camera_permission_settings_msg':
+              'Camera access was denied. Please enable it in Settings > Privacy > Camera.',
           'take_selfie': 'Take a Selfie',
           'selfie_hint': 'Capture this moment during your run!',
           'open_camera': 'Open Camera',
@@ -247,20 +263,25 @@ class AppStrings extends Translations {
 
           // Location service / permission
           'location_off_title': 'Location is Off',
-          'location_off_body': 'Please turn on your device\'s location (GPS) to track your run.',
+          'location_off_body':
+              'Please turn on your device\'s location (GPS) to track your run.',
           'location_permission_title': 'Location Permission Required',
-          'location_permission_denied': 'Location permission was denied. Please allow location access to start tracking.',
-          'location_permission_forever': 'Location permission is permanently denied. Please enable it in app settings.',
+          'location_permission_denied':
+              'Location permission was denied. Please allow location access to start tracking.',
+          'location_permission_forever':
+              'RunMate uses your location to track and display your run route on the map. Please enable location access as Always for RunMate in Settings.',
           'open_settings': 'Open Settings',
 
           // iOS background location
           'ios_bg_title': 'Allow Location "Always"',
-          'ios_bg_body': 'Your location is set to "While Using App". To keep tracking your run after you close the app or lock the screen, go to Settings → RunMate → Location → change to "Always".',
+          'ios_bg_body':
+              'Your location is set to "While Using App". To keep tracking your run after you close the app or lock the screen, go to Settings → RunMate → Location → change to "Always".',
           'continue_anyway': 'Continue Anyway',
 
           // Proximity check
-          'too_far_title': 'Too Far from Start',
-          'too_far_body': 'You are @dist km from the event start point. You must be within 100 m of the start to begin.',
+          'too_far_title': 'Too Far from the Start Line',
+          'too_far_body':
+              'You are currently @dist km from the event start point. Please move within 100 mof the start line to START the run.',
           'start_anyway': 'Start Anyway',
           'ok': 'OK',
 
@@ -268,12 +289,15 @@ class AppStrings extends Translations {
           'my_route_tab': 'My Route',
           'photos_tab': 'Photos',
           'no_photos': 'No photos yet',
-          'no_photos_subtitle': 'Tap the camera button while running to take photos',
+          'no_photos_subtitle':
+              'Tap the camera button while running to take photos',
           'event': 'Event',
 
           // My Page sections
-          'add_friends_or_join_group': 'Add friends or join a group to see them here',
-          'no_groups_leaderboard': 'Join or create a group to see rankings here',
+          'add_friends_or_join_group':
+              'Add friends or join a group to see them here',
+          'no_groups_leaderboard':
+              'Join or create a group to see rankings here',
           'no_event_rankings': 'Run an event to see your ranking here',
           'your_rank': 'Your rank',
           'no_run_data_yet': 'No run data yet',
@@ -479,7 +503,8 @@ class AppStrings extends Translations {
           'change_email': 'メールアドレス変更',
           'enter_new_email': '新しいメールアドレスを入力',
           'enter_current_password': '現在のパスワードを入力',
-          'email_verification_sent': '新しいメールアドレスに確認メールを送信しました。リンクをクリックして変更を完了してください。',
+          'email_verification_sent':
+              '新しいメールアドレスに確認メールを送信しました。リンクをクリックして変更を完了してください。',
           'change_password': 'パスワード変更',
           'current_password': '現在のパスワード',
           'new_password': '新しいパスワード',
@@ -497,8 +522,10 @@ class AppStrings extends Translations {
           'set_gender': '性別を設定',
           'delete_account': 'アカウント削除',
           'delete_account_confirm': '本当に削除しますか？この操作は取り消せません。',
-          'delete_account_google_confirm': '削除を確認するため、Googleでの再ログインが必要です。この操作は取り消せません。',
-          'delete_account_apple_confirm': '削除を確認するため、Appleでの再ログインが必要です。この操作は取り消せません。',
+          'delete_account_google_confirm':
+              '削除を確認するため、Googleでの再ログインが必要です。この操作は取り消せません。',
+          'delete_account_apple_confirm':
+              '削除を確認するため、Appleでの再ログインが必要です。この操作は取り消せません。',
           'notification_settings': '通知',
           'event_notifications': 'イベントリマインダー',
           'event_notifications_subtitle': 'イベント開始の24時間前・5分前・開始時に通知を受け取る',
@@ -522,7 +549,8 @@ class AppStrings extends Translations {
           'share_action': 'シェア',
           'camera_permission_denied': 'カメラのアクセス許可',
           'camera_permission_msg': 'セルフィーを撮るにはカメラへのアクセスを許可してください。',
-          'camera_permission_settings_msg': 'カメラへのアクセスが拒否されています。設定 > プライバシー > カメラで許可してください。',
+          'camera_permission_settings_msg':
+              'カメラへのアクセスが拒否されています。設定 > プライバシー > カメラで許可してください。',
           'take_selfie': 'セルフィーを撮る',
           'selfie_hint': 'ランの途中でこの瞬間を残そう！',
           'open_camera': 'カメラを開く',
@@ -537,18 +565,22 @@ class AppStrings extends Translations {
           'location_off_title': '位置情報がオフです',
           'location_off_body': 'ランの記録を開始するには、デバイスの位置情報（GPS）をオンにしてください。',
           'location_permission_title': '位置情報の許可が必要です',
-          'location_permission_denied': '位置情報の許可が拒否されました。追跡を開始するには位置情報を許可してください。',
-          'location_permission_forever': '位置情報の許可が永久に拒否されています。アプリ設定から有効にしてください。',
+          'location_permission_denied':
+              '位置情報の許可が拒否されました。追跡を開始するには位置情報を許可してください。',
+          'location_permission_forever':
+              '位置情報の許可が永久に拒否されています。アプリ設定から有効にしてください。',
           'open_settings': '設定を開く',
 
           // iOS background location
           'ios_bg_title': '位置情報を「常に許可」に変更してください',
-          'ios_bg_body': '現在の位置情報は「使用中のみ許可」です。アプリを閉じたり画面をロックした後もランを継続するには、設定 → RunMate → 位置情報 → 「常に許可」に変更してください。',
+          'ios_bg_body':
+              '現在の位置情報は「使用中のみ許可」です。アプリを閉じたり画面をロックした後もランを継続するには、設定 → RunMate → 位置情報 → 「常に許可」に変更してください。',
           'continue_anyway': 'このまま続ける',
 
           // Proximity check
           'too_far_title': 'スタート地点から離れすぎです',
-          'too_far_body': 'イベントのスタート地点から @dist km 離れています。開始するにはスタート地点から100m以内にいる必要があります。',
+          'too_far_body':
+              'イベントのスタート地点から @dist km 離れています。開始するにはスタート地点から100m以内にいる必要があります。',
           'start_anyway': 'このまま開始',
           'ok': 'OK',
 

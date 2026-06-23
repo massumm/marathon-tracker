@@ -11,6 +11,7 @@ import '../controllers/auth_controller.dart';
 import '../core/config.dart';
 import '../core/image_utils.dart';
 import '../models/group_model.dart';
+import '../models/tracked_route.dart';
 import '../models/user_stats.dart';
 import '../services/firebase_service.dart';
 import '../services/friends_service.dart';
@@ -75,7 +76,7 @@ class MyPageController extends GetxController {
     // 1. Load from local index immediately — no spinner, instant display
     final cachedNames =
         await OfflineStorageService.instance.getCachedRouteNames(uid);
-    if (cachedNames.isNotEmpty && routeRefs.isEmpty) {
+    if (cachedNames.isNotEmpty) {
       routeRefs.value = cachedNames
           .map((n) => fs.FirebaseStorage.instance
               .ref('${AppConfig.routesStoragePath}/$uid/$n'))
@@ -88,25 +89,41 @@ class MyPageController extends GetxController {
 
     // 3. Refresh from cloud in background
     isLoading.value = true;
+    debugPrint('[fetchRoutes] cached=${cachedNames.length}: $cachedNames');
+    debugPrint('[fetchRoutes] pending=${localPendingNames.length}: ${localPendingNames.toList()}');
     try {
       final refs = await FirebaseService.instance.fetchSavedRouteRefs();
+      debugPrint('[fetchRoutes] firebase=${refs.length}: ${refs.map((r) => r.name).toList()}');
       final refNames = refs.map((r) => r.name).toSet();
       // Preserve any locally-saved files not yet returned by listAll()
       // (Firebase Storage can take a few seconds to index a newly uploaded file)
       final localOnly = cachedNames.where((n) => !refNames.contains(n)).toList();
+      debugPrint('[fetchRoutes] localOnly=${localOnly.length}: $localOnly');
       final merged = [
         ...refs,
         ...localOnly.map((n) => fs.FirebaseStorage.instance
             .ref('${AppConfig.routesStoragePath}/$uid/$n')),
-      ];
+      ]..sort((a, b) => TrackedRoute.parseDateTimeFromFileName(b.name)
+            .compareTo(TrackedRoute.parseDateTimeFromFileName(a.name)));
+      debugPrint('[fetchRoutes] merged=${merged.length}: ${merged.map((r) => r.name).toList()}');
       await OfflineStorageService.instance
           .cacheRouteNames(uid, merged.map((r) => r.name).toList());
       routeRefs.value = merged;
-    } catch (_) {
-      // Keep cached data — already shown above
+    } catch (e, st) {
+      debugPrint('[fetchRoutes] ERROR: $e\n$st');
     } finally {
       isLoading.value = false;
     }
+  }
+
+  // Immediately surfaces a just-uploaded route without waiting for listAll().
+  void addRouteOptimistically(String fileName, String uid) {
+    if (routeRefs.any((r) => r.name == fileName)) return;
+    final newRef = fs.FirebaseStorage.instance
+        .ref('${AppConfig.routesStoragePath}/$uid/$fileName');
+    routeRefs.insert(0, newRef);
+    OfflineStorageService.instance
+        .cacheRouteNames(uid, routeRefs.map((r) => r.name).toList());
   }
 
   // ── Profile image upload ──────────────────────────────────────────────────
@@ -205,6 +222,7 @@ class MyPageController extends GetxController {
       final cred = EmailAuthProvider.credential(email: u.email!, password: password);
       await u.reauthenticateWithCredential(cred);
       _cancelSubscriptions();
+      await FirebaseService.instance.deleteAllUserData(u.uid);
       await u.delete();
     } finally {
       authCtrl.suppressAuthNav = false;
@@ -227,6 +245,7 @@ class MyPageController extends GetxController {
       );
       await u.reauthenticateWithCredential(cred);
       _cancelSubscriptions();
+      await FirebaseService.instance.deleteAllUserData(u.uid);
       await u.delete();
     } finally {
       authCtrl.suppressAuthNav = false;
@@ -244,6 +263,7 @@ class MyPageController extends GetxController {
         ..addScope('fullName');
       await u.reauthenticateWithProvider(appleProvider);
       _cancelSubscriptions();
+      await FirebaseService.instance.deleteAllUserData(u.uid);
       await u.delete();
     } finally {
       authCtrl.suppressAuthNav = false;

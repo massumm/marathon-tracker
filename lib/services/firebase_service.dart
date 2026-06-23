@@ -53,6 +53,22 @@ class FirebaseService {
         bytes, fs.SettableMetadata(contentType: 'image/jpeg'));
   }
 
+  /// Deletes all Storage data owned by [uid]: profile image + entire routes folder.
+  Future<void> deleteAllUserData(String uid) async {
+    await Future.wait([
+      _storage.ref('profile_images/$uid.jpg').delete().catchError((_) {}),
+      _deleteFolder(_storage.ref('${AppConfig.routesStoragePath}/$uid')),
+    ]);
+  }
+
+  Future<void> _deleteFolder(fs.Reference ref) async {
+    final result = await ref.listAll();
+    await Future.wait([
+      ...result.items.map((item) => item.delete().catchError((_) {})),
+      ...result.prefixes.map(_deleteFolder),
+    ]);
+  }
+
   /// Lists photo references for a saved route identified by its storage path.
   /// [runStartMs] is preferred (from route JSON); falls back to filename parsing.
   Future<List<fs.Reference>> fetchRunPhotoRefs(

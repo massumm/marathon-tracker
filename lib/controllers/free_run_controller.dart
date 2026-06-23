@@ -327,6 +327,9 @@ class FreeRunController extends GetxController {
       } else {
         try {
           await FirebaseService.instance.saveTrackedRoute(fileName, jsonBody);
+          if (Get.isRegistered<MyPageController>()) {
+            Get.find<MyPageController>().addRouteOptimistically(fileName, uid);
+          }
         } catch (_) {
           // Upload failed — enqueue so it retries when online again.
           await OfflineStorageService.instance.enqueuePendingRun(

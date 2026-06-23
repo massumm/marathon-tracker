@@ -1,7 +1,9 @@
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -238,7 +240,7 @@ class _BottomControls extends StatelessWidget {
         final state = ctrl.runState.value;
 
         if (state == FreeRunState.idle) {
-          return _RunButton(ctrl: ctrl);
+          return _RunButton(onTap: () => _startWithChecks(context));
         }
 
         if (state == FreeRunState.stopped || ctrl.isSaving.value) {
@@ -275,6 +277,141 @@ class _BottomControls extends StatelessWidget {
         );
       }),
     );
+  }
+
+  Future<void> _startWithChecks(BuildContext context) async {
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      if (context.mounted) _showLocationOffDialog(context);
+      return;
+    }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      if (context.mounted) {
+        _showPermissionDeniedDialog(context,
+            forever: permission == LocationPermission.deniedForever);
+      }
+      return;
+    }
+
+    if (Platform.isIOS && permission != LocationPermission.always) {
+      if (!context.mounted) return;
+      final proceed = await _showIosAlwaysLocationDialog(context);
+      if (!proceed) return;
+    }
+
+    ctrl.startRun();
+  }
+
+  void _showLocationOffDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        icon: const Icon(Icons.location_disabled,
+            color: Colors.redAccent, size: 40),
+        title: Text('location_off_title'.tr,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+        content: Text('location_off_body'.tr,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 14)),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('cancel'.tr)),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Geolocator.openLocationSettings();
+            },
+            style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                foregroundColor: Colors.white),
+            child: Text('open_settings'.tr),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPermissionDeniedDialog(BuildContext context,
+      {required bool forever}) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        icon: const Icon(Icons.location_off_outlined,
+            color: Colors.orange, size: 40),
+        title: Text('location_permission_title'.tr,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+        content: Text(
+            forever
+                ? 'location_permission_forever'.tr
+                : 'location_permission_denied'.tr,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 14)),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('cancel'.tr)),
+          if (forever)
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Geolocator.openAppSettings();
+              },
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  foregroundColor: Colors.white),
+              child: Text('open_settings'.tr),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<bool> _showIosAlwaysLocationDialog(BuildContext context) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        icon:
+            const Icon(Icons.location_on, color: AppTheme.primary, size: 40),
+        title: Text('ios_bg_title'.tr,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+        content: Text('ios_bg_body'.tr,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 13, height: 1.5)),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context, false);
+              Geolocator.openAppSettings();
+            },
+            child: Text('open_settings'.tr),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                foregroundColor: Colors.white),
+            child: Text('continue_anyway'.tr),
+          ),
+        ],
+      ),
+    );
+    return result ?? true;
   }
 
   void _confirmStop(BuildContext context, FreeRunController ctrl) {
@@ -322,8 +459,8 @@ class _BottomControls extends StatelessWidget {
 
 // ── Big pulsing RUN button ────────────────────────────────────────────────────
 class _RunButton extends StatefulWidget {
-  final FreeRunController ctrl;
-  const _RunButton({required this.ctrl});
+  final VoidCallback onTap;
+  const _RunButton({required this.onTap});
 
   @override
   State<_RunButton> createState() => _RunButtonState();
@@ -338,7 +475,7 @@ class _RunButtonState extends State<_RunButton> {
       onTapDown: (_) => setState(() => _pressed = true),
       onTapUp: (_) {
         setState(() => _pressed = false);
-        widget.ctrl.startRun();
+        widget.onTap();
       },
       onTapCancel: () => setState(() => _pressed = false),
       child: AnimatedScale(
