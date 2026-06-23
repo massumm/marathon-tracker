@@ -10,7 +10,6 @@ import 'package:geolocator/geolocator.dart';
 
 import '../services/firebase_service.dart';
 import '../services/location_service.dart';
-import '../widgets/app_snackbar.dart';
 import 'kml_map_controller.dart';
 import 'my_page_controller.dart';
 import '../services/offline_storage_service.dart';
@@ -87,9 +86,6 @@ class FreeRunController extends GetxController {
       );
       return;
     }
-    final ok = await _checkPermissions();
-    if (!ok) return;
-
     segments.clear();
     _smoothingBuffer.clear();
     _cachedDistanceKm = 0;
@@ -242,22 +238,6 @@ class FreeRunController extends GetxController {
     }
   }
 
-  Future<bool> _checkPermissions() async {
-    if (!await Geolocator.isLocationServiceEnabled()) {
-      showSnack('Location Off', 'Please enable GPS to start a free run.');
-      return false;
-    }
-    var perm = await Geolocator.checkPermission();
-    if (perm == LocationPermission.denied) {
-      perm = await Geolocator.requestPermission();
-    }
-    if (perm == LocationPermission.deniedForever ||
-        perm == LocationPermission.denied) {
-      showSnack('Permission Denied', 'Location permission is required.');
-      return false;
-    }
-    return true;
-  }
 
   Future<void> _saveRun() async {
     final allPoints = segments.expand((s) => s).toList();

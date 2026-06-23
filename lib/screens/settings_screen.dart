@@ -58,7 +58,11 @@ class SettingsScreen extends GetView<MyPageController> {
           _tile(
             icon: Icons.language,
             title: 'language_settings'.tr,
-            subtitle: Get.locale?.languageCode == 'ja' ? '日本語' : 'English',
+            subtitle: Get.locale?.languageCode == 'ja'
+              ? '日本語'
+              : Get.locale?.languageCode == 'bn'
+                  ? 'বাংলা'
+                  : 'English',
             onTap: () => _selectLanguage(),
           ),
           _tile(
@@ -199,7 +203,7 @@ class SettingsScreen extends GetView<MyPageController> {
   }
 
   void _selectLanguage() {
-    final isJa = Get.locale?.languageCode == 'ja';
+    final lang = Get.locale?.languageCode;
     Get.dialog(SimpleDialog(
       title: Text('language_settings'.tr),
       children: [
@@ -209,8 +213,10 @@ class SettingsScreen extends GetView<MyPageController> {
             Get.updateLocale(const Locale('en', 'US'));
           },
           child: Row(children: [
-            Text('English', style: TextStyle(fontWeight: isJa ? FontWeight.normal : FontWeight.bold)),
-            if (!isJa) ...[const SizedBox(width: 8), const Icon(Icons.check, size: 18)],
+            Text('English',
+                style: TextStyle(
+                    fontWeight: lang == 'en' ? FontWeight.bold : FontWeight.normal)),
+            if (lang == 'en') ...[const SizedBox(width: 8), const Icon(Icons.check, size: 18)],
           ]),
         ),
         SimpleDialogOption(
@@ -219,8 +225,22 @@ class SettingsScreen extends GetView<MyPageController> {
             Get.updateLocale(const Locale('ja', 'JP'));
           },
           child: Row(children: [
-            Text('日本語', style: TextStyle(fontWeight: isJa ? FontWeight.bold : FontWeight.normal)),
-            if (isJa) ...[const SizedBox(width: 8), const Icon(Icons.check, size: 18)],
+            Text('日本語',
+                style: TextStyle(
+                    fontWeight: lang == 'ja' ? FontWeight.bold : FontWeight.normal)),
+            if (lang == 'ja') ...[const SizedBox(width: 8), const Icon(Icons.check, size: 18)],
+          ]),
+        ),
+        SimpleDialogOption(
+          onPressed: () {
+            Get.back();
+            Get.updateLocale(const Locale('bn', 'BD'));
+          },
+          child: Row(children: [
+            Text('বাংলা',
+                style: TextStyle(
+                    fontWeight: lang == 'bn' ? FontWeight.bold : FontWeight.normal)),
+            if (lang == 'bn') ...[const SizedBox(width: 8), const Icon(Icons.check, size: 18)],
           ]),
         ),
       ],
