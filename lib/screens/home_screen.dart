@@ -110,6 +110,87 @@ class _FreeRunBanner extends StatelessWidget {
   }
 }
 
+// Daily Challenge call-to-action — docked just above the bottom nav bar.
+// Hidden while a challenge run is active (the in-progress banner shows then).
+class _DailyChallengeCta extends StatelessWidget {
+  const _DailyChallengeCta();
+
+  @override
+  Widget build(BuildContext context) {
+    final ctrl = Get.find<FreeRunController>();
+    return Obx(() {
+      final state = ctrl.runState.value;
+      if (state != FreeRunState.idle && state != FreeRunState.stopped) {
+        return const SizedBox.shrink();
+      }
+      return GestureDetector(
+        onTap: () => Get.toNamed(AppRoutes.freeRun),
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF2B2B2B), Color(0xFF000000)],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.35),
+                blurRadius: 14,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF6B35).withValues(alpha: 0.18),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.local_fire_department_rounded,
+                    color: Color(0xFFFF8A4C), size: 26),
+              ),
+              const SizedBox(width: 14),
+              const Expanded(
+                child: Text(
+                  'Daily Challenge',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text(
+                  'Start',
+                  style: TextStyle(
+                    color: Color(0xFFFF6B35),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+}
+
 class HomeScreen extends GetView<HomeController> {
   const HomeScreen({super.key});
 
@@ -132,29 +213,36 @@ class HomeScreen extends GetView<HomeController> {
               ),
             ],
           ),
-          bottomNavigationBar: LiquidGlassBar(
-            currentIndex: controller.tabIndex.value,
-            onTap: controller.changeTab,
-            style: LiquidGlassBarStyle(
-              activeColor: AppTheme.primary,
-              inactiveColor: Colors.grey.shade500,
-              borderRadius: 32,
-              height: 60,
-              iconSize: 24,
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 10),
-            ),
-            items: [
-              LiquidGlassBarItem(
-                iconData: controller.tabIndex.value == 0
-                    ? Icons.map
-                    : Icons.map_outlined,
-                label: 'nav_map'.tr,
-              ),
-              LiquidGlassBarItem(
-                iconData: controller.tabIndex.value == 1
-                    ? Icons.person
-                    : Icons.person_outline,
-                label: 'nav_my_page'.tr,
+          bottomNavigationBar: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Only on the Events tab — hidden on My Page.
+              if (controller.tabIndex.value == 0) const _DailyChallengeCta(),
+              LiquidGlassBar(
+                currentIndex: controller.tabIndex.value,
+                onTap: controller.changeTab,
+                style: LiquidGlassBarStyle(
+                  activeColor: AppTheme.primary,
+                  inactiveColor: Colors.grey.shade500,
+                  borderRadius: 32,
+                  height: 60,
+                  iconSize: 24,
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 10),
+                ),
+                items: [
+                  LiquidGlassBarItem(
+                    iconData: controller.tabIndex.value == 0
+                        ? Icons.map
+                        : Icons.map_outlined,
+                    label: 'nav_map'.tr,
+                  ),
+                  LiquidGlassBarItem(
+                    iconData: controller.tabIndex.value == 1
+                        ? Icons.person
+                        : Icons.person_outline,
+                    label: 'nav_my_page'.tr,
+                  ),
+                ],
               ),
             ],
           ),
