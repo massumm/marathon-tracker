@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -45,8 +46,14 @@ class _RunSelfieScreenState extends State<RunSelfieScreen> {
         selected,
         ResolutionPreset.high,
         enableAudio: false,
+        imageFormatGroup: ImageFormatGroup.jpeg,
       );
       await _controller!.initialize();
+      await Future.wait([
+        _controller!.lockCaptureOrientation(DeviceOrientation.portraitUp),
+        _controller!.setFocusMode(FocusMode.auto),
+        _controller!.setExposureMode(ExposureMode.auto),
+      ]);
       if (mounted) setState(() => _cameraReady = true);
     } on CameraException catch (e) {
       debugPrint('Camera init error: ${e.code} ${e.description}');
@@ -83,11 +90,37 @@ class _RunSelfieScreenState extends State<RunSelfieScreen> {
   Future<void> _capture() async {
     if (_controller == null || !_controller!.value.isInitialized) return;
     try {
-      final file = await _controller!.takePicture();
-      setState(() => _capturedFile = File(file.path));
+      final xfile = await _controller!.takePicture();
+      final corrected = await _fixFrontCameraFlip(xfile.path);
+      setState(() => _capturedFile = corrected);
     } catch (e) {
       debugPrint('Capture error: $e');
     }
+  }
+
+  Future<File> _fixFrontCameraFlip(String path) async {
+    final bytes = await File(path).readAsBytes();
+    final codec = await ui.instantiateImageCodec(bytes);
+    final frame = await codec.getNextFrame();
+    final src = frame.image;
+
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    canvas.translate(src.width.toDouble(), 0);
+    canvas.scale(-1.0, 1.0);
+    canvas.drawImage(src, Offset.zero, Paint());
+
+    final flipped = await recorder
+        .endRecording()
+        .toImage(src.width, src.height);
+    final byteData =
+        await flipped.toByteData(format: ui.ImageByteFormat.png);
+
+    final tmp = await getTemporaryDirectory();
+    final out = File(
+        '${tmp.path}/selfie_${DateTime.now().millisecondsSinceEpoch}.png');
+    await out.writeAsBytes(byteData!.buffer.asUint8List());
+    return out;
   }
 
   Future<void> _share() async {

@@ -73,7 +73,7 @@ class SettingsScreen extends GetView<MyPageController> {
               ],
             ),
           ),
-          _sectionHeader('version'.tr),
+          // _sectionHeader('version'.tr),
           FutureBuilder<PackageInfo>(
             future: PackageInfo.fromPlatform(),
             builder: (_, snap) {
