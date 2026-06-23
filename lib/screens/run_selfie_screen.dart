@@ -1,13 +1,11 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 
-import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/theme.dart';
@@ -23,104 +21,33 @@ class RunSelfieScreen extends StatefulWidget {
 }
 
 class _RunSelfieScreenState extends State<RunSelfieScreen> {
-  CameraController? _controller;
-  bool _cameraReady = false;
   File? _capturedFile;
   bool _sharing = false;
+  bool _opening = false;
   final _previewKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
-    _initCamera();
+    _openCamera();
   }
 
-  Future<void> _initCamera() async {
+  Future<void> _openCamera() async {
+    setState(() => _opening = true);
     try {
-      final cameras = await availableCameras();
-      final front = cameras.firstWhereOrNull(
-        (c) => c.lensDirection == CameraLensDirection.front,
+      final photo = await ImagePicker().pickImage(
+        source: ImageSource.camera,
+        preferredCameraDevice: CameraDevice.front,
+        imageQuality: 90,
       );
-      final selected = front ?? cameras.first;
-      _controller = CameraController(
-        selected,
-        ResolutionPreset.high,
-        enableAudio: false,
-        imageFormatGroup: ImageFormatGroup.jpeg,
-      );
-      await _controller!.initialize();
-      await Future.wait([
-        _controller!.lockCaptureOrientation(DeviceOrientation.portraitUp),
-        _controller!.setFocusMode(FocusMode.auto),
-        _controller!.setExposureMode(ExposureMode.auto),
-      ]);
-      if (mounted) setState(() => _cameraReady = true);
-    } on CameraException catch (e) {
-      debugPrint('Camera init error: ${e.code} ${e.description}');
-      if (mounted) {
-        Get.dialog(
-          AlertDialog(
-            title: Text('camera_permission_denied'.tr),
-            content: Text('camera_permission_settings_msg'.tr),
-            actions: [
-              TextButton(
-                onPressed: () => Get.back(),
-                child: Text('cancel'.tr),
-              ),
-              TextButton(
-                onPressed: () async {
-                  Get.back();
-                  await openAppSettings();
-                },
-                child: Text('open_settings'.tr),
-              ),
-            ],
-          ),
-        );
+      if (photo == null) {
+        if (mounted) Get.back();
+        return;
       }
+      if (mounted) setState(() => _capturedFile = File(photo.path));
+    } finally {
+      if (mounted) setState(() => _opening = false);
     }
-  }
-
-  @override
-  void dispose() {
-    _controller?.dispose();
-    super.dispose();
-  }
-
-  Future<void> _capture() async {
-    if (_controller == null || !_controller!.value.isInitialized) return;
-    try {
-      final xfile = await _controller!.takePicture();
-      final corrected = await _fixFrontCameraFlip(xfile.path);
-      setState(() => _capturedFile = corrected);
-    } catch (e) {
-      debugPrint('Capture error: $e');
-    }
-  }
-
-  Future<File> _fixFrontCameraFlip(String path) async {
-    final bytes = await File(path).readAsBytes();
-    final codec = await ui.instantiateImageCodec(bytes);
-    final frame = await codec.getNextFrame();
-    final src = frame.image;
-
-    final recorder = ui.PictureRecorder();
-    final canvas = Canvas(recorder);
-    canvas.translate(src.width.toDouble(), 0);
-    canvas.scale(-1.0, 1.0);
-    canvas.drawImage(src, Offset.zero, Paint());
-
-    final flipped = await recorder
-        .endRecording()
-        .toImage(src.width, src.height);
-    final byteData =
-        await flipped.toByteData(format: ui.ImageByteFormat.png);
-
-    final tmp = await getTemporaryDirectory();
-    final out = File(
-        '${tmp.path}/selfie_${DateTime.now().millisecondsSinceEpoch}.png');
-    await out.writeAsBytes(byteData!.buffer.asUint8List());
-    return out;
   }
 
   Future<void> _share() async {
@@ -137,7 +64,8 @@ class _RunSelfieScreenState extends State<RunSelfieScreen> {
           '${tmp.path}/runmate_${DateTime.now().millisecondsSinceEpoch}.png';
       await File(path).writeAsBytes(bytes);
 
-      final previewBox = _previewKey.currentContext?.findRenderObject() as RenderBox?;
+      final previewBox =
+          _previewKey.currentContext?.findRenderObject() as RenderBox?;
       final shareRect = previewBox != null
           ? previewBox.localToGlobal(Offset.zero) & previewBox.size
           : const Rect.fromLTWH(0, 0, 100, 100);
@@ -165,37 +93,17 @@ class _RunSelfieScreenState extends State<RunSelfieScreen> {
         title: Text('share_run'.tr),
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: _capturedFile == null
-                  ? _buildCameraPreview()
-                  : _buildReview(),
-            ),
-            _buildControls(),
-          ],
-        ),
+        child: _capturedFile == null
+            ? const Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              )
+            : Column(
+                children: [
+                  Expanded(child: _buildReview()),
+                  _buildControls(),
+                ],
+              ),
       ),
-    );
-  }
-
-  Widget _buildCameraPreview() {
-    if (!_cameraReady || _controller == null) {
-      return const Center(
-        child: CircularProgressIndicator(color: Colors.white),
-      );
-    }
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        ClipRect(child: CameraPreview(_controller!)),
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          child: _StatsOverlay(route: widget.route),
-        ),
-      ],
     );
   }
 
@@ -218,29 +126,6 @@ class _RunSelfieScreenState extends State<RunSelfieScreen> {
   }
 
   Widget _buildControls() {
-    if (_capturedFile == null) {
-      return Container(
-        color: Colors.black,
-        padding: const EdgeInsets.symmetric(vertical: 28),
-        child: Center(
-          child: GestureDetector(
-            onTap: _capture,
-            child: Container(
-              width: 76,
-              height: 76,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 3),
-                color: Colors.white.withValues(alpha: 0.15),
-              ),
-              child: const Icon(Icons.camera_alt,
-                  color: Colors.white, size: 34),
-            ),
-          ),
-        ),
-      );
-    }
-
     return Container(
       color: Colors.black,
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 28),
@@ -248,7 +133,7 @@ class _RunSelfieScreenState extends State<RunSelfieScreen> {
         children: [
           Expanded(
             child: OutlinedButton.icon(
-              onPressed: () => setState(() => _capturedFile = null),
+              onPressed: _opening ? null : _openCamera,
               icon: const Icon(Icons.refresh, color: Colors.white),
               label: Text('retake'.tr,
                   style: const TextStyle(color: Colors.white)),
@@ -310,8 +195,7 @@ class _StatsOverlay extends StatelessWidget {
         children: [
           const Row(
             children: [
-              Icon(Icons.directions_run,
-                  color: AppTheme.primary, size: 16),
+              Icon(Icons.directions_run, color: AppTheme.primary, size: 16),
               SizedBox(width: 6),
               Text(
                 'RunMate',
@@ -328,8 +212,7 @@ class _StatsOverlay extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               route.event,
-              style: const TextStyle(
-                  color: Colors.white60, fontSize: 11),
+              style: const TextStyle(color: Colors.white60, fontSize: 11),
             ),
           ],
           const SizedBox(height: 12),
