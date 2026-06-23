@@ -222,7 +222,6 @@ class MyPageController extends GetxController {
       final cred = EmailAuthProvider.credential(email: u.email!, password: password);
       await u.reauthenticateWithCredential(cred);
       _cancelSubscriptions();
-      await FirebaseService.instance.deleteAllUserData(u.uid);
       await u.delete();
     } finally {
       authCtrl.suppressAuthNav = false;
@@ -245,7 +244,6 @@ class MyPageController extends GetxController {
       );
       await u.reauthenticateWithCredential(cred);
       _cancelSubscriptions();
-      await FirebaseService.instance.deleteAllUserData(u.uid);
       await u.delete();
     } finally {
       authCtrl.suppressAuthNav = false;
@@ -263,7 +261,6 @@ class MyPageController extends GetxController {
         ..addScope('fullName');
       await u.reauthenticateWithProvider(appleProvider);
       _cancelSubscriptions();
-      await FirebaseService.instance.deleteAllUserData(u.uid);
       await u.delete();
     } finally {
       authCtrl.suppressAuthNav = false;

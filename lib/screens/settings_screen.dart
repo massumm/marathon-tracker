@@ -362,11 +362,26 @@ class SettingsScreen extends GetView<MyPageController> {
 
   void _deleteAccountGoogle() {
     Get.dialog(AlertDialog(
-      title: Text('delete_account'.tr),
-      content: Text('delete_account_google_confirm'.tr),
+      title: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.delete_forever_rounded, color: Colors.red, size: 36),
+          const SizedBox(height: 8),
+          Text('delete_account'.tr, textAlign: TextAlign.center),
+        ],
+      ),
+      content: Text('delete_account_google_confirm'.tr,
+          textAlign: TextAlign.center),
+      actionsAlignment: MainAxisAlignment.center,
       actions: [
-        TextButton(onPressed: Get.back, child: Text('cancel'.tr)),
-        TextButton(
+        ElevatedButton(
+          onPressed: Get.back,
+          style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.textSecondary,
+              foregroundColor: Colors.white),
+          child: Text('cancel'.tr),
+        ),
+        ElevatedButton(
           onPressed: () async {
             Get.back();
             try {
@@ -374,10 +389,13 @@ class SettingsScreen extends GetView<MyPageController> {
               Get.offAllNamed(AppRoutes.login);
             } catch (e) {
               Get.snackbar('delete_account'.tr, e.toString(),
-                  snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: Colors.red,
+                  colorText: Colors.white);
             }
           },
-          style: TextButton.styleFrom(foregroundColor: Colors.red),
+          style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red, foregroundColor: Colors.white),
           child: Text('delete_account'.tr),
         ),
       ],
@@ -386,11 +404,26 @@ class SettingsScreen extends GetView<MyPageController> {
 
   void _deleteAccountApple() {
     Get.dialog(AlertDialog(
-      title: Text('delete_account'.tr),
-      content: Text('delete_account_apple_confirm'.tr),
+      title: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.delete_forever_rounded, color: Colors.red, size: 36),
+          const SizedBox(height: 8),
+          Text('delete_account'.tr, textAlign: TextAlign.center),
+        ],
+      ),
+      content: Text('delete_account_apple_confirm'.tr,
+          textAlign: TextAlign.center),
+      actionsAlignment: MainAxisAlignment.center,
       actions: [
-        TextButton(onPressed: Get.back, child: Text('cancel'.tr)),
-        TextButton(
+        ElevatedButton(
+          onPressed: Get.back,
+          style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.textSecondary,
+              foregroundColor: Colors.white),
+          child: Text('cancel'.tr),
+        ),
+        ElevatedButton(
           onPressed: () async {
             Get.back();
             try {
@@ -398,10 +431,13 @@ class SettingsScreen extends GetView<MyPageController> {
               Get.offAllNamed(AppRoutes.login);
             } catch (e) {
               Get.snackbar('delete_account'.tr, e.toString(),
-                  snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: Colors.red,
+                  colorText: Colors.white);
             }
           },
-          style: TextButton.styleFrom(foregroundColor: Colors.red),
+          style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red, foregroundColor: Colors.white),
           child: Text('delete_account'.tr),
         ),
       ],
@@ -411,23 +447,38 @@ class SettingsScreen extends GetView<MyPageController> {
   void _deleteAccountEmail() {
     final passCtrl = TextEditingController();
     Get.dialog(AlertDialog(
-      title: Text('delete_account'.tr),
+      title: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.delete_forever_rounded, color: Colors.red, size: 36),
+          const SizedBox(height: 8),
+          Text('delete_account'.tr, textAlign: TextAlign.center),
+        ],
+      ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('delete_account_confirm'.tr),
+          Text('delete_account_confirm'.tr, textAlign: TextAlign.center),
           const SizedBox(height: 12),
           TextField(
             controller: passCtrl,
             obscureText: true,
             autofocus: true,
-            decoration: InputDecoration(hintText: 'enter_current_password'.tr),
+            decoration:
+                InputDecoration(hintText: 'enter_current_password'.tr),
           ),
         ],
       ),
+      actionsAlignment: MainAxisAlignment.center,
       actions: [
-        TextButton(onPressed: Get.back, child: Text('cancel'.tr)),
-        TextButton(
+        ElevatedButton(
+          onPressed: Get.back,
+          style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.textSecondary,
+              foregroundColor: Colors.white),
+          child: Text('cancel'.tr),
+        ),
+        ElevatedButton(
           onPressed: () async {
             final password = passCtrl.text;
             if (password.isEmpty) return;
@@ -436,18 +487,24 @@ class SettingsScreen extends GetView<MyPageController> {
               Get.offAllNamed(AppRoutes.login);
             } on FirebaseAuthException catch (e) {
               Get.back();
-              final msg = (e.code == 'wrong-password' || e.code == 'invalid-credential')
+              final msg = (e.code == 'wrong-password' ||
+                      e.code == 'invalid-credential')
                   ? 'wrong_password'.tr
                   : e.message ?? e.code;
               Get.snackbar('delete_account'.tr, msg,
-                  snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: Colors.red,
+                  colorText: Colors.white);
             } catch (e) {
               Get.back();
               Get.snackbar('delete_account'.tr, e.toString(),
-                  snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: Colors.red,
+                  colorText: Colors.white);
             }
           },
-          style: TextButton.styleFrom(foregroundColor: Colors.red),
+          style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red, foregroundColor: Colors.white),
           child: Text('delete_account'.tr),
         ),
       ],

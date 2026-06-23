@@ -148,9 +148,9 @@ class AppStrings extends Translations {
           'start_run': 'START',
           'stop_run': 'STOP',
           'continue_run': 'Continue',
-          'start_window_closed_title': 'Start Closed',
+          'start_window_closed_title': 'START Closed',
           'start_window_closed_body':
-              'You can no longer start this event.\nThe allowed start period has ended.',
+          'You can no longer START run in this event.\nThe allowed start period has ended.',
           'finish_line_title': 'Finish Line Reached!',
           'off_route_title': '⚠️ Off Route',
           'off_route_msg':
