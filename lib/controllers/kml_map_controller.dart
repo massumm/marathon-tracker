@@ -207,7 +207,9 @@ class KmlMapController extends GetxController {
           ? eventStartTime!.add(Duration(minutes: cutMins))
           : null;
       final chipMins = args['chipTimeMinutes'] as int? ?? 10;
-      chipDeadline = eventStartTime?.add(Duration(minutes: chipMins));
+      // chipMins == 0 means no chip window — runners may start any time.
+      chipDeadline =
+          chipMins > 0 ? eventStartTime?.add(Duration(minutes: chipMins)) : null;
       if (currentEventId.isNotEmpty && eventStartTime != null) {
         _chipTimeSub = FirebaseDatabase.instance
             .ref('events/$currentEventId/chipTimeMinutes')
@@ -215,7 +217,9 @@ class KmlMapController extends GetxController {
             .listen((event) {
           final mins = (event.snapshot.value as num?)?.toInt();
           if (mins != null) {
-            chipDeadline = eventStartTime!.add(Duration(minutes: mins));
+            chipDeadline = mins > 0
+                ? eventStartTime!.add(Duration(minutes: mins))
+                : null;
           }
         });
       }

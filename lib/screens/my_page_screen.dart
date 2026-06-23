@@ -287,16 +287,14 @@ class _MyClubsSection extends StatelessWidget {
           ),
         );
       }
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 0.82,
-          children: orgs.map((o) => _OrganizationCard(org: o)).toList(),
+      return SizedBox(
+        height: 200,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          itemCount: orgs.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 12),
+          itemBuilder: (_, i) => _OrganizationCard(org: orgs[i]),
         ),
       );
     });
@@ -312,6 +310,7 @@ class _OrganizationCard extends StatelessWidget {
     // Top 3 events of this organizer (already sorted newest-first).
     final topEvents = org.events.take(3).toList();
     return Container(
+      width: 168,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
