@@ -116,7 +116,12 @@ class MapApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       translations: AppStrings(),
       locale: const Locale('en', 'US'),
-      fallbackLocale: const Locale('ja', 'JP'),
+      fallbackLocale: const Locale('en', 'US'),
+      supportedLocales: const [
+        Locale('en', 'US'),
+        Locale('ja', 'JP'),
+        Locale('bn', 'BD'),
+      ],
       initialBinding: InitialBinding(),
       initialRoute: AppRoutes.login,
       builder: (ctx, child) => Stack(

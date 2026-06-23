@@ -20,3 +20,5 @@ class AppConfig {
   static const String drawOnMapTutorialUrl =
       'https://www.youtube.com/watch?v=42_QTluGfok';
 }
+
+
