@@ -109,9 +109,16 @@ class MyPageBody extends StatelessWidget {
                 children: [
                   _ActionCard(
                     icon: Icons.emoji_events,
-                    label: 'leaderboard'.tr,
+                    label: 'event_leaderboard'.tr,
                     color: const Color(0xFFFFB300),
                     onTap: () => Get.toNamed(AppRoutes.leaderboard),
+                  ),
+                  _ActionCard(
+                    icon: Icons.local_fire_department_rounded,
+                    label: 'daily_challenge_leaderboard'.tr,
+                    color: const Color(0xFFFF6B35),
+                    onTap: () =>
+                        Get.toNamed(AppRoutes.dailyChallengeLeaderboard),
                   ),
                   _ActionCard(
                     icon: Icons.map_outlined,

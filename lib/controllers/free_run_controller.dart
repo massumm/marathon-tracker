@@ -350,6 +350,10 @@ class FreeRunController extends GetxController {
           runId: runId,
           eventId: '',
         );
+        await UserStatsService.instance.addDailyChallengeStats(
+          _cachedDistanceKm,
+          elapsedSeconds.value,
+        );
       }
     } catch (e) {
       debugPrint('[FREE_RUN] save error: $e');

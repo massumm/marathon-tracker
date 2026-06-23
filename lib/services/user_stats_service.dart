@@ -73,6 +73,18 @@ class UserStatsService {
     // await OfflineStorageService.instance.markStatConfirmed(runId);
   }
 
+  /// Adds a completed Daily Challenge (free run) to the user's daily-challenge
+  /// totals (stored under user_stats so no extra node/rules are needed).
+  Future<void> addDailyChallengeStats(double distanceKm, int seconds) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    await _db.ref('user_stats/${user.uid}').update({
+      'dcDistanceKm': ServerValue.increment(distanceKm),
+      'dcRuns': ServerValue.increment(1),
+      'dcSeconds': ServerValue.increment(seconds),
+    });
+  }
+
   /// Replays any unconfirmed pending stats (those whose RTDB write may have
   /// been lost when the process was killed offline). Called on startup.
   // Future<void> syncPendingStats() async {
@@ -141,6 +153,32 @@ class UserStatsService {
         list[i].rank = i + 1;
       }
       return list;
+    });
+  }
+
+  /// Daily Challenge leaderboard — everyone who has run a Daily Challenge,
+  /// ranked by total daily-challenge distance (time as tiebreaker), top 20.
+  Stream<List<UserStats>> watchDailyChallengeLeaderboard({int limit = 20}) {
+    _db.ref('user_stats').keepSynced(true);
+    return _db.ref('user_stats').onValue.map((event) {
+      final data = event.snapshot.value;
+      if (data == null) return <UserStats>[];
+      final map = data as Map<dynamic, dynamic>;
+      final list = map.entries
+          .map((e) => UserStats.fromMap(
+              e.key as String, e.value as Map<dynamic, dynamic>))
+          .where((s) => s.dailyDistanceKm > 0)
+          .toList()
+        ..sort((a, b) {
+          final distCmp = b.dailyDistanceKm.compareTo(a.dailyDistanceKm);
+          if (distCmp != 0) return distCmp;
+          return a.dailySeconds.compareTo(b.dailySeconds);
+        });
+      final top = list.take(limit).toList();
+      for (int i = 0; i < top.length; i++) {
+        top[i].rank = i + 1;
+      }
+      return top;
     });
   }
 

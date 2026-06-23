@@ -10,6 +10,10 @@ class UserStats {
   // 0 = male, 1 = female, null = not set
   final int? gender;
   final String categoryId;
+  // Daily Challenge (free run) cumulative totals.
+  final double dailyDistanceKm;
+  final int dailyRuns;
+  final int dailySeconds;
   int rank;
 
   UserStats({
@@ -23,6 +27,9 @@ class UserStats {
     this.age = 0,
     this.gender,
     this.categoryId = '',
+    this.dailyDistanceKm = 0,
+    this.dailyRuns = 0,
+    this.dailySeconds = 0,
     this.rank = 0,
   });
 
@@ -37,8 +44,13 @@ class UserStats {
       totalSeconds: (map['totalSeconds'] as num?)?.toInt() ?? 0,
       age: (map['age'] as num?)?.toInt() ?? 0,
       gender: (map['gender'] as num?)?.toInt(),
+      dailyDistanceKm: (map['dcDistanceKm'] as num?)?.toDouble() ?? 0,
+      dailyRuns: (map['dcRuns'] as num?)?.toInt() ?? 0,
+      dailySeconds: (map['dcSeconds'] as num?)?.toInt() ?? 0,
     );
   }
+
+  String get dailyDistanceStr => '${dailyDistanceKm.toStringAsFixed(2)} km';
 
   String get label {
     if (displayName.isNotEmpty) return displayName;
