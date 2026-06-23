@@ -6,6 +6,22 @@
 -keep class com.google.firebase.** { *; }
 -keep class com.google.android.gms.** { *; }
 
+# flutter_local_notifications — persists scheduled notifications via Gson/TypeToken.
+# Without these, R8 strips generic signatures and the boot receiver crashes on
+# launch with "Missing type parameter".
+-keepattributes Signature
+-keepattributes *Annotation*
+-keep class com.dexterous.** { *; }
+
+# Gson (used by flutter_local_notifications)
+-keep class com.google.gson.** { *; }
+-keep class * extends com.google.gson.reflect.TypeToken
+-keep public class * implements java.lang.reflect.Type
+-keepclassmembers,allowobfuscation class * {
+    @com.google.gson.annotations.SerializedName <fields>;
+}
+-dontwarn com.google.gson.**
+
 # Google Play Core (deferred components — not used, suppress warnings)
 -dontwarn com.google.android.play.core.**
 

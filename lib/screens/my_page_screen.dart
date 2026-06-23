@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_storage/firebase_storage.dart' as fs;
@@ -10,7 +12,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../app/routes/app_routes.dart';
 import '../../controllers/my_page_controller.dart';
 import '../../core/theme.dart';
+import '../../models/event_model.dart';
 import '../../models/group_model.dart';
+import '../../models/organization_info.dart';
 import '../../models/user_stats.dart';
 
 class MyPageScreen extends GetView<MyPageController> {
@@ -72,7 +76,7 @@ class MyPageBody extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // ── My Clubs ──────────────────────────────────────────────
+            // ── My Clubs (grouped by organizer) ───────────────────────
             _SectionHeader(title: 'my_clubs'.tr),
             const SizedBox(height: 10),
             _MyClubsSection(controller: controller),
@@ -262,7 +266,7 @@ class _CompletedRunsSection extends StatelessWidget {
   }
 }
 
-// ── My clubs card section ─────────────────────────────────────────────────────
+// ── My clubs section — organizers whose events the user has run ────────────────
 
 class _MyClubsSection extends StatelessWidget {
   final MyPageController controller;
@@ -270,27 +274,260 @@ class _MyClubsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final groups = controller.myGroups;
-    if (groups.isEmpty) {
+    // Own Obx so the section reacts to myOrganizations loading — the parent Obx
+    // only tracks myStats and won't rebuild this otherwise.
+    return Obx(() {
+      final orgs = controller.myOrganizations;
+      if (orgs.isEmpty) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: _EmptyHexPlaceholder(
+            icon: Icons.apartment_outlined,
+            label: 'no_clubs_yet'.tr,
+          ),
+        );
+      }
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: _EmptyHexPlaceholder(
-          icon: Icons.group_outlined,
-          label: 'no_clubs_yet'.tr,
+        child: GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: 0.82,
+          children: orgs.map((o) => _OrganizationCard(org: o)).toList(),
         ),
       );
-    }
-    return SizedBox(
-      height: 148,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: groups.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemBuilder: (_, i) => _GroupCard(group: groups[i]),
+    });
+  }
+}
+
+class _OrganizationCard extends StatelessWidget {
+  final OrganizationInfo org;
+  const _OrganizationCard({required this.org});
+
+  @override
+  Widget build(BuildContext context) {
+    // Top 3 events of this organizer (already sorted newest-first).
+    final topEvents = org.events.take(3).toList();
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.hardEdge,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Auto-rotating slideshow of the club's top 3 events.
+          Expanded(child: _EventSlideshow(events: topEvents)),
+          // Club info footer.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.apartment,
+                        size: 14, color: AppTheme.primary),
+                    const SizedBox(width: 5),
+                    Expanded(
+                      child: Text(
+                        org.name,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.textPrimary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '${org.events.length} ${'events_title'.tr}',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
+}
+
+// ── Event slideshow (auto-rotating carousel of a club's top events) ────────────
+
+class _EventSlideshow extends StatefulWidget {
+  final List<EventModel> events;
+  const _EventSlideshow({required this.events});
+
+  @override
+  State<_EventSlideshow> createState() => _EventSlideshowState();
+}
+
+class _EventSlideshowState extends State<_EventSlideshow> {
+  final _pageController = PageController();
+  Timer? _timer;
+  int _page = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.events.length > 1) _startAutoPlay();
+  }
+
+  void _startAutoPlay() {
+    _timer = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (!mounted || !_pageController.hasClients) return;
+      final next = (_page + 1) % widget.events.length;
+      _pageController.animateToPage(
+        next,
+        duration: const Duration(milliseconds: 450),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.events.isEmpty) {
+      return Container(
+        color: AppTheme.primary.withValues(alpha: 0.08),
+        child: const Center(
+          child: Icon(Icons.event_outlined,
+              color: AppTheme.primary, size: 28),
+        ),
+      );
+    }
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        PageView.builder(
+          controller: _pageController,
+          itemCount: widget.events.length,
+          onPageChanged: (i) => setState(() => _page = i),
+          itemBuilder: (_, i) => _EventSlide(event: widget.events[i]),
+        ),
+        // Page dots.
+        if (widget.events.length > 1)
+          Positioned(
+            bottom: 6,
+            left: 0,
+            right: 0,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(widget.events.length, (i) {
+                final active = i == _page;
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  margin: const EdgeInsets.symmetric(horizontal: 2),
+                  width: active ? 14 : 5,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: active
+                        ? Colors.white
+                        : Colors.white.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                );
+              }),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _EventSlide extends StatelessWidget {
+  final EventModel event;
+  const _EventSlide({required this.event});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        if (event.bannerUrl.isNotEmpty)
+          CachedNetworkImage(
+            imageUrl: event.bannerUrl,
+            fit: BoxFit.cover,
+            placeholder: (_, __) => _fallback(),
+            errorWidget: (_, __, ___) => _fallback(),
+          )
+        else
+          _fallback(),
+        // Gradient so the title stays readable.
+        Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Colors.transparent, Colors.black54],
+            ),
+          ),
+        ),
+        Positioned(
+          left: 8,
+          right: 8,
+          bottom: 16,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                event.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+              if (event.date.isNotEmpty)
+                Text(
+                  event.date,
+                  style: TextStyle(
+                    fontSize: 9,
+                    color: Colors.white.withValues(alpha: 0.85),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _fallback() => Container(
+        color: AppTheme.primary.withValues(alpha: 0.12),
+        child: const Center(
+          child: Icon(Icons.emoji_events_outlined,
+              color: AppTheme.primary, size: 30),
+        ),
+      );
 }
 
 // ── Hex grid (3 top + 3 bottom honeycomb) ────────────────────────────────────
