@@ -57,7 +57,9 @@ class EventNotificationService {
     // Request POST_NOTIFICATIONS permission (Android 13+)
     await _android?.requestNotificationsPermission();
 
-    // Request exact-alarm permission (Android 12+).
+    // Request exact-alarm permission (Android 12+). Required for reliable
+    // event reminders — inexact alarms are deferred by Doze and miss the
+    // 24h/5min/start marks.
     final canExact = await _android?.canScheduleExactNotifications() ?? true;
     if (!canExact) {
       await _android?.requestExactAlarmsPermission();

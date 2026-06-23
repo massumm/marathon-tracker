@@ -10,19 +10,19 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../controllers/auth_controller.dart';
 import '../core/config.dart';
 import '../core/image_utils.dart';
-import '../models/group_model.dart';
+import '../models/organization_info.dart';
 import '../models/tracked_route.dart';
 import '../models/user_stats.dart';
 import '../services/firebase_service.dart';
 import '../services/friends_service.dart';
-import '../services/group_service.dart';
+import '../services/organization_service.dart';
 import '../services/offline_storage_service.dart';
 import '../services/user_stats_service.dart';
 
 class MyPageController extends GetxController {
   final routeRefs = <fs.Reference>[].obs;
   final localPendingNames = <String>[].obs;
-  final myGroups = <GroupModel>[].obs;
+  final myOrganizations = <OrganizationInfo>[].obs;
   final isLoading = false.obs;
   final isUploading = false.obs;
   final myStats = Rxn<UserStats>();
@@ -57,8 +57,9 @@ class MyPageController extends GetxController {
         displayNameObs.value = s!.displayName;
       }
     });
-    _groupsSub = GroupService.instance.watchAllMyGroups().listen((list) {
-      myGroups.value = list;
+    _groupsSub =
+        OrganizationService.instance.watchMyOrganizations().listen((list) {
+      myOrganizations.value = list;
     });
   }
 

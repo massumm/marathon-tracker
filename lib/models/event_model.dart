@@ -72,6 +72,7 @@ class EventModel {
   final int createdAt;
   final Map<String, RaceCategory> categories;
   final String organizerUid;
+  final String organizerName;
   final String registrationStartDate;
   final String registrationEndDate;
   final String registrationUrl;
@@ -90,6 +91,7 @@ class EventModel {
     required this.createdAt,
     required this.categories,
     this.organizerUid = '',
+    this.organizerName = '',
     this.registrationStartDate = '',
     this.registrationEndDate = '',
     this.registrationUrl = '',
@@ -287,6 +289,7 @@ class EventModel {
       createdAt: (map['createdAt'] as num?)?.toInt() ?? 0,
       categories: cats,
       organizerUid: map['organizerUid'] as String? ?? '',
+      organizerName: map['organizerName'] as String? ?? '',
       registrationStartDate: map['registrationStartDate'] as String? ?? '',
       registrationEndDate: map['registrationEndDate'] as String? ?? '',
       registrationUrl: map['registrationUrl'] as String? ?? '',
@@ -305,6 +308,7 @@ class EventModel {
         'bannerUrl': bannerUrl,
         'createdAt': createdAt,
         'organizerUid': organizerUid,
+        if (organizerName.isNotEmpty) 'organizerName': organizerName,
         'registrationStartDate': registrationStartDate,
         'registrationEndDate': registrationEndDate,
         'registrationUrl': registrationUrl,

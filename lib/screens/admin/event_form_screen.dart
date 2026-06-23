@@ -354,6 +354,21 @@ class _EventFormScreenState extends State<EventFormScreen> {
         };
       }
 
+      final orgUid = widget.existing?.organizerUid ?? widget.organizerUid;
+      // Denormalize the organizer's name onto the event so regular users can
+      // display it — the admins node is not readable by non-admins.
+      String organizerName = widget.existing?.organizerName ?? '';
+      if (orgUid.isNotEmpty) {
+        try {
+          final admin = await AdminService.instance.fetchAdminUser(orgUid);
+          if (admin != null && admin.displayName.isNotEmpty) {
+            organizerName = admin.displayName;
+          }
+        } catch (_) {
+          // Keep any existing name if the lookup fails.
+        }
+      }
+
       final data = {
         'name': _nameCtrl.text.trim(),
         'date': _dateCtrl.text.trim(),
@@ -365,7 +380,8 @@ class _EventFormScreenState extends State<EventFormScreen> {
         'bannerUrl': bannerUrl,
         'createdAt':
             widget.existing?.createdAt ?? DateTime.now().millisecondsSinceEpoch,
-        'organizerUid': widget.existing?.organizerUid ?? widget.organizerUid,
+        'organizerUid': orgUid,
+        if (organizerName.isNotEmpty) 'organizerName': organizerName,
         'registrationStartDate': _regStartCtrl.text.trim(),
         'registrationEndDate': _regEndCtrl.text.trim(),
         'registrationUrl': _regUrlCtrl.text.trim(),
