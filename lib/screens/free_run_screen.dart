@@ -9,6 +9,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../controllers/free_run_controller.dart';
 import '../core/theme.dart';
+import '../utils/helpers.dart';
 import '../widgets/app_dialogs.dart';
 
 class FreeRunScreen extends StatefulWidget {
@@ -176,6 +177,13 @@ class _StatsCard extends StatelessWidget {
               _Stat(label: 'Time', value: ctrl.formattedTime),
               _divider(),
               _Stat(label: 'Pace', value: ctrl.formattedPace),
+              _divider(),
+              _Stat(
+                label: 'calories'.tr,
+                value: ctrl.distanceKm.value > 0
+                    ? '${caloriesFromMeters(ctrl.distanceKm.value * 1000)} kcal'
+                    : '—',
+              ),
             ],
           )),
     );
@@ -472,6 +480,13 @@ class _SummaryCard extends StatelessWidget {
                   icon: Icons.speed_rounded,
                   label: 'Pace',
                   value: ctrl.formattedPace,
+                ),
+                _SummaryStat(
+                  icon: Icons.local_fire_department_rounded,
+                  label: 'calories'.tr,
+                  value: ctrl.distanceKm.value > 0
+                      ? '${caloriesFromMeters(ctrl.distanceKm.value * 1000)} kcal'
+                      : '—',
                 ),
               ],
             ),
