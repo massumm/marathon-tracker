@@ -6,10 +6,14 @@ class ParsedKml {
   final Set<Polyline> polylines;
   final Set<Marker> markers;
   final LatLng? finishPosition;
-  const ParsedKml(
-      {required this.polylines,
-      required this.markers,
-      this.finishPosition});
+  // markerId.value → type name ('start'|'finish'|'water'|'restroom'|'snack'|'medical'|'info')
+  final Map<String, String> markerTypeIds;
+  const ParsedKml({
+    required this.polylines,
+    required this.markers,
+    this.finishPosition,
+    this.markerTypeIds = const {},
+  });
 }
 
 class KmlService {
@@ -72,6 +76,7 @@ class KmlService {
 
     // ── Step 3: Parse <Point> markers ────────────────────────────────────────
     final Set<Marker> markers = {};
+    final Map<String, String> markerTypeIds = {};
     for (final placemark in document.findAllElements('*').where((e) => e.name.local == 'Placemark')) {
       xml.XmlElement? pointEl;
       xml.XmlElement? nameEl;
@@ -111,9 +116,21 @@ class KmlService {
       if (lat == null || lon == null) continue;
 
       final hue = resolveHue(styleUrl, name);
+      final markerId = name.isNotEmpty ? name : '$lat,$lon';
+
+      // Resolve type ID from styleUrl, then fall back to name keywords.
+      const knownTypes = ['start', 'finish', 'water', 'restroom', 'snack', 'medical', 'info'];
+      final rawId = styleUrl.startsWith('#') ? styleUrl.substring(1) : styleUrl;
+      final resolvedId = styleMapResolution[rawId] ?? rawId;
+      String typeId = knownTypes.contains(resolvedId)
+          ? resolvedId
+          : knownTypes.contains(rawId)
+              ? rawId
+              : _typeIdFromName(name);
+      markerTypeIds[markerId] = typeId;
 
       markers.add(Marker(
-        markerId: MarkerId(name.isNotEmpty ? name : '$lat,$lon'),
+        markerId: MarkerId(markerId),
         position: LatLng(lat, lon),
         infoWindow: InfoWindow(
           title: name,
@@ -171,7 +188,24 @@ class KmlService {
     }
 
     return ParsedKml(
-        polylines: polylines, markers: markers, finishPosition: finishPosition);
+      polylines: polylines,
+      markers: markers,
+      finishPosition: finishPosition,
+      markerTypeIds: markerTypeIds,
+    );
+  }
+
+  // ── Name → type ID string ─────────────────────────────────────────────────
+  static String _typeIdFromName(String name) {
+    final n = name.toLowerCase();
+    if (n.contains('start')) return 'start';
+    if (n.contains('finish') || n.contains('goal') || n.contains('end')) return 'finish';
+    if (n.contains('water') || n.contains('drink') || n.contains('hydrat')) return 'water';
+    if (n.contains('toilet') || n.contains('rest') || n.contains('wc') || n.contains('bathroom')) return 'restroom';
+    if (n.contains('snack') || n.contains('food') || n.contains('refresh') || n.contains('eat')) return 'snack';
+    if (n.contains('medical') || n.contains('aid') || n.contains('first')) return 'medical';
+    if (n.contains('lobby') || n.contains('info') || n.contains('help')) return 'info';
+    return '';
   }
 
   // ── KML AABBGGRR → HSV hue ────────────────────────────────────────────────
