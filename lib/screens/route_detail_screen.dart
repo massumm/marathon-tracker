@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 import '../../app/routes/app_routes.dart';
 import '../../core/theme.dart';
 import '../../models/tracked_route.dart';
+import '../../utils/helpers.dart';
 import 'run_selfie_screen.dart';
 import '../../services/firebase_service.dart';
 import '../../services/offline_storage_service.dart';
@@ -208,6 +209,12 @@ class _StatsHeader extends StatelessWidget {
                 value: route.pace.isNotEmpty ? route.pace : '—',
                 label: 'pace_label'.tr,
               ),
+              _divider(),
+              _StatCell(
+                icon: Icons.local_fire_department_rounded,
+                value: route.caloriesStr.isNotEmpty ? route.caloriesStr : '—',
+                label: 'calories'.tr,
+              ),
             ],
           ),
         ],
@@ -300,7 +307,7 @@ class _MapTabState extends State<_MapTab>
               CameraPosition(target: initial, zoom: 15),
           onMapCreated: (c) {
             if (route.route.length >= 2) {
-              final bounds = _boundsOf(route.route);
+              final bounds = boundsOf(route.route);
               c.animateCamera(
                   CameraUpdate.newLatLngBounds(bounds, 48));
             }
@@ -338,23 +345,6 @@ class _MapTabState extends State<_MapTab>
           ),
         ),
       ],
-    );
-  }
-
-  LatLngBounds _boundsOf(List<LatLng> points) {
-    double minLat = points.first.latitude;
-    double maxLat = points.first.latitude;
-    double minLng = points.first.longitude;
-    double maxLng = points.first.longitude;
-    for (final p in points) {
-      if (p.latitude < minLat) minLat = p.latitude;
-      if (p.latitude > maxLat) maxLat = p.latitude;
-      if (p.longitude < minLng) minLng = p.longitude;
-      if (p.longitude > maxLng) maxLng = p.longitude;
-    }
-    return LatLngBounds(
-      southwest: LatLng(minLat, minLng),
-      northeast: LatLng(maxLat, maxLng),
     );
   }
 }

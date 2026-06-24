@@ -1,8 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:package_info_plus/package_info_plus.dart';
-
 import '../../app/routes/app_routes.dart';
 import '../../controllers/map_controller.dart';
 import '../../controllers/my_page_controller.dart';
