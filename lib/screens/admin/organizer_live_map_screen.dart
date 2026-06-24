@@ -13,6 +13,7 @@ import '../../../models/runner_data.dart';
 import '../../../models/user_stats.dart';
 import '../../../services/admin_service.dart';
 import '../../../services/kml_service.dart';
+import '../../../utils/poi_marker_utils.dart';
 import '../../../widgets/user_avatar.dart';
 
 /// Live runner map for the Organizer role.
@@ -181,11 +182,13 @@ class _OrganizerLiveMapScreenState extends State<OrganizerLiveMapScreen>
       if (kmlContent != null) {
         final parsed =
             KmlService.instance.parse(kmlContent, polylineColor: AppTheme.primary);
+        final customMarkers = await buildCustomPOIMarkers(parsed);
+        if (!mounted) return;
         _kmlPolylineCache[catKey] = parsed.polylines;
-        _kmlMarkerCache[catKey] = parsed.markers;
+        _kmlMarkerCache[catKey] = customMarkers;
         setState(() {
           _currentPolylines = parsed.polylines;
-          _kmlMarkers = parsed.markers;
+          _kmlMarkers = customMarkers;
           _kmlLoading = false;
         });
         _fitCameraToRoute(parsed.polylines);

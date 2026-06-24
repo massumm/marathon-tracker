@@ -26,6 +26,7 @@ import '../services/kml_service.dart';
 import '../services/user_stats_service.dart';
 import '../services/live_tracking_service.dart';
 import '../services/location_service.dart';
+import '../utils/poi_marker_utils.dart';
 import '../widgets/app_snackbar.dart';
 import '../widgets/runner_info_sheet.dart';
 import 'home_controller.dart';
@@ -71,6 +72,8 @@ class KmlMapController extends GetxController {
   final kmlLoadError = false.obs;
   Set<Polyline> kmlPolylines = {};
   Set<Marker> kmlMarkers = {};
+  // Observable POI markers with custom icons — replaces kmlMarkers in the UI.
+  final kmlPOIMarkers = Rx<Set<Marker>>(<Marker>{});
   LatLng initialLocation =
       const LatLng(AppConfig.defaultLat, AppConfig.defaultLng);
 
@@ -645,6 +648,7 @@ class KmlMapController extends GetxController {
       kmlPolylines = parsed.polylines;
       kmlMarkers = parsed.markers;
       finishPosition = parsed.finishPosition;
+      _buildCustomPOIMarkers(parsed);
       if (finishPosition != null) {
         debugPrint('[KML] ✅ finishPosition set: '
             '(${finishPosition!.latitude.toStringAsFixed(6)}, '
@@ -657,6 +661,15 @@ class KmlMapController extends GetxController {
       kmlLoadError.value = false;
       mapController?.animateCamera(CameraUpdate.newLatLng(initialLocation));
     }
+  }
+
+  // ── POI marker icons ──────────────────────────────────────────────────────
+
+  /// Builds custom circular bitmap icons for every POI in [parsed] and
+  /// assigns them to [kmlPOIMarkers]. Called async after KML load so the
+  /// route appears immediately; rich icons replace default pins once ready.
+  Future<void> _buildCustomPOIMarkers(ParsedKml parsed) async {
+    kmlPOIMarkers.value = await buildCustomPOIMarkers(parsed);
   }
 
   // ── Proximity check ───────────────────────────────────────────────────────

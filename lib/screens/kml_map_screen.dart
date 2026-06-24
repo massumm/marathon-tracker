@@ -572,7 +572,7 @@ class _KmlMapScreenState extends State<KmlMapScreen>
             ),
         },
         markers: {
-          ..._ctrl.kmlMarkers,
+          ..._ctrl.kmlPOIMarkers.value,
           ...runnerMarkersSet,
           if (_ctrl.selfMarker.value != null) _ctrl.selfMarker.value!,
         },
