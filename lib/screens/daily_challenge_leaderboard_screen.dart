@@ -31,6 +31,34 @@ String _tierLabel(int rank) => rank <= 3
 
 const double _rowExtent = 84;
 
+const _months = [
+  '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+];
+
+/// A selectable day for the leaderboard filter.
+class _DayOption {
+  final String key; // YYYY-MM-DD
+  final String label; // Today / Yesterday / day-of-week
+  final String dateStr; // e.g. Jun 24
+  const _DayOption(this.key, this.label, this.dateStr);
+}
+
+List<_DayOption> _buildDayOptions(DateTime now) {
+  final today = DateTime(now.year, now.month, now.day);
+  String key(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+  String dateStr(DateTime d) => '${_months[d.month]} ${d.day}';
+  return [
+    _DayOption(key(today), 'Today', dateStr(today)),
+    _DayOption(key(today.subtract(const Duration(days: 1))), 'Yesterday',
+        dateStr(today.subtract(const Duration(days: 1)))),
+    _DayOption(key(today.subtract(const Duration(days: 2))),
+        dateStr(today.subtract(const Duration(days: 2))),
+        dateStr(today.subtract(const Duration(days: 2)))),
+  ];
+}
+
 class DailyChallengeLeaderboardScreen extends StatefulWidget {
   const DailyChallengeLeaderboardScreen({super.key});
 
@@ -43,11 +71,61 @@ class _DailyChallengeLeaderboardScreenState
     extends State<DailyChallengeLeaderboardScreen> {
   final _scrollController = ScrollController();
   final _uid = FirebaseAuth.instance.currentUser?.uid;
+  late final List<_DayOption> _days = _buildDayOptions(DateTime.now());
+  int _selected = 0; // 0 = today
 
   @override
   void dispose() {
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _pickDay() async {
+    final picked = await showModalBottomSheet<int>(
+      context: context,
+      backgroundColor: _card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: _muted.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 8),
+            for (int i = 0; i < _days.length; i++)
+              ListTile(
+                leading: Icon(Icons.calendar_today_rounded,
+                    size: 18,
+                    color: i == _selected ? _gold : _muted),
+                title: Text(_days[i].label,
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontWeight:
+                            i == _selected ? FontWeight.w800 : FontWeight.w600)),
+                subtitle: Text(_days[i].dateStr,
+                    style: const TextStyle(color: _muted, fontSize: 12)),
+                trailing: i == _selected
+                    ? const Icon(Icons.check_circle, color: _gold, size: 20)
+                    : null,
+                onTap: () => Navigator.pop(context, i),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (picked != null && picked != _selected) {
+      setState(() => _selected = picked);
+    }
   }
 
   void _jumpToMyRank(int index) {
@@ -60,67 +138,124 @@ class _DailyChallengeLeaderboardScreenState
 
   @override
   Widget build(BuildContext context) {
+    final day = _days[_selected];
     return Scaffold(
       backgroundColor: _bg,
       appBar: AppBar(title: Text('daily_challenge_leaderboard'.tr)),
-      body: StreamBuilder<List<UserStats>>(
-        stream: UserStatsService.instance.watchDailyChallengeLeaderboard(),
-        builder: (ctx, snap) {
-          if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final entries = snap.data ?? [];
-          if (entries.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.local_fire_department_outlined,
-                      size: 72, color: _muted),
-                  const SizedBox(height: 16),
-                  Text('no_daily_challenge_runs'.tr,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 15, color: _muted)),
-                ],
-              ),
-            );
-          }
+      body: Column(
+        children: [
+          _DaySelector(day: day, onTap: _pickDay),
+          Expanded(
+            child: StreamBuilder<List<UserStats>>(
+              // Keyed by the selected day so the stream resubscribes on change.
+              key: ValueKey(day.key),
+              stream: UserStatsService.instance.watchDailyChallengeDay(day.key),
+              builder: (ctx, snap) {
+                if (snap.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final entries = snap.data ?? [];
+                if (entries.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.local_fire_department_outlined,
+                            size: 72, color: _muted),
+                        const SizedBox(height: 16),
+                        Text('no_daily_challenge_runs'.tr,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 15, color: _muted)),
+                      ],
+                    ),
+                  );
+                }
 
-          final top3 = entries.take(3).toList();
-          final meIndex = entries.indexWhere((e) => e.uid == _uid);
-          final me = meIndex >= 0 ? entries[meIndex] : null;
+                final top3 = entries.take(3).toList();
+                final meIndex = entries.indexWhere((e) => e.uid == _uid);
+                final me = meIndex >= 0 ? entries[meIndex] : null;
 
-          return Column(
-            children: [
-              Expanded(
-                child: ListView.builder(
-                  controller: _scrollController,
-                  padding: EdgeInsets.zero,
-                  // +2 leading items: podium and the "RANKINGS" header.
-                  itemCount: entries.length + 2,
-                  itemBuilder: (_, i) {
-                    if (i == 0) return _Podium(top3: top3);
-                    if (i == 1) return _RankingsHeader(total: entries.length);
-                    return SizedBox(
-                      height: _rowExtent,
-                      child: _RankRow(
-                        stats: entries[i - 2],
-                        isMe: entries[i - 2].uid == _uid,
+                return Column(
+                  children: [
+                    Expanded(
+                      child: ListView.builder(
+                        controller: _scrollController,
+                        padding: EdgeInsets.zero,
+                        // +2 leading items: podium and the "RANKINGS" header.
+                        itemCount: entries.length + 2,
+                        itemBuilder: (_, i) {
+                          if (i == 0) return _Podium(top3: top3);
+                          if (i == 1) {
+                            return _RankingsHeader(total: entries.length);
+                          }
+                          return SizedBox(
+                            height: _rowExtent,
+                            child: _RankRow(
+                              stats: entries[i - 2],
+                              isMe: entries[i - 2].uid == _uid,
+                            ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
-              ),
-              if (me != null)
-                _YouBar(
-                  me: me,
-                  total: entries.length,
-                  // index in the ListView (offset by the 2 leading items)
-                  onJump: () => _jumpToMyRank(meIndex + 2),
-                ),
-            ],
-          );
-        },
+                    ),
+                    if (me != null)
+                      _YouBar(
+                        me: me,
+                        total: entries.length,
+                        onJump: () => _jumpToMyRank(meIndex + 2),
+                      ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Top-center day selector ───────────────────────────────────────────────────
+
+class _DaySelector extends StatelessWidget {
+  final _DayOption day;
+  final VoidCallback onTap;
+  const _DaySelector({required this.day, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
+      child: Center(
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+            decoration: BoxDecoration(
+              color: _card,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: _gold.withValues(alpha: 0.5)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.calendar_today_rounded,
+                    size: 15, color: _gold),
+                const SizedBox(width: 8),
+                Text(day.label,
+                    style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white)),
+                const SizedBox(width: 6),
+                Text('· ${day.dateStr}',
+                    style: const TextStyle(fontSize: 13, color: _muted)),
+                const SizedBox(width: 4),
+                const Icon(Icons.keyboard_arrow_down, size: 18, color: _muted),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
