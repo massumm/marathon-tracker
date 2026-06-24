@@ -81,13 +81,19 @@ class UserStatsService {
 
   /// Adds a completed Daily Challenge (free run) to the user's daily-challenge
   /// totals (stored under user_stats so no extra node/rules are needed).
-  Future<void> addDailyChallengeStats(double distanceKm, int seconds) async {
+  /// [dayKey] is the run's local date as `YYYY-MM-DD` — used to build the
+  /// per-day (Today / Yesterday / …) leaderboards.
+  Future<void> addDailyChallengeStats(double distanceKm, int seconds,
+      {required String dayKey}) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
     await _db.ref('user_stats/${user.uid}').update({
       'dcDistanceKm': ServerValue.increment(distanceKm),
       'dcRuns': ServerValue.increment(1),
       'dcSeconds': ServerValue.increment(seconds),
+      'dcDaily/$dayKey/km': ServerValue.increment(distanceKm),
+      'dcDaily/$dayKey/runs': ServerValue.increment(1),
+      'dcDaily/$dayKey/sec': ServerValue.increment(seconds),
     });
   }
 
@@ -184,6 +190,49 @@ class UserStatsService {
           if (distCmp != 0) return distCmp;
           return a.dailySeconds.compareTo(b.dailySeconds);
         });
+      for (int i = 0; i < list.length; i++) {
+        list[i].rank = i + 1;
+      }
+      return list;
+    }).handleError((_) {});
+  }
+
+  /// Per-day Daily Challenge ranking for [dayKey] (`YYYY-MM-DD`). Reads each
+  /// user's `dcDaily/{dayKey}` totals, keeps those who ran that day, and ranks
+  /// by that day's distance (time as tiebreaker). The returned UserStats carry
+  /// the *day's* values in dailyDistanceKm / dailyRuns / dailySeconds.
+  Stream<List<UserStats>> watchDailyChallengeDay(String dayKey) {
+    _db.ref('user_stats').keepSynced(true);
+    return _db.ref('user_stats').onValue.map((event) {
+      final data = event.snapshot.value;
+      if (data == null) return <UserStats>[];
+      final map = data as Map<dynamic, dynamic>;
+      final list = <UserStats>[];
+      map.forEach((key, value) {
+        if (value is! Map) return;
+        final daily = value['dcDaily'];
+        final day = daily is Map ? daily[dayKey] : null;
+        if (day is! Map) return;
+        final km = (day['km'] as num?)?.toDouble() ?? 0.0;
+        if (km <= 0) return;
+        list.add(UserStats(
+          uid: key as String,
+          displayName: value['displayName'] as String? ?? '',
+          email: value['email'] as String? ?? '',
+          photoUrl: value['photoUrl'] as String? ?? '',
+          totalDistanceKm: 0,
+          totalRuns: 0,
+          totalSeconds: 0,
+          dailyDistanceKm: km,
+          dailyRuns: (day['runs'] as num?)?.toInt() ?? 0,
+          dailySeconds: (day['sec'] as num?)?.toInt() ?? 0,
+        ));
+      });
+      list.sort((a, b) {
+        final distCmp = b.dailyDistanceKm.compareTo(a.dailyDistanceKm);
+        if (distCmp != 0) return distCmp;
+        return a.dailySeconds.compareTo(b.dailySeconds);
+      });
       for (int i = 0; i < list.length; i++) {
         list[i].rank = i + 1;
       }
