@@ -116,7 +116,7 @@ class KmlService {
       if (lat == null || lon == null) continue;
 
       final hue = resolveHue(styleUrl, name);
-      final markerId = name.isNotEmpty ? name : '$lat,$lon';
+      final markerId = name.isNotEmpty ? '${name}_${lat}_$lon' : '${lat}_$lon';
 
       // Resolve type ID from styleUrl, then fall back to name keywords.
       const knownTypes = ['start', 'finish', 'water', 'restroom', 'snack', 'medical', 'info'];
