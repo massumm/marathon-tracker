@@ -229,7 +229,11 @@ const Map<String, String> bnStrings = {
   'developed_by': 'ডেভেলপ করেছে XOR Geek',
   'image_too_large': 'ছবি অনেক বড়। অনুগ্রহ করে ৩ MB-এর কম ছবি বেছে নিন।',
   'offline_banner': 'ইন্টারনেট নেই · ক্যাশ ডেটা দেখাচ্ছে',
+  'run_saved': 'রান সংরক্ষিত হয়েছে',
   'run_saved_offline': 'রান অফলাইনে সংরক্ষিত · সংযুক্ত হলে সিঙ্ক হবে',
+  'event_leaderboard': 'ইভেন্ট লিডারবোর্ড',
+  'daily_challenge_leaderboard': 'ডেইলি চ্যালেঞ্জ',
+  'no_daily_challenge_runs': 'এখনও কেউ ডেইলি চ্যালেঞ্জ করেনি',
   'route_cached': 'অফলাইন · ক্যাশ করা রুট ব্যবহার করা হচ্ছে',
   'route_unavailable_offline':
       'রুট অফলাইনে পাওয়া যাচ্ছে না · GPS ট্র্যাকিং কাজ করছে',

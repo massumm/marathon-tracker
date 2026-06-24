@@ -158,7 +158,11 @@ class UserStatsService {
 
   /// Daily Challenge leaderboard — everyone who has run a Daily Challenge,
   /// ranked by total daily-challenge distance (time as tiebreaker), top 20.
-  Stream<List<UserStats>> watchDailyChallengeLeaderboard({int limit = 20}) {
+  /// Full Daily Challenge ranking — everyone who has run a Daily Challenge,
+  /// ranked by total daily-challenge distance (time as tiebreaker). Returns the
+  /// whole list (ranked) so the UI can show the podium, total count and the
+  /// current user's own rank/percentile.
+  Stream<List<UserStats>> watchDailyChallengeLeaderboard() {
     _db.ref('user_stats').keepSynced(true);
     return _db.ref('user_stats').onValue.map((event) {
       final data = event.snapshot.value;
@@ -174,12 +178,11 @@ class UserStatsService {
           if (distCmp != 0) return distCmp;
           return a.dailySeconds.compareTo(b.dailySeconds);
         });
-      final top = list.take(limit).toList();
-      for (int i = 0; i < top.length; i++) {
-        top[i].rank = i + 1;
+      for (int i = 0; i < list.length; i++) {
+        list[i].rank = i + 1;
       }
-      return top;
-    });
+      return list;
+    }).handleError((_) {});
   }
 
   /// Friends-only leaderboard — filtered by [friendUids], sorted by distance

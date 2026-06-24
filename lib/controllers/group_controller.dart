@@ -31,7 +31,7 @@ class GroupController extends GetxController {
         GroupService.instance.watchMyGroupsForEvent(eventId).listen((list) {
       groups.value = list;
       groupsLoaded.value = true;
-    });
+    }, onError: (_) {}); // ignore permission-denied during logout
   }
 
   @override
@@ -114,7 +114,7 @@ class GroupDetailController extends GetxController {
     _membersSub =
         GroupService.instance.watchGroupMembers(group.id).listen((list) {
       members.value = list;
-    });
+    }, onError: (_) {}); // ignore permission-denied during logout
     if (isAdmin) {
       _requestsSub =
           GroupService.instance.watchJoinRequests(group.id).listen((list) {

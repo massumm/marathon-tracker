@@ -230,7 +230,11 @@ const Map<String, String> enStrings = {
   'developed_by': 'Developed by XOR Geek',
   'image_too_large': 'Image too large. Please choose an image under 3 MB.',
   'offline_banner': 'No internet · showing cached data',
+  'run_saved': 'Run saved',
   'run_saved_offline': 'Run saved offline · will sync when connected',
+  'event_leaderboard': 'Event Leaderboard',
+  'daily_challenge_leaderboard': 'Daily Challenge',
+  'no_daily_challenge_runs': 'No one has run a Daily Challenge yet',
   'route_cached': 'Offline · using cached route',
   'route_unavailable_offline':
       'Route not available offline · GPS tracking still works',

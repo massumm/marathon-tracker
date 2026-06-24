@@ -347,7 +347,7 @@ class GroupService {
                 e.snapshot.key!, e.snapshot.value as Map<dynamic, dynamic>);
           }
           emitCurrent();
-        });
+        }, onError: (_) {}); // ignore permission-denied during logout
       }
       // Emit immediately when groups are removed (no new onValue to trigger it).
       if (added.isEmpty) emitCurrent();
@@ -361,7 +361,7 @@ class GroupService {
         watchGroupData(
             (data as Map<dynamic, dynamic>).keys.cast<String>().toSet());
       }
-    });
+    }, onError: (_) {}); // ignore permission-denied during logout
 
     controller.onCancel = () {
       membershipSub?.cancel();
