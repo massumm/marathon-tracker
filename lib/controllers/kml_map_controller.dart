@@ -221,7 +221,7 @@ class KmlMapController extends GetxController {
                 ? eventStartTime!.add(Duration(minutes: mins))
                 : null;
           }
-        });
+        }, onError: (_) {}); // ignore permission-denied during logout
       }
       _graceTimeMinutes = args['graceTimeMinutes'] as int? ?? 10;
       final cutoffMins = RaceCategory.parseCutoffMinutes(

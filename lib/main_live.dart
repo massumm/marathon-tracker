@@ -26,6 +26,7 @@ import 'l10n/strings.dart';
 import 'screens/home_screen.dart';
 import 'screens/kml_map_screen.dart';
 import 'screens/leaderboard_screen.dart';
+import 'screens/daily_challenge_leaderboard_screen.dart';
 import 'screens/email_verification_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/my_page_map_screen.dart';
@@ -136,6 +137,7 @@ class MapApp extends StatelessWidget {
         GetPage(name: AppRoutes.myRoutes, page: () => const MyRoutesScreen()),
         GetPage(name: AppRoutes.qrScanner, page: () => const QrScannerScreen()),
         GetPage(name: AppRoutes.leaderboard, page: () => const LeaderboardScreen()),
+        GetPage(name: AppRoutes.dailyChallengeLeaderboard, page: () => const DailyChallengeLeaderboardScreen()),
         GetPage(name: AppRoutes.userProfile, page: () => const UserProfileScreen()),
         GetPage(name: AppRoutes.settings, page: () => const SettingsScreen()),
         GetPage(

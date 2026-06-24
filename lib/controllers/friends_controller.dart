@@ -35,13 +35,13 @@ class FriendsController extends GetxController {
     _friendsSub = FriendsService.instance.watchFriends().listen((list) {
       friends.value = list;
       _refreshRunningStatus();
-    });
+    }, onError: (_) {}); // ignore permission-denied during logout
     _requestsSub = FriendsService.instance.watchRequests().listen((list) {
       requests.value = list;
-    });
+    }, onError: (_) {});
     _sentRequestsSub = FriendsService.instance.watchSentRequests().listen((list) {
       sentRequests.value = list;
-    });
+    }, onError: (_) {});
     _watchLiveRunners();
   }
 
@@ -69,7 +69,7 @@ class FriendsController extends GetxController {
             (data as Map<dynamic, dynamic>).keys.cast<String>());
       }
       _refreshRunningStatus();
-    });
+    }, onError: (_) {}); // ignore permission-denied during logout
   }
 
   void _refreshRunningStatus() {

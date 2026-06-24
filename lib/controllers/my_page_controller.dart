@@ -56,11 +56,11 @@ class MyPageController extends GetxController {
       if (displayNameObs.value.isEmpty && (s?.displayName.isNotEmpty ?? false)) {
         displayNameObs.value = s!.displayName;
       }
-    });
+    }, onError: (_) {}); // ignore permission-denied during logout
     _groupsSub =
         OrganizationService.instance.watchMyOrganizations().listen((list) {
       myOrganizations.value = list;
-    });
+    }, onError: (_) {});
   }
 
   @override
