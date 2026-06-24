@@ -44,6 +44,12 @@ class UserStatsService {
     await _db.ref('user_stats/${user.uid}').update({'gender': gender});
   }
 
+  Future<void> updatePhone(String phone) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    await _db.ref('user_stats/${user.uid}').update({'phone': phone});
+  }
+
   /// Atomically add distance + time after a run is saved.
   /// [runId] is used to persist a local backup before the RTDB write so that
   /// stats can be replayed if the process is killed before RTDB flushes to disk.

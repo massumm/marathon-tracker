@@ -208,6 +208,9 @@ const Map<String, String> bnStrings = {
   'gender_required_to_run':
       'ইভেন্টে অংশগ্রহণের আগে আপনার লিঙ্গ নির্ধারণ করুন। লাইভ লিডারবোর্ডে ব্যবহার করা হয়।',
   'set_gender': 'লিঙ্গ নির্ধারণ করুন',
+  'phone_number': 'ফোন নম্বর',
+  'enter_phone_number': 'আপনার ফোন নম্বর লিখুন',
+  'phone_updated': 'ফোন নম্বর আপডেট হয়েছে',
   'notification_settings': 'বিজ্ঞপ্তি',
   'event_notifications': 'ইভেন্ট রিমাইন্ডার',
   'event_notifications_subtitle':

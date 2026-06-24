@@ -204,6 +204,9 @@ const Map<String, String> jaStrings = {
   'gender_required_to_run':
       'イベントに参加する前に性別を設定してください。ライブリーダーボードで使用されます。',
   'set_gender': '性別を設定',
+  'phone_number': '電話番号',
+  'enter_phone_number': '電話番号を入力してください',
+  'phone_updated': '電話番号を更新しました',
   'notification_settings': '通知',
   'event_notifications': 'イベントリマインダー',
   'event_notifications_subtitle': 'イベント開始の24時間前・5分前・開始時に通知を受け取る',
