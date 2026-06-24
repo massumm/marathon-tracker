@@ -16,6 +16,7 @@ import '../../models/event_model.dart';
 import '../../models/group_model.dart';
 import '../../models/organization_info.dart';
 import '../../models/user_stats.dart';
+import '../../widgets/app_button.dart';
 
 class MyPageScreen extends GetView<MyPageController> {
   const MyPageScreen({super.key});
@@ -1041,26 +1042,32 @@ class _ProfileHeader extends StatelessWidget {
 
   void _editName(BuildContext context, String currentName) {
     final ctrl = TextEditingController(text: currentName);
-    Get.dialog(
-      AlertDialog(
-        title: Text('edit_name'.tr),
-        content: TextField(
-          controller: ctrl,
-          autofocus: true,
-          decoration: InputDecoration(hintText: 'your_name'.tr),
-        ),
-        actions: [
-          TextButton(onPressed: Get.back, child: Text('cancel'.tr)),
-          TextButton(
-            onPressed: () {
-              Get.back();
-              controller.updateDisplayName(ctrl.text);
-            },
-            child: Text('confirm'.tr),
-          ),
-        ],
+    Get.dialog(AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Column(mainAxisSize: MainAxisSize.min, children: [
+        const Icon(Icons.edit_outlined, color: AppTheme.primary, size: 36),
+        const SizedBox(height: 8),
+        Text('edit_name'.tr,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+      ]),
+      content: TextField(
+        controller: ctrl,
+        autofocus: true,
+        decoration: InputDecoration(hintText: 'your_name'.tr),
       ),
-    );
+      actionsAlignment: MainAxisAlignment.center,
+      actions: [
+        AppButton.cancel(label: 'cancel'.tr, onPressed: Get.back),
+        AppButton(
+          label: 'confirm'.tr,
+          onPressed: () {
+            Get.back();
+            controller.updateDisplayName(ctrl.text);
+          },
+        ),
+      ],
+    ));
   }
 }
 
