@@ -457,17 +457,17 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
   // ── Map interactions ──────────────────────────────────────────────────────
 
   void _onMapTap(LatLng pos) {
-    if (_mode == _EditMode.route) {
-      setState(() => _routePoints.add(pos));
-      return;
-    }
-
-    // Marker mode — guard against the click that dismissed the dialog
-    // propagating back to the map and immediately re-opening it.
+    // Guard against the click that dismissed a dialog propagating back to the
+    // map (which would add a stray route point / re-open the marker dialog).
     if (_dialogOpen) return;
     final closedAt = _dialogClosedAt;
     if (closedAt != null &&
         DateTime.now().difference(closedAt).inMilliseconds < 400) {
+      return;
+    }
+
+    if (_mode == _EditMode.route) {
+      setState(() => _routePoints.add(pos));
       return;
     }
 
@@ -541,6 +541,41 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
       );
       return;
     }
+
+    // Require both a Start and a Finish marker — the run app relies on them
+    // for start-proximity and finish-line detection.
+    final hasStart = _markers.any((m) => m.type == _MarkerType.start);
+    final hasFinish = _markers.any((m) => m.type == _MarkerType.finish);
+    if (!hasStart || !hasFinish) {
+      final missing = [
+        if (!hasStart) 'Start',
+        if (!hasFinish) 'Finish',
+      ].join(' and ');
+      _dialogOpen = true;
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          icon: const Icon(Icons.location_off_outlined,
+              color: Colors.orange, size: 40),
+          title: const Text('Missing markers'),
+          content: Text(
+            !hasStart && !hasFinish
+                ? 'Please add a Start and a Finish point on the map before saving the route.'
+                : 'Please add a $missing point on the map before saving the route.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      _dialogOpen = false;
+      _dialogClosedAt = DateTime.now();
+      return;
+    }
+
     setState(() => _saving = true);
     try {
       final kmlBytes = _generateKml();

@@ -1194,8 +1194,19 @@ class KmlMapController extends GetxController {
         '${startTime.hour.toString().padLeft(2, '0')}-${startTime.minute.toString().padLeft(2, '0')}';
     final fileName = '${slug}_${dateStr}_$timeStr2.json';
     final totalDistance = LocationService.instance.totalDistanceKm(routePoints);
+    // Anti-cheat: the distance credited to leaderboards is capped at the
+    // official route distance, so starting early or overshooting the finish
+    // can't inflate a runner's standing. The saved route (personal record)
+    // below keeps the real measured distance.
+    final leaderboardDistance =
+        (currentEventId.isNotEmpty && routeDistanceKm > 0 &&
+                totalDistance > routeDistanceKm)
+            ? routeDistanceKm
+            : totalDistance;
+    // Use the capped distance everywhere it is recorded (JSON + stats) so an
+    // overshoot/early-start can never be saved as a longer run.
     final paceKmh = elapsedSeconds.value > 0
-        ? totalDistance / (elapsedSeconds.value / 3600)
+        ? leaderboardDistance / (elapsedSeconds.value / 3600)
         : 0.0;
     final paceMinKm = paceKmh > 0 ? 60.0 / paceKmh : 0.0;
     final paceMins = paceMinKm.floor();
@@ -1213,7 +1224,7 @@ class KmlMapController extends GetxController {
       'start_time':
           '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}:${startTime.second.toString().padLeft(2, '0')}',
       'time': formatTime(elapsedSeconds.value),
-      'distance': '${totalDistance.toStringAsFixed(1)} km',
+      'distance': '${leaderboardDistance.toStringAsFixed(2)} km',
       'pace': paceStr,
       'route': routePoints
           .map((p) => {'lat': p.latitude, 'lng': p.longitude})
@@ -1240,7 +1251,7 @@ class KmlMapController extends GetxController {
         runId: runId,
         uid: uid,
         fileName: fileName,
-        distanceKm: totalDistance,
+        distanceKm: leaderboardDistance,
         seconds: elapsedSeconds.value,
         eventId: currentEventId,
         displayName: displayName,
@@ -1268,7 +1279,7 @@ class KmlMapController extends GetxController {
           runId: runId,
           uid: uid,
           fileName: fileName,
-          distanceKm: totalDistance,
+          distanceKm: leaderboardDistance,
           seconds: elapsedSeconds.value,
           eventId: currentEventId,
           displayName: displayName,
@@ -1279,7 +1290,7 @@ class KmlMapController extends GetxController {
       // 3. Stats via RTDB (Firebase persistence queues if briefly offline)
       debugPrint('[STOP] saving stats…');
       await UserStatsService.instance.addRunStats(
-        totalDistance,
+        leaderboardDistance,
         elapsedSeconds.value,
         runId: runId,
         eventId: currentEventId,
