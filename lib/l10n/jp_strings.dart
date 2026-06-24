@@ -176,6 +176,7 @@ const Map<String, String> jaStrings = {
   'avg_pace': '平均ペース',
   'total_steps': '合計歩数',
   'total_calories': '消費カロリー',
+  'calories': 'カロリー',
   'settings': '設定',
   'profile_settings': 'プロフィール設定',
   'profile_image': 'プロフィール画像',

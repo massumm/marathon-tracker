@@ -181,6 +181,7 @@ const Map<String, String> enStrings = {
   'avg_pace': 'Avg Pace',
   'total_steps': 'Total Steps',
   'total_calories': 'Calories Burned',
+  'calories': 'Calories',
   'settings': 'Settings',
   'profile_settings': 'Profile Settings',
   'profile_image': 'Profile Image',

@@ -180,6 +180,7 @@ const Map<String, String> bnStrings = {
   'avg_pace': 'গড় গতি',
   'total_steps': 'মোট পদক্ষেপ',
   'total_calories': 'ক্যালোরি পোড়ানো হয়েছে',
+  'calories': 'ক্যালোরি',
   'settings': 'সেটিংস',
   'profile_settings': 'প্রোফাইল সেটিংস',
   'profile_image': 'প্রোফাইল ছবি',

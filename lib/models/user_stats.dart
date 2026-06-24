@@ -1,3 +1,5 @@
+import '../utils/helpers.dart';
+
 class UserStats {
   final String uid;
   final String displayName;
@@ -63,34 +65,21 @@ class UserStats {
 
   String get distanceStr => '${totalDistanceKm.toStringAsFixed(2)} km';
 
-  String get timeStr {
-    final h = totalSeconds ~/ 3600;
-    final m = (totalSeconds % 3600) ~/ 60;
-    if (h > 0) return '${h}h ${m}m';
-    return '${m}m';
-  }
+  String get timeStr => formatRunTime(totalSeconds);
 
   double get avgPaceKmH =>
       totalSeconds > 0 ? totalDistanceKm / (totalSeconds / 3600) : 0;
 
   String get avgPaceStr {
-    if (avgPaceKmH <= 0) return '-';
-    final minPerKm = 60.0 / avgPaceKmH;
-    final mins = minPerKm.floor();
-    final secs = ((minPerKm - mins) * 60).round();
-    return '$mins:${secs.toString().padLeft(2, '0')}/km';
+    final s = paceFromKmh(avgPaceKmH);
+    return s.isNotEmpty ? s : '-';
   }
 
-  int get totalSteps => (totalDistanceKm * 1000 / 0.762).round();
+  int get totalSteps => calcSteps(totalDistanceKm);
 
-  String get stepsStr {
-    if (totalSteps >= 1000) {
-      return '${(totalSteps / 1000).toStringAsFixed(1)}k';
-    }
-    return '$totalSteps';
-  }
+  String get stepsStr => formatSteps(totalDistanceKm);
 
-  int get totalCalories => (totalDistanceKm * 65).round();
+  int get totalCalories => caloriesKcal(totalDistanceKm);
 
-  String get caloriesStr => '$totalCalories kcal';
+  String get caloriesStr => formatCalories(totalDistanceKm);
 }

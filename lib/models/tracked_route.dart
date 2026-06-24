@@ -1,5 +1,7 @@
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import '../utils/helpers.dart';
+
 class TrackedRoute {
   final String event;
   final String type;
@@ -36,7 +38,7 @@ class TrackedRoute {
       startTime: json['start_time'] as String? ?? '',
       time: json['time'] as String? ?? '',
       distance: json['distance'] as String? ?? '',
-      pace: _normalisePace(json['pace'] as String? ?? ''),
+      pace: normalisePace(json['pace'] as String? ?? ''),
       storagePath: storagePath,
       route: routeData
           .map((e) => LatLng(
@@ -47,20 +49,7 @@ class TrackedRoute {
     );
   }
 
-  /// Converts old "X.X km/h" pace strings to "m:ss/km" format.
-  /// Already-converted strings (contain "/km") are returned unchanged.
-  static String _normalisePace(String pace) {
-    if (pace.isEmpty || pace == '—') return pace;
-    if (pace.contains('/km')) return pace; // already correct format
-    final match = RegExp(r'([\d.]+)\s*km/h').firstMatch(pace);
-    if (match == null) return pace;
-    final kmh = double.tryParse(match.group(1) ?? '');
-    if (kmh == null || kmh <= 0) return '—';
-    final minPerKm = 60.0 / kmh;
-    final mins = minPerKm.floor();
-    final secs = ((minPerKm - mins) * 60).round();
-    return '$mins:${secs.toString().padLeft(2, '0')}/km';
-  }
+  String get caloriesStr => caloriesFromDistStr(distance);
 
   /// Extracts a sortable DateTime from both old and new filename formats.
   static DateTime parseDateTimeFromFileName(String fileName) {
