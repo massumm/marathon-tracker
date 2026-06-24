@@ -10,6 +10,7 @@ import 'package:geolocator/geolocator.dart';
 
 import '../services/firebase_service.dart';
 import '../services/location_service.dart';
+import '../utils/helpers.dart';
 import 'kml_map_controller.dart';
 import 'my_page_controller.dart';
 import '../services/offline_storage_service.dart';
@@ -253,15 +254,8 @@ class FreeRunController extends GetxController {
       const slug = 'Free_Run';
       final fileName = '${slug}_${dateStr}_$timeStr.json';
 
-      final paceKmh = elapsedSeconds.value > 0
-          ? _cachedDistanceKm / (elapsedSeconds.value / 3600)
-          : 0.0;
-      final paceMinKm = paceKmh > 0 ? 60.0 / paceKmh : 0.0;
-      final paceMins = paceMinKm.floor();
-      final paceSecs = ((paceMinKm - paceMins) * 60).round();
-      final paceStr = paceKmh > 0
-          ? '$paceMins:${paceSecs.toString().padLeft(2, '0')}/km'
-          : '—';
+      final paceResult = calcPaceStr(_cachedDistanceKm, elapsedSeconds.value);
+      final paceStr = paceResult.isNotEmpty ? paceResult : '—';
 
       final data = {
         'event': eventLabel,
@@ -363,13 +357,8 @@ class FreeRunController extends GetxController {
     return _cachedDistanceKm / (elapsedSeconds.value / 3600);
   }
 
-  // Returns pace as "m:ss/km" — the standard running format.
   String get formattedPace {
-    final kmh = paceKmH;
-    if (kmh <= 0) return '—';
-    final minPerKm = 60.0 / kmh;
-    final mins = minPerKm.floor();
-    final secs = ((minPerKm - mins) * 60).round();
-    return '$mins:${secs.toString().padLeft(2, '0')}/km';
+    final s = paceFromKmh(paceKmH);
+    return s.isNotEmpty ? s : '—';
   }
 }

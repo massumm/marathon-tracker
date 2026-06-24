@@ -349,8 +349,11 @@ class _EventCardState extends State<_EventCard> {
 
   void _openMap(RaceCategory cat) {
     final myPageCtrl = Get.find<MyPageController>();
-    if (myPageCtrl.myStats.value?.gender == null) {
-      _showGenderRequiredDialog(cat);
+    final stats = myPageCtrl.myStats.value;
+    final genderMissing = stats?.gender == null;
+    final phoneMissing = (stats?.phone ?? '').isEmpty;
+    if (genderMissing || phoneMissing) {
+      _showProfileIncompleteDialog(genderMissing: genderMissing, phoneMissing: phoneMissing);
       return;
     }
     final runCtrl = Get.find<KmlMapController>();
@@ -389,14 +392,35 @@ class _EventCardState extends State<_EventCard> {
     );
   }
 
-  void _showGenderRequiredDialog(RaceCategory cat) {
+  void _showProfileIncompleteDialog({
+    required bool genderMissing,
+    required bool phoneMissing,
+  }) {
+    final IconData icon;
+    final String title;
+    final String body;
+
+    if (genderMissing && phoneMissing) {
+      icon = Icons.person_outline;
+      title = 'profile_incomplete'.tr;
+      body = 'profile_incomplete_body'.tr;
+    } else if (genderMissing) {
+      icon = Icons.wc;
+      title = 'gender'.tr;
+      body = 'gender_required_to_run'.tr;
+    } else {
+      icon = Icons.phone_outlined;
+      title = 'phone_number'.tr;
+      body = 'phone_required_to_run'.tr;
+    }
+
     AppDialogs.confirm(
       context: context,
-      icon: Icons.wc,
+      icon: icon,
       iconColor: AppTheme.primary,
-      title: 'gender'.tr,
-      body: 'gender_required_to_run'.tr,
-      confirmLabel: 'set_gender'.tr,
+      title: title,
+      body: body,
+      confirmLabel: 'settings'.tr,
     ).then((confirmed) {
       if (confirmed) Get.toNamed(AppRoutes.settings);
     });

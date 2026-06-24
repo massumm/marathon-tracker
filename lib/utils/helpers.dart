@@ -4,6 +4,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 int caloriesKcal(double distanceKm) => (distanceKm * 65).round();
 
+int caloriesFromMeters(double distanceM) => (distanceM * 0.065).round();
+
 String formatCalories(double distanceKm) {
   final c = caloriesKcal(distanceKm);
   return c > 0 ? '$c kcal' : '';

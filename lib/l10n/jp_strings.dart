@@ -205,6 +205,9 @@ const Map<String, String> jaStrings = {
   'gender_required_to_run':
       'イベントに参加する前に性別を設定してください。ライブリーダーボードで使用されます。',
   'set_gender': '性別を設定',
+  'profile_incomplete': 'プロフィール未完成',
+  'profile_incomplete_body': 'イベントに参加する前に、設定で性別と電話番号を入力してください。',
+  'phone_required_to_run': 'イベントに参加する前に、設定で電話番号を入力してください。',
   'phone_number': '電話番号',
   'enter_phone_number': '電話番号を入力してください',
   'phone_updated': '電話番号を更新しました',
