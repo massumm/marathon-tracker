@@ -209,6 +209,9 @@ const Map<String, String> enStrings = {
   'gender_required_to_run':
       'Please set your gender before entering an event. It is used for the live leaderboard.',
   'set_gender': 'Set Gender',
+  'phone_number': 'Phone Number',
+  'enter_phone_number': 'Enter your phone number',
+  'phone_updated': 'Phone number updated',
   'notification_settings': 'Notifications',
   'event_notifications': 'Event Reminders',
   'event_notifications_subtitle':

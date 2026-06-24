@@ -9,6 +9,7 @@ class UserStats {
   final int age;
   // 0 = male, 1 = female, null = not set
   final int? gender;
+  final String phone;
   final String categoryId;
   // Daily Challenge (free run) cumulative totals.
   final double dailyDistanceKm;
@@ -26,6 +27,7 @@ class UserStats {
     required this.totalSeconds,
     this.age = 0,
     this.gender,
+    this.phone = '',
     this.categoryId = '',
     this.dailyDistanceKm = 0,
     this.dailyRuns = 0,
@@ -44,6 +46,7 @@ class UserStats {
       totalSeconds: (map['totalSeconds'] as num?)?.toInt() ?? 0,
       age: (map['age'] as num?)?.toInt() ?? 0,
       gender: (map['gender'] as num?)?.toInt(),
+      phone: map['phone'] as String? ?? '',
       dailyDistanceKm: (map['dcDistanceKm'] as num?)?.toDouble() ?? 0,
       dailyRuns: (map['dcRuns'] as num?)?.toInt() ?? 0,
       dailySeconds: (map['dcSeconds'] as num?)?.toInt() ?? 0,

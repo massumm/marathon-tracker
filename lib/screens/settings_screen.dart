@@ -8,6 +8,8 @@ import '../../controllers/map_controller.dart';
 import '../../controllers/my_page_controller.dart';
 import '../../core/theme.dart';
 import '../../services/event_notification_service.dart';
+import '../../widgets/app_button.dart';
+import '../../widgets/app_dialogs.dart';
 import '../../widgets/app_snackbar.dart';
 
 class SettingsScreen extends GetView<MyPageController> {
@@ -24,74 +26,83 @@ class SettingsScreen extends GetView<MyPageController> {
             child: ListView(
               children: [
                 _sectionHeader('account_settings'.tr),
-          if (!controller.isGoogleUser && !controller.isAppleUser) ...[
-            _tile(
-              icon: Icons.email_outlined,
-              title: 'change_email'.tr,
-              subtitle: controller.user?.email ?? '',
-              onTap: () => _changeEmail(context),
-            ),
-            _tile(
-              icon: Icons.lock_outline,
-              title: 'change_password'.tr,
-              onTap: () => _resetPassword(context),
-            ),
-          ],
-          Obx(() {
-            final gender = controller.myStats.value?.gender;
-            final label = gender == 0
-                ? 'Male'
-                : gender == 1
-                    ? 'Female'
-                    : 'Not set';
-            final missing = gender == null;
-            return _tile(
-              icon: gender == 1 ? Icons.female : Icons.male,
-              iconColor: missing ? Colors.orange : null,
-              title: 'gender'.tr,
-              subtitle: label,
-              subtitleColor: missing ? Colors.orange : null,
-              warning: missing,
-              onTap: () => _changeGender(context, gender),
-            );
-          }),
-          _tile(
-            icon: Icons.language,
-            title: 'language_settings'.tr,
-            subtitle: Get.locale?.languageCode == 'ja'
-              ? '日本語'
-              : Get.locale?.languageCode == 'bn'
-                  ? 'বাংলা'
-                  : 'English',
-            onTap: () => _selectLanguage(),
-          ),
-          _tile(
-            icon: Icons.delete_outline,
-            title: 'delete_account'.tr,
-            titleColor: Colors.red,
-            onTap: () => _deleteAccount(context),
-          ),
-          const Divider(height: 1),
-          _sectionHeader('notification_settings'.tr),
-          const _NotificationToggleWidget(),
+                if (!controller.isGoogleUser && !controller.isAppleUser) ...[
+                  _tile(
+                    icon: Icons.email_outlined,
+                    title: 'change_email'.tr,
+                    subtitle: controller.user?.email ?? '',
+                    onTap: () => _changeEmail(context),
+                  ),
+                  _tile(
+                    icon: Icons.lock_outline,
+                    title: 'change_password'.tr,
+                    onTap: () => _resetPassword(context),
+                  ),
+                ],
+                Obx(() {
+                  final gender = controller.myStats.value?.gender;
+                  final label = gender == 0
+                      ? 'Male'
+                      : gender == 1
+                          ? 'Female'
+                          : 'Not set';
+                  final missing = gender == null;
+                  return _tile(
+                    icon: gender == 1 ? Icons.female : Icons.male,
+                    iconColor: missing ? Colors.orange : null,
+                    title: 'gender'.tr,
+                    subtitle: label,
+                    subtitleColor: missing ? Colors.orange : null,
+                    warning: missing,
+                    onTap: () => _changeGender(context, gender),
+                  );
+                }),
+                Obx(() {
+                  final phone = controller.myStats.value?.phone ?? '';
+                  return _tile(
+                    icon: Icons.phone_outlined,
+                    title: 'phone_number'.tr,
+                    subtitle: phone.isEmpty ? 'Not set' : phone,
+                    onTap: () => _changePhone(context, phone),
+                  );
+                }),
+                _tile(
+                  icon: Icons.language,
+                  title: 'language_settings'.tr,
+                  subtitle: Get.locale?.languageCode == 'ja'
+                      ? '日本語'
+                      : Get.locale?.languageCode == 'bn'
+                          ? 'বাংলা'
+                          : 'English',
+                  onTap: () => _selectLanguage(),
+                ),
+                _tile(
+                  icon: Icons.delete_outline,
+                  title: 'delete_account'.tr,
+                  titleColor: Colors.red,
+                  onTap: () => _deleteAccount(context),
+                ),
+                const Divider(height: 1),
+                _sectionHeader('notification_settings'.tr),
+                const _NotificationToggleWidget(),
               ],
             ),
           ),
           // _sectionHeader('version'.tr),
-          FutureBuilder<PackageInfo>(
-            future: PackageInfo.fromPlatform(),
-            builder: (_, snap) {
-              final version = snap.hasData
-                  ? '${snap.data!.version} (${snap.data!.buildNumber})'
-                  : '...';
-              return _tile(
-                icon: Icons.info_outline,
-                title: 'version'.tr,
-                subtitle: version,
-              );
-            },
-          ),
-          const Divider(height: 1),
+          // FutureBuilder<PackageInfo>(
+          //   future: PackageInfo.fromPlatform(),
+          //   builder: (_, snap) {
+          //     final version = snap.hasData
+          //         ? '${snap.data!.version} (${snap.data!.buildNumber})'
+          //         : '...';
+          //     return _tile(
+          //       icon: Icons.info_outline,
+          //       title: 'version'.tr,
+          //       subtitle: version,
+          //     );
+          //   },
+          // ),
+          // const Divider(height: 1),
           const SizedBox(height: 8),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -136,7 +147,8 @@ class SettingsScreen extends GetView<MyPageController> {
     VoidCallback? onTap,
   }) =>
       ListTile(
-        leading: Icon(icon, color: iconColor ?? titleColor ?? AppTheme.textSecondary),
+        leading: Icon(icon,
+            color: iconColor ?? titleColor ?? AppTheme.textSecondary),
         title: Text(title,
             style: TextStyle(
                 fontSize: 15,
@@ -202,6 +214,48 @@ class SettingsScreen extends GetView<MyPageController> {
     }
   }
 
+  void _changePhone(BuildContext context, String current) {
+    final phoneCtrl = TextEditingController(text: current);
+    Get.dialog(AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Column(mainAxisSize: MainAxisSize.min, children: [
+        const Icon(Icons.phone_outlined, color: AppTheme.primary, size: 36),
+        const SizedBox(height: 8),
+        Text('phone_number'.tr,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+      ]),
+      content: TextField(
+        controller: phoneCtrl,
+        autofocus: true,
+        keyboardType: TextInputType.phone,
+        decoration: InputDecoration(hintText: 'enter_phone_number'.tr),
+      ),
+      actionsAlignment: MainAxisAlignment.center,
+      actions: [
+        AppButton.cancel(label: 'cancel'.tr, onPressed: Get.back),
+        AppButton(
+          label: 'confirm'.tr,
+          onPressed: () async {
+            final phone = phoneCtrl.text.trim();
+            try {
+              await controller.updatePhoneNumber(phone);
+              Get.back();
+              showSnack('phone_number'.tr, 'phone_updated'.tr,
+                  duration: const Duration(seconds: 2));
+            } catch (e) {
+              Get.back();
+              Get.snackbar('phone_number'.tr, e.toString(),
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: Colors.red,
+                  colorText: Colors.white);
+            }
+          },
+        ),
+      ],
+    ));
+  }
+
   void _selectLanguage() {
     final lang = Get.locale?.languageCode;
     Get.dialog(SimpleDialog(
@@ -215,8 +269,12 @@ class SettingsScreen extends GetView<MyPageController> {
           child: Row(children: [
             Text('English',
                 style: TextStyle(
-                    fontWeight: lang == 'en' ? FontWeight.bold : FontWeight.normal)),
-            if (lang == 'en') ...[const SizedBox(width: 8), const Icon(Icons.check, size: 18)],
+                    fontWeight:
+                        lang == 'en' ? FontWeight.bold : FontWeight.normal)),
+            if (lang == 'en') ...[
+              const SizedBox(width: 8),
+              const Icon(Icons.check, size: 18)
+            ],
           ]),
         ),
         SimpleDialogOption(
@@ -227,8 +285,12 @@ class SettingsScreen extends GetView<MyPageController> {
           child: Row(children: [
             Text('日本語',
                 style: TextStyle(
-                    fontWeight: lang == 'ja' ? FontWeight.bold : FontWeight.normal)),
-            if (lang == 'ja') ...[const SizedBox(width: 8), const Icon(Icons.check, size: 18)],
+                    fontWeight:
+                        lang == 'ja' ? FontWeight.bold : FontWeight.normal)),
+            if (lang == 'ja') ...[
+              const SizedBox(width: 8),
+              const Icon(Icons.check, size: 18)
+            ],
           ]),
         ),
         SimpleDialogOption(
@@ -239,8 +301,12 @@ class SettingsScreen extends GetView<MyPageController> {
           child: Row(children: [
             Text('বাংলা',
                 style: TextStyle(
-                    fontWeight: lang == 'bn' ? FontWeight.bold : FontWeight.normal)),
-            if (lang == 'bn') ...[const SizedBox(width: 8), const Icon(Icons.check, size: 18)],
+                    fontWeight:
+                        lang == 'bn' ? FontWeight.bold : FontWeight.normal)),
+            if (lang == 'bn') ...[
+              const SizedBox(width: 8),
+              const Icon(Icons.check, size: 18)
+            ],
           ]),
         ),
       ],
@@ -251,7 +317,18 @@ class SettingsScreen extends GetView<MyPageController> {
     final emailCtrl = TextEditingController();
     final passCtrl = TextEditingController();
     Get.dialog(AlertDialog(
-      title: Text('change_email'.tr),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.alternate_email, color: AppTheme.primary, size: 36),
+          const SizedBox(height: 8),
+          Text('change_email'.tr,
+              textAlign: TextAlign.center,
+              style:
+                  const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+        ],
+      ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -269,9 +346,11 @@ class SettingsScreen extends GetView<MyPageController> {
           ),
         ],
       ),
+      actionsAlignment: MainAxisAlignment.center,
       actions: [
-        TextButton(onPressed: Get.back, child: Text('cancel'.tr)),
-        TextButton(
+        AppButton.cancel(label: 'cancel'.tr, onPressed: Get.back),
+        AppButton(
+          label: 'confirm'.tr,
           onPressed: () async {
             final email = emailCtrl.text.trim();
             final password = passCtrl.text;
@@ -283,18 +362,22 @@ class SettingsScreen extends GetView<MyPageController> {
                   duration: const Duration(seconds: 5));
             } on FirebaseAuthException catch (e) {
               Get.back();
-              final msg = (e.code == 'wrong-password' || e.code == 'invalid-credential')
-                  ? 'wrong_password'.tr
-                  : e.message ?? e.code;
+              final msg =
+                  (e.code == 'wrong-password' || e.code == 'invalid-credential')
+                      ? 'wrong_password'.tr
+                      : e.message ?? e.code;
               Get.snackbar('change_email'.tr, msg,
-                  snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: Colors.red,
+                  colorText: Colors.white);
             } catch (e) {
               Get.back();
               Get.snackbar('change_email'.tr, e.toString(),
-                  snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: Colors.red,
+                  colorText: Colors.white);
             }
           },
-          child: Text('confirm'.tr),
         ),
       ],
     ));
@@ -305,7 +388,18 @@ class SettingsScreen extends GetView<MyPageController> {
     final newCtrl = TextEditingController();
     final confirmCtrl = TextEditingController();
     Get.dialog(AlertDialog(
-      title: Text('change_password'.tr),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.lock_outline, color: AppTheme.primary, size: 36),
+          const SizedBox(height: 8),
+          Text('change_password'.tr,
+              textAlign: TextAlign.center,
+              style:
+                  const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+        ],
+      ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -329,9 +423,11 @@ class SettingsScreen extends GetView<MyPageController> {
           ),
         ],
       ),
+      actionsAlignment: MainAxisAlignment.center,
       actions: [
-        TextButton(onPressed: Get.back, child: Text('cancel'.tr)),
-        TextButton(
+        AppButton.cancel(label: 'cancel'.tr, onPressed: Get.back),
+        AppButton(
+          label: 'confirm'.tr,
           onPressed: () async {
             final current = currentCtrl.text;
             final newPass = newCtrl.text;
@@ -339,12 +435,16 @@ class SettingsScreen extends GetView<MyPageController> {
             if (current.isEmpty || newPass.isEmpty) return;
             if (newPass != confirm) {
               Get.snackbar('change_password'.tr, 'password_mismatch'.tr,
-                  snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: Colors.red,
+                  colorText: Colors.white);
               return;
             }
             if (newPass.length < 6) {
               Get.snackbar('change_password'.tr, 'password_too_short'.tr,
-                  snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: Colors.red,
+                  colorText: Colors.white);
               return;
             }
             try {
@@ -353,18 +453,22 @@ class SettingsScreen extends GetView<MyPageController> {
               showSnack('change_password'.tr, 'password_updated'.tr);
             } on FirebaseAuthException catch (e) {
               Get.back();
-              final msg = (e.code == 'wrong-password' || e.code == 'invalid-credential')
-                  ? 'wrong_password'.tr
-                  : e.message ?? e.code;
+              final msg =
+                  (e.code == 'wrong-password' || e.code == 'invalid-credential')
+                      ? 'wrong_password'.tr
+                      : e.message ?? e.code;
               Get.snackbar('change_password'.tr, msg,
-                  snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: Colors.red,
+                  colorText: Colors.white);
             } catch (e) {
               Get.back();
               Get.snackbar('change_password'.tr, e.toString(),
-                  snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: Colors.red,
+                  colorText: Colors.white);
             }
           },
-          child: Text('confirm'.tr),
         ),
       ],
     ));
@@ -372,120 +476,87 @@ class SettingsScreen extends GetView<MyPageController> {
 
   void _deleteAccount(BuildContext context) {
     if (controller.isGoogleUser) {
-      _deleteAccountGoogle();
+      _deleteAccountGoogle(context);
     } else if (controller.isAppleUser) {
-      _deleteAccountApple();
+      _deleteAccountApple(context);
     } else {
       _deleteAccountEmail();
     }
   }
 
-  void _deleteAccountGoogle() {
-    Get.dialog(AlertDialog(
-      title: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.delete_forever_rounded, color: Colors.red, size: 36),
-          const SizedBox(height: 8),
-          Text('delete_account'.tr, textAlign: TextAlign.center),
-        ],
-      ),
-      content: Text('delete_account_google_confirm'.tr,
-          textAlign: TextAlign.center),
-      actionsAlignment: MainAxisAlignment.center,
-      actions: [
-        ElevatedButton(
-          onPressed: Get.back,
-          style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.textSecondary,
-              foregroundColor: Colors.white),
-          child: Text('cancel'.tr),
-        ),
-        ElevatedButton(
-          onPressed: () async {
-            Get.back();
-            try {
-              await controller.deleteAccountWithGoogle();
-              Get.offAllNamed(AppRoutes.login);
-            } catch (e) {
-              Get.snackbar('delete_account'.tr, e.toString(),
-                  snackPosition: SnackPosition.BOTTOM,
-                  backgroundColor: Colors.red,
-                  colorText: Colors.white);
-            }
-          },
-          style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red, foregroundColor: Colors.white),
-          child: Text('delete_account'.tr),
-        ),
-      ],
-    ));
+  void _deleteAccountGoogle(BuildContext context) {
+    AppDialogs.confirm(
+      context: context,
+      icon: Icons.delete_forever_rounded,
+      iconColor: Colors.red,
+      title: 'delete_account'.tr,
+      body: 'delete_account_google_confirm'.tr,
+      confirmLabel: 'delete_account'.tr,
+      confirmColor: Colors.red,
+    ).then((confirmed) async {
+      if (!confirmed) return;
+      try {
+        await controller.deleteAccountWithGoogle();
+        Get.offAllNamed(AppRoutes.login);
+      } catch (e) {
+        Get.snackbar('delete_account'.tr, e.toString(),
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.red,
+            colorText: Colors.white);
+      }
+    });
   }
 
-  void _deleteAccountApple() {
-    Get.dialog(AlertDialog(
-      title: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.delete_forever_rounded, color: Colors.red, size: 36),
-          const SizedBox(height: 8),
-          Text('delete_account'.tr, textAlign: TextAlign.center),
-        ],
-      ),
-      content: Text('delete_account_apple_confirm'.tr,
-          textAlign: TextAlign.center),
-      actionsAlignment: MainAxisAlignment.center,
-      actions: [
-        ElevatedButton(
-          onPressed: Get.back,
-          style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.textSecondary,
-              foregroundColor: Colors.white),
-          child: Text('cancel'.tr),
-        ),
-        ElevatedButton(
-          onPressed: () async {
-            Get.back();
-            try {
-              await controller.deleteAccountWithApple();
-              Get.offAllNamed(AppRoutes.login);
-            } catch (e) {
-              Get.snackbar('delete_account'.tr, e.toString(),
-                  snackPosition: SnackPosition.BOTTOM,
-                  backgroundColor: Colors.red,
-                  colorText: Colors.white);
-            }
-          },
-          style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red, foregroundColor: Colors.white),
-          child: Text('delete_account'.tr),
-        ),
-      ],
-    ));
+  void _deleteAccountApple(BuildContext context) {
+    AppDialogs.confirm(
+      context: context,
+      icon: Icons.delete_forever_rounded,
+      iconColor: Colors.red,
+      title: 'delete_account'.tr,
+      body: 'delete_account_apple_confirm'.tr,
+      confirmLabel: 'delete_account'.tr,
+      confirmColor: Colors.red,
+    ).then((confirmed) async {
+      if (!confirmed) return;
+      try {
+        await controller.deleteAccountWithApple();
+        Get.offAllNamed(AppRoutes.login);
+      } catch (e) {
+        Get.snackbar('delete_account'.tr, e.toString(),
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.red,
+            colorText: Colors.white);
+      }
+    });
   }
 
   void _deleteAccountEmail() {
     final passCtrl = TextEditingController();
     Get.dialog(AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           const Icon(Icons.delete_forever_rounded, color: Colors.red, size: 36),
           const SizedBox(height: 8),
-          Text('delete_account'.tr, textAlign: TextAlign.center),
+          Text('delete_account'.tr,
+              textAlign: TextAlign.center,
+              style:
+                  const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
         ],
       ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('delete_account_confirm'.tr, textAlign: TextAlign.center),
+          Text('delete_account_confirm'.tr,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 14, height: 1.5)),
           const SizedBox(height: 12),
           TextField(
             controller: passCtrl,
             obscureText: true,
             autofocus: true,
-            decoration:
-                InputDecoration(hintText: 'enter_current_password'.tr),
+            decoration: InputDecoration(hintText: 'enter_current_password'.tr),
           ),
         ],
       ),
@@ -507,10 +578,10 @@ class SettingsScreen extends GetView<MyPageController> {
               Get.offAllNamed(AppRoutes.login);
             } on FirebaseAuthException catch (e) {
               Get.back();
-              final msg = (e.code == 'wrong-password' ||
-                      e.code == 'invalid-credential')
-                  ? 'wrong_password'.tr
-                  : e.message ?? e.code;
+              final msg =
+                  (e.code == 'wrong-password' || e.code == 'invalid-credential')
+                      ? 'wrong_password'.tr
+                      : e.message ?? e.code;
               Get.snackbar('delete_account'.tr, msg,
                   snackPosition: SnackPosition.BOTTOM,
                   backgroundColor: Colors.red,
@@ -532,21 +603,18 @@ class SettingsScreen extends GetView<MyPageController> {
   }
 
   void _confirmSignOut(BuildContext context) {
-    Get.dialog(AlertDialog(
-      title: Text('sign_out'.tr),
-      content: Text('sign_out_confirm'.tr),
-      actions: [
-        TextButton(onPressed: Get.back, child: Text('cancel'.tr)),
-        TextButton(
-          onPressed: () async {
-            Get.back();
-            await controller.signOut();
-          },
-          style: TextButton.styleFrom(foregroundColor: Colors.red),
-          child: Text('sign_out'.tr),
-        ),
-      ],
-    ));
+    AppDialogs.confirm(
+      context: context,
+      icon: Icons.logout,
+      iconColor: Colors.red,
+      title: 'sign_out'.tr,
+      body: 'sign_out_confirm'.tr,
+      confirmLabel: 'sign_out'.tr,
+      confirmColor: Colors.red,
+    ).then((confirmed) async {
+      if (!confirmed) return;
+      await controller.signOut();
+    });
   }
 }
 
@@ -558,8 +626,7 @@ class _NotificationToggleWidget extends StatefulWidget {
       _NotificationToggleWidgetState();
 }
 
-class _NotificationToggleWidgetState
-    extends State<_NotificationToggleWidget> {
+class _NotificationToggleWidgetState extends State<_NotificationToggleWidget> {
   late bool _enabled;
 
   @override

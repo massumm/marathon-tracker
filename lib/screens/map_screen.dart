@@ -12,6 +12,7 @@ import '../../controllers/my_page_controller.dart';
 import '../../core/theme.dart';
 import '../../models/event_model.dart';
 import '../../services/group_service.dart';
+import '../../widgets/app_dialogs.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -354,39 +355,17 @@ class _EventCardState extends State<_EventCard> {
     }
     final runCtrl = Get.find<KmlMapController>();
     if (runCtrl.isTracking.value) {
-      showDialog(
+      AppDialogs.confirm(
         context: context,
-        builder: (_) => AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          icon: const Icon(Icons.directions_run,
-              color: AppTheme.trackingGreen, size: 40),
-          title: Text('already_running_title'.tr,
-              textAlign: TextAlign.center,
-              style:
-                  const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-          content: Text('already_running_body'.tr,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 14)),
-          actionsAlignment: MainAxisAlignment.center,
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('cancel'.tr),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Get.toNamed(AppRoutes.kmlMap);
-              },
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.trackingGreen,
-                  foregroundColor: Colors.white),
-              child: Text('return_to_run'.tr),
-            ),
-          ],
-        ),
-      );
+        icon: Icons.directions_run,
+        iconColor: AppTheme.trackingGreen,
+        title: 'already_running_title'.tr,
+        body: 'already_running_body'.tr,
+        confirmLabel: 'return_to_run'.tr,
+        confirmColor: AppTheme.trackingGreen,
+      ).then((confirmed) {
+        if (confirmed) Get.toNamed(AppRoutes.kmlMap);
+      });
       return;
     }
     debugPrint(
@@ -411,31 +390,16 @@ class _EventCardState extends State<_EventCard> {
   }
 
   void _showGenderRequiredDialog(RaceCategory cat) {
-    showDialog(
+    AppDialogs.confirm(
       context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        icon: const Icon(Icons.wc, color: AppTheme.primary, size: 40),
-        title: Text('gender'.tr,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-        content: Text('gender_required_to_run'.tr, textAlign: TextAlign.center),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('cancel'.tr),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Get.toNamed(AppRoutes.settings);
-            },
-            child: Text('set_gender'.tr),
-          ),
-        ],
-      ),
-    );
+      icon: Icons.wc,
+      iconColor: AppTheme.primary,
+      title: 'gender'.tr,
+      body: 'gender_required_to_run'.tr,
+      confirmLabel: 'set_gender'.tr,
+    ).then((confirmed) {
+      if (confirmed) Get.toNamed(AppRoutes.settings);
+    });
   }
 }
 

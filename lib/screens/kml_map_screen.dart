@@ -14,6 +14,7 @@ import '../../controllers/kml_map_controller.dart';
 import '../../core/image_utils.dart';
 import '../../core/theme.dart';
 import '../../services/firebase_service.dart';
+import '../../widgets/app_dialogs.dart';
 import '../../widgets/user_avatar.dart';
 
 const _medals = ['🥇', '🥈', '🥉'];
@@ -381,7 +382,7 @@ class _KmlMapScreenState extends State<KmlMapScreen>
   Future<bool> _checkLocationReady() async {
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      if (mounted) _showLocationOffDialog();
+      if (mounted) AppDialogs.locationOff(context);
       return false;
     }
     LocationPermission permission = await Geolocator.checkPermission();
@@ -391,14 +392,14 @@ class _KmlMapScreenState extends State<KmlMapScreen>
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) {
       if (mounted) {
-        _showPermissionDeniedDialog(
+        AppDialogs.permissionDenied(context,
             forever: permission == LocationPermission.deniedForever);
       }
       return false;
     }
     if (Platform.isIOS && permission != LocationPermission.always) {
       if (!mounted) return false;
-      final proceed = await _showIosAlwaysLocationDialog();
+      final proceed = await AppDialogs.iosAlwaysLocation(context);
       if (!proceed) return false;
     }
     return true;
@@ -408,7 +409,7 @@ class _KmlMapScreenState extends State<KmlMapScreen>
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       if (!mounted) return;
-      _showLocationOffDialog();
+      AppDialogs.locationOff(context);
       return;
     }
 
@@ -419,14 +420,14 @@ class _KmlMapScreenState extends State<KmlMapScreen>
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) {
       if (!mounted) return;
-      _showPermissionDeniedDialog(
+      AppDialogs.permissionDenied(context,
           forever: permission == LocationPermission.deniedForever);
       return;
     }
 
     if (Platform.isIOS && permission != LocationPermission.always) {
       if (!mounted) return;
-      final proceed = await _showIosAlwaysLocationDialog();
+      final proceed = await AppDialogs.iosAlwaysLocation(context);
       if (!proceed) return;
     }
 
@@ -439,135 +440,14 @@ class _KmlMapScreenState extends State<KmlMapScreen>
     }
   }
 
-  // Informs the user that "Always" location improves background tracking.
-  // "Start Anyway" is the primary action so the run is never hard-blocked.
-  Future<bool> _showIosAlwaysLocationDialog() async {
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        icon: const Icon(Icons.location_on, color: AppTheme.primary, size: 40),
-        title: Text('ios_bg_title'.tr,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-        content: Text('ios_bg_body'.tr,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 13, height: 1.5)),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context, false);
-              Geolocator.openAppSettings();
-            },
-            child: Text('open_settings'.tr),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primary,
-                foregroundColor: Colors.white),
-            child: Text('continue_anyway'.tr),
-          ),
-        ],
-      ),
-    );
-    return result ?? true;
-  }
-
-  void _showLocationOffDialog() {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        icon: const Icon(Icons.location_disabled,
-            color: Colors.redAccent, size: 40),
-        title: Text('location_off_title'.tr,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-        content: Text('location_off_body'.tr,
-            textAlign: TextAlign.center, style: const TextStyle(fontSize: 14)),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('cancel'.tr)),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Geolocator.openLocationSettings();
-            },
-            style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primary,
-                foregroundColor: Colors.white),
-            child: Text('open_settings'.tr),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showPermissionDeniedDialog({required bool forever}) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        icon: const Icon(Icons.location_off_outlined,
-            color: Colors.orange, size: 40),
-        title: Text('location_permission_title'.tr,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-        content: Text(
-            forever
-                ? 'location_permission_forever'.tr
-                : 'location_permission_denied'.tr,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 14)),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('cancel'.tr)),
-          if (forever)
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Geolocator.openAppSettings();
-              },
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primary,
-                  foregroundColor: Colors.white),
-              child: Text('open_settings'.tr),
-            ),
-        ],
-      ),
-    );
-  }
-
   void _showTooFarDialog(double distKm) {
-    showDialog(
+    AppDialogs.alert(
       context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        icon: const Icon(Icons.location_off_outlined,
-            color: Colors.orange, size: 40),
-        title: Text('too_far_title'.tr,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-        content: Text(
-            'too_far_body'.tr.replaceAll('@dist', distKm.toStringAsFixed(2)),
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 14)),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: [
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context),
-            style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primary, foregroundColor: Colors.white),
-            child: Text('ok'.tr),
-          ),
-        ],
-      ),
+      icon: Icons.location_off_outlined,
+      iconColor: Colors.orange,
+      title: 'too_far_title'.tr,
+      body: 'too_far_body'.tr.replaceAll('@dist', distKm.toStringAsFixed(2)),
+      buttonColor: AppTheme.primary,
     );
   }
 

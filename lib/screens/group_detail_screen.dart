@@ -12,6 +12,7 @@ import '../../models/group_model.dart';
 import 'group_management_screen.dart';
 import '../../services/comment_service.dart';
 import '../../services/user_stats_service.dart';
+import '../../widgets/app_dialogs.dart';
 import '../../widgets/user_avatar.dart';
 
 class GroupDetailScreen extends StatefulWidget {
@@ -149,22 +150,17 @@ class _GroupDetailScreenState extends State<GroupDetailScreen>
     ));
   }
 
-  void _confirmLeave(GroupDetailController ctrl) {
-    Get.dialog(AlertDialog(
-      title: Text('leave_group'.tr),
-      content: Text('leave_group_confirm'.tr),
-      actions: [
-        TextButton(onPressed: Get.back, child: Text('cancel'.tr)),
-        TextButton(
-          onPressed: () {
-            Get.back();
-            ctrl.leaveGroup();
-          },
-          child: Text('leave'.tr,
-              style: const TextStyle(color: Colors.redAccent)),
-        ),
-      ],
-    ));
+  Future<void> _confirmLeave(GroupDetailController ctrl) async {
+    final confirmed = await AppDialogs.confirm(
+      context: context,
+      icon: Icons.exit_to_app,
+      iconColor: Colors.red,
+      title: 'leave_group'.tr,
+      body: 'leave_group_confirm'.tr,
+      confirmLabel: 'leave'.tr,
+      confirmColor: Colors.red,
+    );
+    if (confirmed) ctrl.leaveGroup();
   }
 }
 
@@ -246,7 +242,7 @@ class _MembersListView extends StatelessWidget {
                   return _MemberCard(
                     member: m,
                     canRemove: ctrl.isAdmin && !isSelf && !m.isAdmin,
-                    onRemove: () => _confirmRemove(m.uid, m.label),
+                    onRemove: () => _confirmRemove(context, m.uid, m.label),
                   );
                 },
                 childCount: members.length,
@@ -259,23 +255,18 @@ class _MembersListView extends StatelessWidget {
     });
   }
 
-  void _confirmRemove(String uid, String label) {
-    Get.dialog(AlertDialog(
-      title: Text('remove_member'.tr),
-      content:
-          Text('remove_member_confirm'.tr.replaceAll('@name', label)),
-      actions: [
-        TextButton(onPressed: Get.back, child: Text('cancel'.tr)),
-        TextButton(
-          onPressed: () {
-            Get.back();
-            ctrl.removeMember(uid);
-          },
-          child: Text('remove'.tr,
-              style: const TextStyle(color: Colors.redAccent)),
-        ),
-      ],
-    ));
+  void _confirmRemove(BuildContext context, String uid, String label) {
+    AppDialogs.confirm(
+      context: context,
+      icon: Icons.person_remove_outlined,
+      iconColor: Colors.red,
+      title: 'remove_member'.tr,
+      body: 'remove_member_confirm'.tr.replaceAll('@name', label),
+      confirmLabel: 'remove'.tr,
+      confirmColor: Colors.red,
+    ).then((confirmed) {
+      if (confirmed) ctrl.removeMember(uid);
+    });
   }
 }
 
@@ -441,34 +432,17 @@ class _RequestTile extends StatelessWidget {
   });
 
   void _showConfirmDecline(BuildContext context) {
-    showDialog(
+    AppDialogs.confirm(
       context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('reject_request'.tr,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-        content: Text('reject_confirm'.tr,
-            style: const TextStyle(fontSize: 14)),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('cancel'.tr),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              onDecline();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent,
-              foregroundColor: Colors.white,
-            ),
-            child: Text('reject'.tr),
-          ),
-        ],
-      ),
-    );
+      icon: Icons.person_off_outlined,
+      iconColor: Colors.redAccent,
+      title: 'reject_request'.tr,
+      body: 'reject_confirm'.tr,
+      confirmLabel: 'reject'.tr,
+      confirmColor: Colors.redAccent,
+    ).then((confirmed) {
+      if (confirmed) onDecline();
+    });
   }
 
   @override

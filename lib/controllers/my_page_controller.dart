@@ -187,6 +187,10 @@ class MyPageController extends GetxController {
     await UserStatsService.instance.updateGender(gender);
   }
 
+  Future<void> updatePhoneNumber(String phone) async {
+    await UserStatsService.instance.updatePhone(phone);
+  }
+
   Future<void> changePassword(String currentPassword, String newPassword) async {
     final u = user;
     if (u == null || u.email == null) return;
