@@ -330,9 +330,12 @@ class FreeRunController extends GetxController {
           runId: runId,
           eventId: '',
         );
+        final dayKey =
+            '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
         await UserStatsService.instance.addDailyChallengeStats(
           _cachedDistanceKm,
           elapsedSeconds.value,
+          dayKey: dayKey,
         );
       }
     } catch (e) {
