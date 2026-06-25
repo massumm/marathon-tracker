@@ -7,13 +7,14 @@ import '../../models/user_stats.dart';
 import '../../services/user_stats_service.dart';
 import '../../widgets/user_avatar.dart';
 
-// Premium dark leaderboard palette.
-const _bg = Color(0xFF0E0D0F);
-const _card = Color(0xFF1C1A1D);
-const _gold = Color(0xFFFFC24B);
-const _silver = Color(0xFFC2CBD2);
-const _bronze = Color(0xFFD08A57);
-const _muted = Color(0xFF8A8590);
+// Light leaderboard palette — matches the event leaderboard background.
+const _bg = Color(0xFFF5F6FA);
+const _card = Colors.white;
+const _gold = Color(0xFFFFB300);
+const _silver = Color(0xFF90A4AE);
+const _bronze = Color(0xFFBF8970);
+const _muted = Color(0xFF718096);
+const _text = Color(0xFF1A202C);
 
 Color _medalColor(int rank) => rank == 1
     ? _gold
@@ -113,7 +114,7 @@ class _DailyChallengeLeaderboardScreenState
                     color: i == _selected ? _gold : _muted),
                 title: Text(_days[i].label,
                     style: TextStyle(
-                        color: Colors.white,
+                        color: _text,
                         fontWeight:
                             i == _selected ? FontWeight.w800 : FontWeight.w600)),
                 subtitle: Text(_days[i].dateStr,
@@ -251,7 +252,7 @@ class _DaySelector extends StatelessWidget {
                     style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
-                        color: Colors.white)),
+                        color: _text)),
                 const SizedBox(width: 6),
                 Text('· ${day.dateStr}',
                     style: const TextStyle(fontSize: 13, color: _muted)),
@@ -361,7 +362,7 @@ class _PodiumItem extends StatelessWidget {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-                fontSize: 13, fontWeight: FontWeight.w800, color: Colors.white),
+                fontSize: 13, fontWeight: FontWeight.w800, color: _text),
           ),
           const SizedBox(height: 8),
           Container(
@@ -377,7 +378,7 @@ class _PodiumItem extends StatelessWidget {
                 _statPill(
                     _fmtKm(stats.dailyDistanceKm), 'km', color),
                 const SizedBox(height: 6),
-                _statPill('${stats.dailyRuns}', 'runs', Colors.white),
+                _statPill('${stats.dailyRuns}', 'runs', _text),
               ],
             ),
           ),
@@ -419,7 +420,7 @@ class _RankingsHeader extends StatelessWidget {
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 1,
-                  color: Colors.white)),
+                  color: _text)),
           Text('$total runners',
               style: const TextStyle(fontSize: 13, color: _muted)),
         ],
@@ -441,8 +442,10 @@ class _RankRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
       child: Material(
-        color: isMe ? _gold.withValues(alpha: 0.12) : _card,
+        color: isMe ? const Color(0xFFFFF3E0) : _card,
         borderRadius: BorderRadius.circular(14),
+        elevation: 1,
+        shadowColor: Colors.black.withValues(alpha: 0.08),
         child: InkWell(
           borderRadius: BorderRadius.circular(14),
           onTap: () => Get.toNamed(AppRoutes.userProfile, arguments: stats.uid),
@@ -457,7 +460,7 @@ class _RankRow extends StatelessWidget {
                       style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w800,
-                          color: stats.rank <= 3 ? color : Colors.white)),
+                          color: stats.rank <= 3 ? color : _text)),
                 ),
                 const SizedBox(width: 8),
                 UserAvatar(
@@ -473,7 +476,7 @@ class _RankRow extends StatelessWidget {
                           style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w700,
-                              color: Colors.white)),
+                              color: _text)),
                       const SizedBox(height: 2),
                       Text(_tierLabel(stats.rank),
                           style: const TextStyle(fontSize: 12, color: _muted)),
@@ -490,7 +493,7 @@ class _RankRow extends StatelessWidget {
                             style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w800,
-                                color: Colors.white)),
+                                color: _text)),
                         const TextSpan(
                             text: ' km',
                             style: TextStyle(fontSize: 11, color: _muted)),
@@ -529,6 +532,13 @@ class _YouBar extends StatelessWidget {
         color: _card,
         border: Border.all(color: _gold.withValues(alpha: 0.6)),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.10),
+            blurRadius: 12,
+            offset: const Offset(0, -2),
+          ),
+        ],
       ),
       child: Column(
         children: [
@@ -552,7 +562,7 @@ class _YouBar extends StatelessWidget {
                         style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w800,
-                            color: Colors.white)),
+                            color: _text)),
                     const SizedBox(height: 2),
                     Text(_tierLabel(me.rank),
                         style: const TextStyle(fontSize: 12, color: _muted)),
