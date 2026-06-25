@@ -18,6 +18,11 @@ class DeepLinkService {
   // Holds a URI received before auth was ready, to retry after login.
   String? _pendingUri;
 
+  // Dedupe — cold start can deliver the same link via both getInitialLink and
+  // the event stream; processing it twice double-navigates (black screen).
+  String? _lastHandledUri;
+  DateTime? _lastHandledAt;
+
   void init() {
     _checkInitialLink();
     _events.receiveBroadcastStream().listen((uri) {
@@ -31,7 +36,10 @@ class DeepLinkService {
     final uri = _pendingUri;
     if (uri == null) return;
     _pendingUri = null;
-    _handleUri(uri);
+    // Let the home route finish its transition before navigating again —
+    // pushing a route mid-transition (right after offAllNamed) can leave a
+    // blank/black screen on cold-start deep links.
+    Future.delayed(const Duration(milliseconds: 700), () => _handleUri(uri));
   }
 
   Future<void> _checkInitialLink() async {
@@ -44,12 +52,23 @@ class DeepLinkService {
   Future<void> _handleUri(String uri) async {
     if (!uri.startsWith('marathon-map://group/')) return;
 
+    // Skip if we just handled the same link (double delivery on cold start).
+    final now = DateTime.now();
+    if (_lastHandledUri == uri &&
+        _lastHandledAt != null &&
+        now.difference(_lastHandledAt!).inSeconds < 3) {
+      return;
+    }
+
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       // Auth not ready yet — park the URI and retry after login.
       _pendingUri = uri;
       return;
     }
+
+    _lastHandledUri = uri;
+    _lastHandledAt = now;
 
     final groupId = uri.replaceFirst('marathon-map://group/', '').trim();
     if (groupId.isEmpty) return;

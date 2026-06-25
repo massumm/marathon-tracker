@@ -72,7 +72,7 @@ class _RunSelfieScreenState extends State<RunSelfieScreen> {
       await Share.shareXFiles(
         [XFile(path)],
         text:
-            '🏃 Just finished a run on RunMate!\n${widget.route.distance}  ·  ${widget.route.time}  ·  ${widget.route.pace}\n\n#RunMate #Running #Marathon #Run\nhttps://runmate.app',
+            '🏃 Just finished a run on RunMate!\n${widget.route.distance}  ·  ${widget.route.time}  ·  ${widget.route.pace}\n\n#RunMate #Running #Marathon #Run\nhttps://runmate.club',
         sharePositionOrigin: shareRect,
       );
     } catch (e) {

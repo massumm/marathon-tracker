@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RunMate — Account</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #fff3ee 0%, #f5f6fa 60%);
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; padding: 16px;
+    }
+    .card {
+      background: #fff; border-radius: 24px; padding: 36px 32px;
+      box-shadow: 0 12px 48px rgba(255,107,53,.13); text-align: center;
+      max-width: 380px; width: 100%;
+    }
+    .app-row { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 22px; }
+    .app-icon { width: 40px; height: 40px; border-radius: 10px; }
+    .app-name { font-size: 18px; font-weight: 800; color: #1a202c; }
+    h2 { font-size: 20px; font-weight: 800; color: #1a202c; margin-bottom: 6px; }
+    .sub { font-size: 13px; color: #718096; margin-bottom: 22px; line-height: 1.5; }
+    input {
+      width: 100%; padding: 14px 16px; border: 1.5px solid #e2e8f0;
+      border-radius: 12px; font-size: 15px; margin-bottom: 12px; outline: none;
+    }
+    input:focus { border-color: #FF6B35; }
+    .btn {
+      width: 100%; padding: 15px; border-radius: 14px; border: none;
+      font-size: 15px; font-weight: 700; cursor: pointer;
+      background: #FF6B35; color: #fff; transition: opacity .15s;
+    }
+    .btn:active { opacity: .85; }
+    .btn:disabled { opacity: .5; cursor: default; }
+    .msg { font-size: 13px; margin-top: 14px; line-height: 1.5; }
+    .msg.error { color: #e53e3e; }
+    .msg.ok { color: #2f855a; }
+    .icon-big { font-size: 44px; margin-bottom: 10px; }
+    .hidden { display: none; }
+    .spinner {
+      width: 28px; height: 28px; border: 3px solid #ffe0d3;
+      border-top-color: #FF6B35; border-radius: 50%;
+      animation: spin .8s linear infinite; margin: 8px auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="app-row">
+      <img class="app-icon" src="/icon.png" alt="RunMate"/>
+      <span class="app-name">RunMate</span>
+    </div>
+
+    <div id="loading"><div class="spinner"></div><p class="sub">Loading…</p></div>
+
+    <!-- Reset password form -->
+    <div id="reset" class="hidden">
+      <h2>Reset your password</h2>
+      <p class="sub" id="reset-email"></p>
+      <input id="pw1" type="password" placeholder="New password" autocomplete="new-password"/>
+      <input id="pw2" type="password" placeholder="Confirm new password" autocomplete="new-password"/>
+      <button class="btn" id="reset-btn">Update password</button>
+      <p class="msg" id="reset-msg"></p>
+    </div>
+
+    <!-- Generic result (verify email / done / error) -->
+    <div id="result" class="hidden">
+      <div class="icon-big" id="result-icon">✅</div>
+      <h2 id="result-title"></h2>
+      <p class="sub" id="result-msg"></p>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import {
+      getAuth, verifyPasswordResetCode, confirmPasswordReset, applyActionCode
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+    const params = new URLSearchParams(window.location.search);
+    const mode = params.get('mode');
+    const oobCode = params.get('oobCode');
+    // apiKey comes in the URL from Firebase; authDomain is the live project.
+    const apiKey = params.get('apiKey') || 'AIzaSyBMkrxqgbO6cCW8h_L-D3I5HRysV1DvoJY';
+
+    const app = initializeApp({
+      apiKey: apiKey,
+      authDomain: 'runmate-live.firebaseapp.com',
+    });
+    const auth = getAuth(app);
+
+    const $ = (id) => document.getElementById(id);
+    const show = (id) => $(id).classList.remove('hidden');
+    const hide = (id) => $(id).classList.add('hidden');
+
+    function result(icon, title, msg) {
+      hide('loading'); hide('reset');
+      $('result-icon').textContent = icon;
+      $('result-title').textContent = title;
+      $('result-msg').textContent = msg;
+      show('result');
+    }
+
+    async function main() {
+      if (!oobCode) { result('⚠️', 'Invalid link', 'This link is missing its security code.'); return; }
+
+      if (mode === 'resetPassword') {
+        try {
+          const email = await verifyPasswordResetCode(auth, oobCode);
+          hide('loading');
+          $('reset-email').textContent = 'for ' + email;
+          show('reset');
+        } catch (e) {
+          result('⚠️', 'Link expired', 'This password reset link is invalid or has expired. Please request a new one from the app.');
+        }
+      } else if (mode === 'verifyEmail') {
+        try {
+          await applyActionCode(auth, oobCode);
+          result('✅', 'Email verified', 'Your email has been verified. You can now return to the RunMate app and sign in.');
+        } catch (e) {
+          result('⚠️', 'Link expired', 'This verification link is invalid or has expired. Please request a new one from the app.');
+        }
+      } else if (mode === 'recoverEmail') {
+        try {
+          await applyActionCode(auth, oobCode);
+          result('✅', 'Email change reverted', 'Your email address change has been reverted.');
+        } catch (e) {
+          result('⚠️', 'Link expired', 'This link is invalid or has expired.');
+        }
+      } else {
+        result('⚠️', 'Unsupported action', 'This link is not supported.');
+      }
+    }
+
+    $('reset-btn').addEventListener('click', async () => {
+      const p1 = $('pw1').value, p2 = $('pw2').value;
+      const msg = $('reset-msg');
+      msg.className = 'msg';
+      if (p1.length < 6) { msg.className = 'msg error'; msg.textContent = 'Password must be at least 6 characters.'; return; }
+      if (p1 !== p2) { msg.className = 'msg error'; msg.textContent = 'Passwords do not match.'; return; }
+      $('reset-btn').disabled = true;
+      try {
+        await confirmPasswordReset(auth, oobCode, p1);
+        result('✅', 'Password updated', 'Your password has been changed. Open the RunMate app and sign in with your new password.');
+      } catch (e) {
+        msg.className = 'msg error';
+        msg.textContent = 'Could not reset password — the link may have expired. Request a new one from the app.';
+        $('reset-btn').disabled = false;
+      }
+    });
+
+    main();
+  </script>
+</body>
+</html>

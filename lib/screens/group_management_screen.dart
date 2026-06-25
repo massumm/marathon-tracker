@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../app/routes/app_routes.dart';
 import '../../controllers/group_controller.dart';
+import '../../core/config.dart';
 import '../../core/theme.dart';
 import '../../models/group_model.dart';
 import '../../widgets/user_avatar.dart';
@@ -385,7 +386,7 @@ class GroupQrSheet extends StatelessWidget {
                 ),
                 onPressed: () {
                   final link =
-                      'https://runmate-252e5.web.app/join.html?id=${group.id}&name=${Uri.encodeComponent(group.name)}';
+                      '${AppConfig.webBaseUrl}/join.html?id=${group.id}&name=${Uri.encodeComponent(group.name)}';
                   final box = btnCtx.findRenderObject() as RenderBox?;
                   final rect = box != null
                       ? box.localToGlobal(Offset.zero) & box.size
