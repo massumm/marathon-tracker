@@ -23,6 +23,11 @@ Color _medalColor(int rank) => rank == 1
             ? _bronze
             : _muted;
 
+// Show 2 decimals for small distances (e.g. 0.23 km) but drop them for large
+// totals (e.g. 1236 km) to keep the podium/rows compact.
+String _fmtKm(double km) =>
+    km >= 100 ? km.toStringAsFixed(0) : km.toStringAsFixed(2);
+
 String _tierLabel(int rank) => rank <= 3
     ? 'Podium runner'
     : rank <= 10
@@ -370,7 +375,7 @@ class _PodiumItem extends StatelessWidget {
             child: Column(
               children: [
                 _statPill(
-                    stats.dailyDistanceKm.toStringAsFixed(0), 'km', color),
+                    _fmtKm(stats.dailyDistanceKm), 'km', color),
                 const SizedBox(height: 6),
                 _statPill('${stats.dailyRuns}', 'runs', Colors.white),
               ],
@@ -481,7 +486,7 @@ class _RankRow extends StatelessWidget {
                     RichText(
                       text: TextSpan(children: [
                         TextSpan(
-                            text: stats.dailyDistanceKm.toStringAsFixed(0),
+                            text: _fmtKm(stats.dailyDistanceKm),
                             style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w800,
@@ -560,7 +565,7 @@ class _YouBar extends StatelessWidget {
                   RichText(
                     text: TextSpan(children: [
                       TextSpan(
-                          text: me.dailyDistanceKm.toStringAsFixed(2),
+                          text: _fmtKm(me.dailyDistanceKm),
                           style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w800,

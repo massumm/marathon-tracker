@@ -135,6 +135,7 @@ class _DailyChallengeCta extends StatelessWidget {
               end: Alignment.centerRight,
             ),
             borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppTheme.primary, width: 1.5),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.35),
@@ -157,14 +158,28 @@ class _DailyChallengeCta extends StatelessWidget {
               ),
               const SizedBox(width: 14),
               const Expanded(
-                child: Text(
-                  'Daily Challenge',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.3,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Daily Challenge',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Run and see your rank in community',
+                      style: TextStyle(
+                        color: Color(0xFFB9B4BD),
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               Container(
