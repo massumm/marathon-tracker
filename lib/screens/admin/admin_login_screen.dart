@@ -133,19 +133,19 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.red.shade50,
+                      color: AppTheme.errorSurface,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.error_outline,
-                            color: Colors.red.shade700, size: 18),
+                        const Icon(Icons.error_outline,
+                            color: AppTheme.errorDark, size: 18),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(_error!,
-                              style: TextStyle(
+                              style: const TextStyle(
                                   fontSize: 12,
-                                  color: Colors.red.shade700)),
+                                  color: AppTheme.errorDark)),
                         ),
                       ],
                     ),

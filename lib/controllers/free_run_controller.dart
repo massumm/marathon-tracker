@@ -36,6 +36,8 @@ class FreeRunController extends GetxController {
   Timer? _timer;
   double _cachedDistanceKm = 0;
   int _runStartMs = 0;
+  // Parallel to segments — one timestamp (ms) per recorded GPS point.
+  final List<List<int>> _segmentTimestamps = [];
 
   static const double _maxJumpMetres = 50.0;
   static const double _minPolylineM = 2.0;
@@ -88,6 +90,7 @@ class FreeRunController extends GetxController {
       return;
     }
     segments.clear();
+    _segmentTimestamps.clear();
     _smoothingBuffer.clear();
     _cachedDistanceKm = 0;
     distanceKm.value = 0;
@@ -132,6 +135,7 @@ class FreeRunController extends GetxController {
 
   void resetRun() {
     segments.clear();
+    _segmentTimestamps.clear();
     _smoothingBuffer.clear();
     _cachedDistanceKm = 0;
     distanceKm.value = 0;
@@ -158,6 +162,7 @@ class FreeRunController extends GetxController {
 
     if (newSegment) {
       segments.add(<LatLng>[].obs); // new segment; jump filter uses this list's .last
+      _segmentTimestamps.add([]);
     }
 
     _positionSub = LocationService.instance.getPositionStream().listen((pos) {
@@ -209,6 +214,9 @@ class FreeRunController extends GetxController {
       }
 
       current.add(smoothed);
+      if (_segmentTimestamps.isNotEmpty) {
+        _segmentTimestamps.last.add(DateTime.now().millisecondsSinceEpoch);
+      }
     });
   }
 
@@ -268,9 +276,14 @@ class FreeRunController extends GetxController {
         'time': _formatTime(elapsedSeconds.value),
         'distance': '${_cachedDistanceKm.toStringAsFixed(2)} km',
         'pace': paceStr,
-        'route': allPoints
-            .map((p) => {'lat': p.latitude, 'lng': p.longitude})
-            .toList(),
+        'route': () {
+          final allTs = _segmentTimestamps.expand((s) => s).toList();
+          return allPoints.asMap().entries.map((e) => {
+            'lat': e.value.latitude,
+            'lng': e.value.longitude,
+            't': e.key < allTs.length ? allTs[e.key] : 0,
+          }).toList();
+        }(),
       };
 
       final uid = FirebaseAuth.instance.currentUser?.uid ?? 'unknown';

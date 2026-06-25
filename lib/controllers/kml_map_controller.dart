@@ -13,6 +13,7 @@ import 'package:http/http.dart' as http;
 import '../app/routes/app_routes.dart';
 import '../core/config.dart';
 import '../core/theme.dart';
+import '../models/colored_segment.dart';
 import '../models/event_model.dart';
 import '../models/runner_data.dart';
 import 'package:geolocator/geolocator.dart';
@@ -26,6 +27,7 @@ import '../services/kml_service.dart';
 import '../services/user_stats_service.dart';
 import '../services/live_tracking_service.dart';
 import '../services/location_service.dart';
+import '../utils/constants.dart';
 import '../utils/poi_marker_utils.dart';
 import '../widgets/app_snackbar.dart';
 import '../widgets/runner_info_sheet.dart';
@@ -84,6 +86,12 @@ class KmlMapController extends GetxController {
   final trackingPoints = <LatLng>[].obs;
   final currentPosition = Rxn<LatLng>();
   final gpsAccuracy = (-1.0).obs; // metres; -1 = no fix yet
+
+  // ── Speed-tier colored segments ───────────────────────────────────────────
+  final coloredSegments = <ColoredSegment>[].obs;
+  Timer? _speedTimer;
+  LatLng? _speedCheckPosition;
+  SpeedTier _currentTier = SpeedTier.normal;
 
   Timer? _timer;
   StreamSubscription? _positionSub;
@@ -262,6 +270,7 @@ class KmlMapController extends GetxController {
   @override
   void onClose() {
     _timer?.cancel();
+    _speedTimer?.cancel();
     _countdownTimer?.cancel();
     _cutoffTimer?.cancel();
     _graceTimer?.cancel();
@@ -893,6 +902,39 @@ class KmlMapController extends GetxController {
     _offRouteTimer = null;
   }
 
+  void _onSpeedTick() {
+    final pos = currentPosition.value;
+    if (pos == null) return;
+    final prev = _speedCheckPosition;
+    _speedCheckPosition = pos;
+    if (prev == null) return;
+
+    final distM = Geolocator.distanceBetween(
+      prev.latitude, prev.longitude,
+      pos.latitude, pos.longitude,
+    );
+    final speedKmh = (distM / 10.0) * 3.6;
+    final tier = tierFromKmh(speedKmh);
+    final tierName = switch (tier) {
+      SpeedTier.fast   => 'FAST',
+      SpeedTier.medium => 'MEDIUM',
+      SpeedTier.normal => 'NORMAL',
+    };
+    debugPrint('[SPEED] ${speedKmh.toStringAsFixed(1)} km/h ($tierName)');
+
+    if (tier != _currentTier) {
+      _currentTier = tier;
+      final lastPt = coloredSegments.isNotEmpty && coloredSegments.last.points.isNotEmpty
+          ? coloredSegments.last.points.last
+          : null;
+      coloredSegments.add(ColoredSegment(
+        color: colorForTier(tier),
+        points: lastPt != null ? [lastPt] : [],
+      ));
+      coloredSegments.refresh();
+    }
+  }
+
   Future<void> startTracking() async {
     debugPrint('[TRACKING] startTracking called. isTracking=${isTracking.value}');
     if (isTracking.value || _isStarting) {
@@ -919,6 +961,10 @@ class KmlMapController extends GetxController {
     _stopOffRouteWarning();
     _smoothingBuffer.clear();
     _lastDistancePoint = null;
+    coloredSegments.clear();
+    coloredSegments.add(ColoredSegment(color: colorForTier(SpeedTier.normal), points: []));
+    _currentTier = SpeedTier.normal;
+    _speedCheckPosition = null;
     elapsedSeconds.value = 0;
     isSharing.value = true;
     _runStartMs = DateTime.now().millisecondsSinceEpoch;
@@ -953,6 +999,8 @@ class KmlMapController extends GetxController {
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       elapsedSeconds.value++;
     });
+    _speedTimer?.cancel();
+    _speedTimer = Timer.periodic(const Duration(seconds: 10), (_) => _onSpeedTick());
 
     _positionSub =
         LocationService.instance.getPositionStream().listen((position) async {
@@ -1064,6 +1112,10 @@ class KmlMapController extends GetxController {
       }
 
       trackingPoints.add(smoothed);
+      if (coloredSegments.isNotEmpty) {
+        coloredSegments.last.points.add(smoothed);
+        coloredSegments.refresh();
+      }
       snappedPoints.add(smoothed);
       if (_lbTickCount % 4 == 0) _rebuildLeaderboard();
 
@@ -1164,6 +1216,8 @@ class KmlMapController extends GetxController {
     isSaving.value = true;
     _positionSub?.cancel();
     _positionSub = null;
+    _speedTimer?.cancel();
+    _speedTimer = null;
     _timer?.cancel();
     _timer = null;
     _isStarting = false;

@@ -276,7 +276,7 @@ class _BottomControls extends StatelessWidget {
             // Stop
             _CircleBtn(
               icon: Icons.stop_rounded,
-              color: Colors.red.shade600,
+              color: AppTheme.savedRouteRed,
               iconColor: Colors.white,
               size: 64,
               label: 'Stop',
@@ -364,14 +364,14 @@ class _RunButtonState extends State<_RunButton> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: const LinearGradient(
-                  colors: [Color(0xFFFF6B35), Color(0xFFFF9A5C)],
+                  colors: [AppTheme.primary, AppTheme.primaryLight],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 border: Border.all(color: Colors.white, width: 3.5),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFFFF6B35).withValues(alpha: 0.55),
+                    color: AppTheme.primary.withValues(alpha: 0.55),
                     blurRadius: 28,
                     spreadRadius: 3,
                   ),
@@ -449,12 +449,12 @@ class _SummaryCard extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Row(
+            const Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(Icons.flag_rounded, color: AppTheme.primary, size: 20),
-                const SizedBox(width: 8),
-                const Text('Run Complete!',
+                SizedBox(width: 8),
+                Text('Run Complete!',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 18,
@@ -562,8 +562,8 @@ class _GpsSignalBadge extends StatelessWidget {
     if (accuracy < 0) return Colors.grey;
     if (accuracy <= 5) return Colors.green;
     if (accuracy <= 10) return Colors.lightGreen;
-    if (accuracy <= 20) return Colors.orange;
-    return Colors.red;
+    if (accuracy <= 20) return AppTheme.warningOrange;
+    return AppTheme.dangerRed;
   }
 
   @override

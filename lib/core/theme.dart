@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 class AppTheme {
   static const Color primary = Color(0xFFFF6B35);
+  static const Color primaryLight = Color(0xFFFF9A5C);
   static const Color primaryDark = Color(0xFFE05520);
   static const Color secondary = Color(0xFF00B4D8);
   static const Color background = Color(0xFFF5F6FA);
@@ -9,7 +10,19 @@ class AppTheme {
   static const Color textPrimary = Color(0xFF1A202C);
   static const Color textSecondary = Color(0xFF718096);
   static const Color trackingGreen = Color(0xFF48BB78);
+  static const Color onlineGreen = Color(0xFF2E7D32);
+
+  // Speed-tier polyline colors
+  static const Color speedNormal = trackingGreen;
+  static const Color speedMedium = Color(0xFF2196F3);
+  static const Color speedFast = dangerRed;
   static const Color savedRouteRed = Color(0xFFE53E3E);
+  static const Color dangerRed = Color(0xFFF44336);
+  static const Color errorSurface = Color(0xFFFFEBEE);
+  static const Color errorDark = Color(0xFFD32F2F);
+  static const Color warningOrange = Color(0xFFFF9800);
+  static const Color genderMale = Color(0xFF42A5F5);
+  static const Color genderFemale = Color(0xFFF06292);
 
   static ThemeData get theme => ThemeData(
         useMaterial3: true,

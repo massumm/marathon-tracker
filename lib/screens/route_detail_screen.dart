@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -9,11 +10,53 @@ import 'package:http/http.dart' as http;
 
 import '../../app/routes/app_routes.dart';
 import '../../core/theme.dart';
+import '../../models/colored_segment.dart';
 import '../../models/tracked_route.dart';
+import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
 import 'run_selfie_screen.dart';
 import '../../services/firebase_service.dart';
 import '../../services/offline_storage_service.dart';
+
+double _haversineM(double lat1, double lng1, double lat2, double lng2) {
+  const r = 6371000.0;
+  final phi1 = lat1 * math.pi / 180;
+  final phi2 = lat2 * math.pi / 180;
+  final dPhi = (lat2 - lat1) * math.pi / 180;
+  final dLam = (lng2 - lng1) * math.pi / 180;
+  final a = math.sin(dPhi / 2) * math.sin(dPhi / 2) +
+      math.cos(phi1) * math.cos(phi2) *
+          math.sin(dLam / 2) * math.sin(dLam / 2);
+  return r * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+}
+
+List<ColoredSegment> _buildSpeedSegments(List<LatLng> pts, List<int> ts) {
+  if (pts.length < 2 || ts.length != pts.length) return [];
+
+  final result = <ColoredSegment>[];
+  var tier = SpeedTier.normal;
+  var current = <LatLng>[pts.first];
+
+  for (int i = 1; i < pts.length; i++) {
+    final dt = (ts[i] - ts[i - 1]) / 1000.0;
+    final distM = _haversineM(
+        pts[i - 1].latitude, pts[i - 1].longitude,
+        pts[i].latitude, pts[i].longitude);
+    final newTier = dt > 0 ? tierFromKmh((distM / dt) * 3.6) : tier;
+
+    if (newTier != tier) {
+      result.add(ColoredSegment(color: colorForTier(tier), points: List.from(current)));
+      tier = newTier;
+      current = [pts[i - 1], pts[i]];
+    } else {
+      current.add(pts[i]);
+    }
+  }
+  result.add(ColoredSegment(color: colorForTier(tier), points: current));
+  return result.where((s) => s.points.length >= 2).toList();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 class RouteDetailScreen extends StatefulWidget {
   const RouteDetailScreen({super.key});
@@ -295,6 +338,10 @@ class _MapTabState extends State<_MapTab>
       ));
     }
 
+    final speedSegments = route.hasEffectiveTimestamps
+        ? _buildSpeedSegments(route.route, route.effectiveTimestamps)
+        : <ColoredSegment>[];
+
     void openFullScreen() => Get.toNamed(
           AppRoutes.myPageMap,
           arguments: widget.storagePath,
@@ -313,17 +360,23 @@ class _MapTabState extends State<_MapTab>
             }
           },
           onTap: (_) => openFullScreen(),
-          polylines: route.route.length >= 2
-              ? {
-                  Polyline(
-                    polylineId:
-                        PolylineId(widget.storagePath),
-                    points: route.route,
-                    color: AppTheme.savedRouteRed,
-                    width: 4,
-                  ),
-                }
-              : {},
+          polylines: {
+            if (speedSegments.isNotEmpty)
+              for (var i = 0; i < speedSegments.length; i++)
+                Polyline(
+                  polylineId: PolylineId('seg_$i'),
+                  points: speedSegments[i].points,
+                  color: speedSegments[i].color,
+                  width: 4,
+                )
+            else if (route.route.length >= 2)
+              Polyline(
+                polylineId: PolylineId(widget.storagePath),
+                points: route.route,
+                color: AppTheme.savedRouteRed,
+                width: 4,
+              ),
+          },
           markers: markers,
           myLocationEnabled: true,
           myLocationButtonEnabled: false,
