@@ -27,27 +27,12 @@ import '../services/kml_service.dart';
 import '../services/user_stats_service.dart';
 import '../services/live_tracking_service.dart';
 import '../services/location_service.dart';
+import '../utils/constants.dart';
 import '../utils/poi_marker_utils.dart';
 import '../widgets/app_snackbar.dart';
 import '../widgets/runner_info_sheet.dart';
 import 'home_controller.dart';
 import 'my_page_controller.dart';
-
-// ── Speed tier ────────────────────────────────────────────────────────────────
-
-enum SpeedTier { normal, medium, fast }
-
-SpeedTier _tierFromKmh(double kmh) {
-  if (kmh >= 40) return SpeedTier.fast;
-  if (kmh >= 20) return SpeedTier.medium;
-  return SpeedTier.normal;
-}
-
-Color _colorForTier(SpeedTier tier) => switch (tier) {
-  SpeedTier.normal => AppTheme.speedNormal,
-  SpeedTier.medium => AppTheme.speedMedium,
-  SpeedTier.fast   => AppTheme.speedFast,
-};
 
 // ── Leaderboard entry ─────────────────────────────────────────────────────────
 
@@ -929,7 +914,7 @@ class KmlMapController extends GetxController {
       pos.latitude, pos.longitude,
     );
     final speedKmh = (distM / 10.0) * 3.6;
-    final tier = _tierFromKmh(speedKmh);
+    final tier = tierFromKmh(speedKmh);
     final tierName = switch (tier) {
       SpeedTier.fast   => 'FAST',
       SpeedTier.medium => 'MEDIUM',
@@ -943,7 +928,7 @@ class KmlMapController extends GetxController {
           ? coloredSegments.last.points.last
           : null;
       coloredSegments.add(ColoredSegment(
-        color: _colorForTier(tier),
+        color: colorForTier(tier),
         points: lastPt != null ? [lastPt] : [],
       ));
       coloredSegments.refresh();
@@ -977,7 +962,7 @@ class KmlMapController extends GetxController {
     _smoothingBuffer.clear();
     _lastDistancePoint = null;
     coloredSegments.clear();
-    coloredSegments.add(ColoredSegment(color: _colorForTier(SpeedTier.normal), points: []));
+    coloredSegments.add(ColoredSegment(color: colorForTier(SpeedTier.normal), points: []));
     _currentTier = SpeedTier.normal;
     _speedCheckPosition = null;
     elapsedSeconds.value = 0;

@@ -14,24 +14,9 @@ import '../../../models/runner_data.dart';
 import '../../../models/user_stats.dart';
 import '../../../services/admin_service.dart';
 import '../../../services/kml_service.dart';
+import '../../../utils/constants.dart';
 import '../../../utils/poi_marker_utils.dart';
 import '../../../widgets/user_avatar.dart';
-
-// ── Speed tier ────────────────────────────────────────────────────────────────
-
-enum _SpeedTier { normal, medium, fast }
-
-_SpeedTier _tierFromKmh(double kmh) {
-  if (kmh >= 40) return _SpeedTier.fast;
-  if (kmh >= 20) return _SpeedTier.medium;
-  return _SpeedTier.normal;
-}
-
-Color _colorForTier(_SpeedTier tier) => switch (tier) {
-      _SpeedTier.normal => AppTheme.speedNormal,
-      _SpeedTier.medium => AppTheme.speedMedium,
-      _SpeedTier.fast => AppTheme.speedFast,
-    };
 
 double _haversineM(double lat1, double lng1, double lat2, double lng2) {
   const r = 6371000.0;
@@ -92,7 +77,7 @@ class _OrganizerLiveMapScreenState extends State<OrganizerLiveMapScreen>
   // Speed tier tracking
   final Map<String, LatLng> _prevRunnerPos = {};
   final Map<String, int> _prevRunnerTime = {};
-  final Map<String, _SpeedTier> _runnerTiers = {};
+  final Map<String, SpeedTier> _runnerTiers = {};
 
   @override
   void initState() {
@@ -125,7 +110,9 @@ class _OrganizerLiveMapScreenState extends State<OrganizerLiveMapScreen>
             final distM = _haversineM(
                 prev.latitude, prev.longitude, r.lat, r.lng);
             final speedKmh = (distM / dt) * 3.6;
-            _runnerTiers[r.uid] = _tierFromKmh(speedKmh);
+            final newTier = tierFromKmh(speedKmh);
+            final peakTier = _runnerTiers[r.uid] ?? SpeedTier.normal;
+            if (newTier.index > peakTier.index) _runnerTiers[r.uid] = newTier;
           }
         }
         _prevRunnerPos[r.uid] = LatLng(r.lat, r.lng);
@@ -656,7 +643,6 @@ class _OrganizerLiveMapScreenState extends State<OrganizerLiveMapScreen>
                                 itemCount: results.length,
                                 itemBuilder: (_, i) => _FinalStandingsTile(
                                   stat: results[i],
-                                  tier: _runnerTiers[results[i].uid],
                                 ),
                               ),
                       ),
@@ -952,7 +938,7 @@ class _MapRunnerTile extends StatelessWidget {
   final int rank;
   final bool selected;
   final VoidCallback onTap;
-  final _SpeedTier? tier;
+  final SpeedTier? tier;
   const _MapRunnerTile({
     required this.runner,
     required this.rank,
@@ -981,7 +967,7 @@ class _MapRunnerTile extends StatelessWidget {
     final online = _isOnline(runner);
     final dotColor = !online
         ? Colors.redAccent
-        : _colorForTier(tier ?? _SpeedTier.normal);
+        : colorForTier(tier ?? SpeedTier.normal);
 
     return GestureDetector(
       onTap: onTap,
@@ -1053,13 +1039,13 @@ class _MapRunnerTile extends StatelessWidget {
                     style: const TextStyle(
                         fontSize: 10, color: Colors.white60),
                   ),
-                  if (online && (tier == _SpeedTier.medium || tier == _SpeedTier.fast))
+                  if (online && (tier == SpeedTier.medium || tier == SpeedTier.fast))
                     Text(
-                      tier == _SpeedTier.fast ? 'FAST' : 'MED',
+                      tier == SpeedTier.fast ? 'FAST' : 'MED',
                       style: TextStyle(
                         fontSize: 9,
                         fontWeight: FontWeight.w800,
-                        color: _colorForTier(tier!),
+                        color: colorForTier(tier!),
                         letterSpacing: 0.5,
                       ),
                     ),
@@ -1139,8 +1125,7 @@ class _GenderFilterRow extends StatelessWidget {
 
 class _FinalStandingsTile extends StatelessWidget {
   final UserStats stat;
-  final _SpeedTier? tier;
-  const _FinalStandingsTile({required this.stat, this.tier});
+  const _FinalStandingsTile({required this.stat});
 
   @override
   Widget build(BuildContext context) {
@@ -1157,6 +1142,7 @@ class _FinalStandingsTile extends StatelessWidget {
             : rank == 3
                 ? const Color(0xFFCD7F32)
                 : null;
+    final tier = tierFromKmh(stat.avgPaceKmH);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
@@ -1196,14 +1182,40 @@ class _FinalStandingsTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.textPrimary,
-                  ),
-                  overflow: TextOverflow.ellipsis,
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        label,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textPrimary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (tier == SpeedTier.medium || tier == SpeedTier.fast) ...[
+                      const SizedBox(width: 5),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: colorForTier(tier).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: colorForTier(tier).withValues(alpha: 0.4)),
+                        ),
+                        child: Text(
+                          tier == SpeedTier.fast ? 'Fast' : 'Medium',
+                          style: TextStyle(
+                            fontSize: 8,
+                            fontWeight: FontWeight.w800,
+                            color: colorForTier(tier),
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 Text(
                   stat.timeStr,
@@ -1213,26 +1225,6 @@ class _FinalStandingsTile extends StatelessWidget {
               ],
             ),
           ),
-          if (tier == _SpeedTier.medium || tier == _SpeedTier.fast) ...[
-            const SizedBox(width: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-              decoration: BoxDecoration(
-                color: _colorForTier(tier!).withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: _colorForTier(tier!).withValues(alpha: 0.4)),
-              ),
-              child: Text(
-                tier == _SpeedTier.fast ? 'FAST' : 'MED',
-                style: TextStyle(
-                  fontSize: 8,
-                  fontWeight: FontWeight.w800,
-                  color: _colorForTier(tier!),
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ),
-          ],
           const SizedBox(width: 4),
           Text(
             stat.distanceStr,

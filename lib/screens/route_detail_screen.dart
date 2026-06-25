@@ -12,26 +12,11 @@ import '../../app/routes/app_routes.dart';
 import '../../core/theme.dart';
 import '../../models/colored_segment.dart';
 import '../../models/tracked_route.dart';
+import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
 import 'run_selfie_screen.dart';
 import '../../services/firebase_service.dart';
 import '../../services/offline_storage_service.dart';
-
-// ── Speed-tier helpers ────────────────────────────────────────────────────────
-
-enum _SpeedTier { normal, medium, fast }
-
-_SpeedTier _tierFromKmh(double kmh) {
-  if (kmh >= 40) return _SpeedTier.fast;
-  if (kmh >= 20) return _SpeedTier.medium;
-  return _SpeedTier.normal;
-}
-
-Color _colorForTier(_SpeedTier tier) => switch (tier) {
-      _SpeedTier.normal => AppTheme.speedNormal,
-      _SpeedTier.medium => AppTheme.speedMedium,
-      _SpeedTier.fast => AppTheme.speedFast,
-    };
 
 double _haversineM(double lat1, double lng1, double lat2, double lng2) {
   const r = 6371000.0;
@@ -49,7 +34,7 @@ List<ColoredSegment> _buildSpeedSegments(List<LatLng> pts, List<int> ts) {
   if (pts.length < 2 || ts.length != pts.length) return [];
 
   final result = <ColoredSegment>[];
-  var tier = _SpeedTier.normal;
+  var tier = SpeedTier.normal;
   var current = <LatLng>[pts.first];
 
   for (int i = 1; i < pts.length; i++) {
@@ -57,17 +42,17 @@ List<ColoredSegment> _buildSpeedSegments(List<LatLng> pts, List<int> ts) {
     final distM = _haversineM(
         pts[i - 1].latitude, pts[i - 1].longitude,
         pts[i].latitude, pts[i].longitude);
-    final newTier = dt > 0 ? _tierFromKmh((distM / dt) * 3.6) : tier;
+    final newTier = dt > 0 ? tierFromKmh((distM / dt) * 3.6) : tier;
 
     if (newTier != tier) {
-      result.add(ColoredSegment(color: _colorForTier(tier), points: List.from(current)));
+      result.add(ColoredSegment(color: colorForTier(tier), points: List.from(current)));
       tier = newTier;
       current = [pts[i - 1], pts[i]];
     } else {
       current.add(pts[i]);
     }
   }
-  result.add(ColoredSegment(color: _colorForTier(tier), points: current));
+  result.add(ColoredSegment(color: colorForTier(tier), points: current));
   return result.where((s) => s.points.length >= 2).toList();
 }
 
