@@ -1332,13 +1332,18 @@ class KmlMapController extends GetxController {
     _runnersSub?.cancel();
     _runnersSub = LiveTrackingService.instance.watchRunners().listen(
       (runners) async {
-        // Only friends/group members running the same event.
-        // Strangers in the same event are not shown on the map or leaderboard.
+        // Only friends/group members running the same event AND the same
+        // category. Different categories (e.g. short vs long run) are separate
+        // races, so they must not appear in each other's map/leaderboard.
         final filtered = friendSet.isEmpty
             ? <RunnerData>[]
             : runners.where((r) {
                 if (!friendSet.contains(r.uid)) return false;
                 if (currentEventId.isNotEmpty && r.eventId != currentEventId) {
+                  return false;
+                }
+                if (selectedCategoryId.isNotEmpty &&
+                    r.categoryId != selectedCategoryId) {
                   return false;
                 }
                 return true;
