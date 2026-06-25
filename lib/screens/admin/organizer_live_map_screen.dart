@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
@@ -15,6 +16,33 @@ import '../../../services/admin_service.dart';
 import '../../../services/kml_service.dart';
 import '../../../utils/poi_marker_utils.dart';
 import '../../../widgets/user_avatar.dart';
+
+// ── Speed tier ────────────────────────────────────────────────────────────────
+
+enum _SpeedTier { normal, medium, fast }
+
+_SpeedTier _tierFromKmh(double kmh) {
+  if (kmh >= 40) return _SpeedTier.fast;
+  if (kmh >= 20) return _SpeedTier.medium;
+  return _SpeedTier.normal;
+}
+
+Color _colorForTier(_SpeedTier tier) => switch (tier) {
+      _SpeedTier.normal => AppTheme.speedNormal,
+      _SpeedTier.medium => AppTheme.speedMedium,
+      _SpeedTier.fast => AppTheme.speedFast,
+    };
+
+double _haversineM(double lat1, double lng1, double lat2, double lng2) {
+  const r = 6371000.0;
+  final phi1 = lat1 * math.pi / 180;
+  final phi2 = lat2 * math.pi / 180;
+  final dPhi = (lat2 - lat1) * math.pi / 180;
+  final dLam = (lng2 - lng1) * math.pi / 180;
+  final a = math.sin(dPhi / 2) * math.sin(dPhi / 2) +
+      math.cos(phi1) * math.cos(phi2) * math.sin(dLam / 2) * math.sin(dLam / 2);
+  return r * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+}
 
 /// Live runner map for the Organizer role.
 /// Left panel shows a ranked runner list; right panel shows the Google Map
@@ -61,6 +89,11 @@ class _OrganizerLiveMapScreenState extends State<OrganizerLiveMapScreen>
   bool _ended = false;
   int _genderFilter = 0; // 0=All  1=Male  2=Female
 
+  // Speed tier tracking
+  final Map<String, LatLng> _prevRunnerPos = {};
+  final Map<String, int> _prevRunnerTime = {};
+  final Map<String, _SpeedTier> _runnerTiers = {};
+
   @override
   void initState() {
     super.initState();
@@ -81,6 +114,23 @@ class _OrganizerLiveMapScreenState extends State<OrganizerLiveMapScreen>
         .listen((runners) {
       if (!mounted) return;
       final wasEmpty = _runners.isEmpty;
+      final now = DateTime.now().millisecondsSinceEpoch;
+      for (final r in runners) {
+        if (r.lat == 0 && r.lng == 0) continue;
+        final prev = _prevRunnerPos[r.uid];
+        final prevTime = _prevRunnerTime[r.uid];
+        if (prev != null && prevTime != null) {
+          final dt = (now - prevTime) / 1000.0;
+          if (dt > 1) {
+            final distM = _haversineM(
+                prev.latitude, prev.longitude, r.lat, r.lng);
+            final speedKmh = (distM / dt) * 3.6;
+            _runnerTiers[r.uid] = _tierFromKmh(speedKmh);
+          }
+        }
+        _prevRunnerPos[r.uid] = LatLng(r.lat, r.lng);
+        _prevRunnerTime[r.uid] = now;
+      }
       setState(() => _runners = runners);
       _preloadIcons(runners);
       // Auto-center on runners only when we have no KML to anchor the view.
@@ -604,8 +654,10 @@ class _OrganizerLiveMapScreenState extends State<OrganizerLiveMapScreen>
                                 padding:
                                     const EdgeInsets.fromLTRB(10, 10, 10, 16),
                                 itemCount: results.length,
-                                itemBuilder: (_, i) =>
-                                    _FinalStandingsTile(stat: results[i]),
+                                itemBuilder: (_, i) => _FinalStandingsTile(
+                                  stat: results[i],
+                                  tier: _runnerTiers[results[i].uid],
+                                ),
                               ),
                       ),
                     ],
@@ -785,6 +837,7 @@ class _OrganizerLiveMapScreenState extends State<OrganizerLiveMapScreen>
                                         rank: rankOffset + i + 1,
                                         selected: pageRunners[i].uid ==
                                             _selectedUid,
+                                        tier: _runnerTiers[pageRunners[i].uid],
                                         onTap: () =>
                                             _focusRunner(pageRunners[i]),
                                       ),
@@ -866,7 +919,7 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = online ? const Color(0xFF2E7D32) : Colors.redAccent;
+    final color = online ? AppTheme.onlineGreen : Colors.redAccent;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
@@ -899,11 +952,13 @@ class _MapRunnerTile extends StatelessWidget {
   final int rank;
   final bool selected;
   final VoidCallback onTap;
+  final _SpeedTier? tier;
   const _MapRunnerTile({
     required this.runner,
     required this.rank,
     required this.selected,
     required this.onTap,
+    this.tier,
   });
 
 
@@ -924,6 +979,9 @@ class _MapRunnerTile extends StatelessWidget {
         ? runner.displayName
         : runner.email.split('@').first;
     final online = _isOnline(runner);
+    final dotColor = !online
+        ? Colors.redAccent
+        : _colorForTier(tier ?? _SpeedTier.normal);
 
     return GestureDetector(
       onTap: onTap,
@@ -970,7 +1028,7 @@ class _MapRunnerTile extends StatelessWidget {
               width: 6,
               height: 6,
               decoration: BoxDecoration(
-                color: online ? const Color(0xFF2E7D32) : Colors.redAccent,
+                color: dotColor,
                 shape: BoxShape.circle,
               ),
             ),
@@ -995,6 +1053,16 @@ class _MapRunnerTile extends StatelessWidget {
                     style: const TextStyle(
                         fontSize: 10, color: Colors.white60),
                   ),
+                  if (online && (tier == _SpeedTier.medium || tier == _SpeedTier.fast))
+                    Text(
+                      tier == _SpeedTier.fast ? 'FAST' : 'MED',
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                        color: _colorForTier(tier!),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -1071,7 +1139,8 @@ class _GenderFilterRow extends StatelessWidget {
 
 class _FinalStandingsTile extends StatelessWidget {
   final UserStats stat;
-  const _FinalStandingsTile({required this.stat});
+  final _SpeedTier? tier;
+  const _FinalStandingsTile({required this.stat, this.tier});
 
   @override
   Widget build(BuildContext context) {
@@ -1144,6 +1213,26 @@ class _FinalStandingsTile extends StatelessWidget {
               ],
             ),
           ),
+          if (tier == _SpeedTier.medium || tier == _SpeedTier.fast) ...[
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+              decoration: BoxDecoration(
+                color: _colorForTier(tier!).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: _colorForTier(tier!).withValues(alpha: 0.4)),
+              ),
+              child: Text(
+                tier == _SpeedTier.fast ? 'FAST' : 'MED',
+                style: TextStyle(
+                  fontSize: 8,
+                  fontWeight: FontWeight.w800,
+                  color: _colorForTier(tier!),
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+          ],
           const SizedBox(width: 4),
           Text(
             stat.distanceStr,

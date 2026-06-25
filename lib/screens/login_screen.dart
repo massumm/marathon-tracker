@@ -61,7 +61,7 @@ class _LoginBodyState extends State<_LoginBody> {
   void _showError(String message) {
     Get.snackbar('Error', message,
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.shade700,
+        backgroundColor: AppTheme.errorDark,
         colorText: Colors.white,
         margin: const EdgeInsets.all(12));
   }
@@ -439,7 +439,7 @@ class _LoginBodyState extends State<_LoginBody> {
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.red.shade400),
+          borderSide: const BorderSide(color: AppTheme.dangerRed),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),

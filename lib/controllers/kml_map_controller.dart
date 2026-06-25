@@ -44,9 +44,9 @@ SpeedTier _tierFromKmh(double kmh) {
 }
 
 Color _colorForTier(SpeedTier tier) => switch (tier) {
-  SpeedTier.normal => AppTheme.primary,
-  SpeedTier.medium => Colors.orange,
-  SpeedTier.fast   => Colors.red,
+  SpeedTier.normal => AppTheme.speedNormal,
+  SpeedTier.medium => AppTheme.speedMedium,
+  SpeedTier.fast   => AppTheme.speedFast,
 };
 
 // ── Leaderboard entry ─────────────────────────────────────────────────────────
