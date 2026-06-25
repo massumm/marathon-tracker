@@ -90,23 +90,18 @@ class MyPageController extends GetxController {
 
     // 3. Refresh from cloud in background
     isLoading.value = true;
-    debugPrint('[fetchRoutes] cached=${cachedNames.length}: $cachedNames');
-    debugPrint('[fetchRoutes] pending=${localPendingNames.length}: ${localPendingNames.toList()}');
     try {
       final refs = await FirebaseService.instance.fetchSavedRouteRefs();
-      debugPrint('[fetchRoutes] firebase=${refs.length}: ${refs.map((r) => r.name).toList()}');
       final refNames = refs.map((r) => r.name).toSet();
       // Preserve any locally-saved files not yet returned by listAll()
       // (Firebase Storage can take a few seconds to index a newly uploaded file)
       final localOnly = cachedNames.where((n) => !refNames.contains(n)).toList();
-      debugPrint('[fetchRoutes] localOnly=${localOnly.length}: $localOnly');
       final merged = [
         ...refs,
         ...localOnly.map((n) => fs.FirebaseStorage.instance
             .ref('${AppConfig.routesStoragePath}/$uid/$n')),
       ]..sort((a, b) => TrackedRoute.parseDateTimeFromFileName(b.name)
             .compareTo(TrackedRoute.parseDateTimeFromFileName(a.name)));
-      debugPrint('[fetchRoutes] merged=${merged.length}: ${merged.map((r) => r.name).toList()}');
       await OfflineStorageService.instance
           .cacheRouteNames(uid, merged.map((r) => r.name).toList());
       routeRefs.value = merged;

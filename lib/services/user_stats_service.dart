@@ -136,9 +136,12 @@ class UserStatsService {
 
   /// One-shot fetch for another user's profile.
   Future<UserStats?> getUserStats(String uid) async {
-    final snap = await _db.ref('user_stats/$uid').get();
+    final event = await _db.ref('user_stats/$uid').onValue.first;
+    final snap = event.snapshot;
     if (!snap.exists) return null;
-    return UserStats.fromMap(uid, snap.value as Map<dynamic, dynamic>);
+    final raw = snap.value;
+    if (raw is! Map) return null;
+    return UserStats.fromMap(uid, Map<String, dynamic>.from(raw));
   }
 
   /// Sorted leaderboard stream (highest distance first, runs as tiebreaker).

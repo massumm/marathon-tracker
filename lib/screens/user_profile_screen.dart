@@ -14,24 +14,42 @@ class UserProfileScreen extends StatefulWidget {
 }
 
 class _UserProfileScreenState extends State<UserProfileScreen> {
-  late final String _uid;
+  String _uid = '';
   UserStats? _stats;
   bool _loading = true;
+  bool _error = false;
 
   @override
-  void initState() {
-    super.initState();
-    _uid = Get.arguments as String;
-    _load();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // ModalRoute.settings.arguments is bound to THIS route instance.
+    // Get.arguments is a global that can be overwritten by a subsequent
+    // navigation before initState reads it — causes wrong-user on iOS AOT.
+    final routeArgs = ModalRoute.of(context)?.settings.arguments;
+    final uid = routeArgs is String ? routeArgs : '';
+    if (uid != _uid) {
+      _uid = uid;
+      _loading = true;
+      _error = false;
+      _load();
+    }
   }
 
   Future<void> _load() async {
-    final stats = await UserStatsService.instance.getUserStats(_uid);
-    if (mounted) {
-      setState(() {
-        _stats = stats;
-        _loading = false;
-      });
+    if (_uid.isEmpty) {
+      if (mounted) setState(() { _loading = false; });
+      return;
+    }
+    try {
+      final stats = await UserStatsService.instance.getUserStats(_uid);
+      if (mounted) {
+        setState(() {
+          _stats = stats;
+          _loading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() { _loading = false; _error = true; });
     }
   }
 
@@ -49,9 +67,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : _stats == null
-              ? Center(child: Text('user_not_found'.tr))
-              : _ProfileBody(stats: _stats!),
+          : _error
+              ? Center(child: Text('error_loading'.tr))
+              : _stats == null
+                  ? Center(child: Text('user_not_found'.tr))
+                  : _ProfileBody(stats: _stats!),
     );
   }
 }
