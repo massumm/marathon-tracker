@@ -51,3 +51,6 @@ app.*.map.json
 # Claude Code
 .claude/
 deploy.sh
+
+# Build artifact — distributed via hosting, not git
+hosting/marathon-map.apk

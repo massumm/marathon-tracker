@@ -105,35 +105,15 @@
       correctLevel: QRCode.CorrectLevel.M
     });
 
-    // Where to send people who don't have the app installed.
-    const apkUrl = 'https://runmate.club/marathon-map.apk';
-
+    // "Open in app" only tries to open the app — NO automatic APK download.
+    // (Auto-download misfired in in-app browsers, downloading the APK even when
+    // the app was installed.) People without the app use the Download button.
     const openBtn = document.getElementById('open-btn');
-    const ua = navigator.userAgent;
-
-    if (/android/i.test(ua)) {
-      // Android Chrome: intent with a built-in fallback — if the app is NOT
-      // installed, the browser navigates to the APK download instead of
-      // showing a "page can't be loaded" error.
+    if (/android/i.test(navigator.userAgent)) {
       openBtn.href = 'intent://group/' + groupId +
-        '#Intent;scheme=marathon-map;package=com.xorgeek.runmate;' +
-        'S.browser_fallback_url=' + encodeURIComponent(apkUrl) + ';end';
+        '#Intent;scheme=marathon-map;package=com.xorgeek.runmate;end';
     } else {
-      // iOS / desktop / other browsers: try the deep link; if the app didn't
-      // open (page still visible after a moment), fall back to the APK.
       openBtn.href = deepLink;
-      openBtn.addEventListener('click', function (e) {
-        e.preventDefault();
-        let fell = false;
-        const timer = setTimeout(function () {
-          if (!document.hidden) { fell = true; window.location.href = apkUrl; }
-        }, 1500);
-        // App opened → page hides → cancel the download fallback.
-        document.addEventListener('visibilitychange', function () {
-          if (document.hidden && !fell) clearTimeout(timer);
-        });
-        window.location.href = deepLink;
-      });
     }
   </script>
 </body>
