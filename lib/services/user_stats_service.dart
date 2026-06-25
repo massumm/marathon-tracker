@@ -136,9 +136,6 @@ class UserStatsService {
 
   /// One-shot fetch for another user's profile.
   Future<UserStats?> getUserStats(String uid) async {
-    // .get() on a child path returns the parent's cached snapshot on iOS when
-    // keepSynced(true) is active on the parent. Use onValue.first instead —
-    // it fires a single event correctly scoped to this exact path.
     final event = await _db.ref('user_stats/$uid').onValue.first;
     final snap = event.snapshot;
     if (!snap.exists) return null;
