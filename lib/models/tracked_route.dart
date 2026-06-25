@@ -12,6 +12,7 @@ class TrackedRoute {
   final String distance;
   final String pace;
   final List<LatLng> route;
+  final List<int> timestamps;
   final String storagePath;
 
   const TrackedRoute({
@@ -24,12 +25,54 @@ class TrackedRoute {
     required this.distance,
     required this.pace,
     required this.route,
+    this.timestamps = const [],
     required this.storagePath,
   });
+
+  bool get hasTimestamps => timestamps.length == route.length && timestamps.any((t) => t > 0);
+
+  /// Real timestamps when available; otherwise a uniform estimate from
+  /// runStartMs + total time — good enough for speed-tier coloring on old saves.
+  List<int> get effectiveTimestamps {
+    if (hasTimestamps) return timestamps;
+    if (runStartMs <= 0 || route.length < 2) return [];
+    final totalMs = _parseDurationMs(time);
+    if (totalMs <= 0) return [];
+    final step = totalMs / (route.length - 1);
+    return List.generate(route.length, (i) => runStartMs + (i * step).round());
+  }
+
+  bool get hasEffectiveTimestamps =>
+      hasTimestamps ||
+      (runStartMs > 0 && route.length >= 2 && _parseDurationMs(time) > 0);
+
+  static int _parseDurationMs(String t) {
+    final parts = t.split(':');
+    try {
+      if (parts.length == 2) {
+        return (int.parse(parts[0]) * 60 + int.parse(parts[1])) * 1000;
+      } else if (parts.length == 3) {
+        return (int.parse(parts[0]) * 3600 +
+                int.parse(parts[1]) * 60 +
+                int.parse(parts[2])) *
+            1000;
+      }
+    } catch (_) {}
+    return 0;
+  }
 
   factory TrackedRoute.fromJson(
       Map<String, dynamic> json, String storagePath) {
     final routeData = json['route'] as List<dynamic>;
+    final points = <LatLng>[];
+    final timestamps = <int>[];
+    for (final e in routeData) {
+      points.add(LatLng(
+        (e['lat'] as num).toDouble(),
+        (e['lng'] as num).toDouble(),
+      ));
+      timestamps.add((e['t'] as int?) ?? 0);
+    }
     return TrackedRoute(
       event: json['event'] as String? ?? '',
       type: json['type'] as String? ?? '',
@@ -40,12 +83,8 @@ class TrackedRoute {
       distance: json['distance'] as String? ?? '',
       pace: normalisePace(json['pace'] as String? ?? ''),
       storagePath: storagePath,
-      route: routeData
-          .map((e) => LatLng(
-                (e['lat'] as num).toDouble(),
-                (e['lng'] as num).toDouble(),
-              ))
-          .toList(),
+      route: points,
+      timestamps: timestamps,
     );
   }
 

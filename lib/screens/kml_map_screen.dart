@@ -530,12 +530,6 @@ class _KmlMapScreenState extends State<KmlMapScreen>
     final isSaving = _ctrl.isSaving.value;
     final gpsAccuracy = _ctrl.gpsAccuracy.value;
     final elapsedSecs = _ctrl.elapsedSeconds.value;
-    final snapped = _ctrl.snappedPoints.toList();
-    final raw = _ctrl.trackingPoints.toList();
-    // During tracking use raw GPS for live continuous feedback — snappedPoints
-    // updates in batches of 10 which causes visible gaps. After the run ends
-    // prefer the cleaner road-snapped version if available.
-    final points = isTracking ? raw : (snapped.isNotEmpty ? snapped : raw);
     final runnerMarkersSet = _ctrl.runnerMarkers.values.toSet();
     final topPad = MediaQuery.of(context).padding.top;
     final lbShift = lb.isNotEmpty && _leaderOpen;
@@ -563,13 +557,14 @@ class _KmlMapScreenState extends State<KmlMapScreen>
         },
         polylines: {
           ..._ctrl.kmlPolylines,
-          if (isTracking && points.length >= 2)
-            Polyline(
-              polylineId: const PolylineId('tracking'),
-              points: points,
-              color: AppTheme.trackingGreen,
-              width: 5,
-            ),
+          for (var i = 0; i < _ctrl.coloredSegments.length; i++)
+            if (_ctrl.coloredSegments[i].points.length >= 2)
+              Polyline(
+                polylineId: PolylineId('tracking_$i'),
+                points: _ctrl.coloredSegments[i].points,
+                color: _ctrl.coloredSegments[i].color,
+                width: 5,
+              ),
         },
         markers: {
           ..._ctrl.kmlPOIMarkers.value,

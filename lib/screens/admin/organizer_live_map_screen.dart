@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
@@ -13,8 +14,20 @@ import '../../../models/runner_data.dart';
 import '../../../models/user_stats.dart';
 import '../../../services/admin_service.dart';
 import '../../../services/kml_service.dart';
+import '../../../utils/constants.dart';
 import '../../../utils/poi_marker_utils.dart';
 import '../../../widgets/user_avatar.dart';
+
+double _haversineM(double lat1, double lng1, double lat2, double lng2) {
+  const r = 6371000.0;
+  final phi1 = lat1 * math.pi / 180;
+  final phi2 = lat2 * math.pi / 180;
+  final dPhi = (lat2 - lat1) * math.pi / 180;
+  final dLam = (lng2 - lng1) * math.pi / 180;
+  final a = math.sin(dPhi / 2) * math.sin(dPhi / 2) +
+      math.cos(phi1) * math.cos(phi2) * math.sin(dLam / 2) * math.sin(dLam / 2);
+  return r * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+}
 
 /// Live runner map for the Organizer role.
 /// Left panel shows a ranked runner list; right panel shows the Google Map
@@ -61,6 +74,11 @@ class _OrganizerLiveMapScreenState extends State<OrganizerLiveMapScreen>
   bool _ended = false;
   int _genderFilter = 0; // 0=All  1=Male  2=Female
 
+  // Speed tier tracking
+  final Map<String, LatLng> _prevRunnerPos = {};
+  final Map<String, int> _prevRunnerTime = {};
+  final Map<String, SpeedTier> _runnerTiers = {};
+
   @override
   void initState() {
     super.initState();
@@ -81,6 +99,25 @@ class _OrganizerLiveMapScreenState extends State<OrganizerLiveMapScreen>
         .listen((runners) {
       if (!mounted) return;
       final wasEmpty = _runners.isEmpty;
+      final now = DateTime.now().millisecondsSinceEpoch;
+      for (final r in runners) {
+        if (r.lat == 0 && r.lng == 0) continue;
+        final prev = _prevRunnerPos[r.uid];
+        final prevTime = _prevRunnerTime[r.uid];
+        if (prev != null && prevTime != null) {
+          final dt = (now - prevTime) / 1000.0;
+          if (dt > 1) {
+            final distM = _haversineM(
+                prev.latitude, prev.longitude, r.lat, r.lng);
+            final speedKmh = (distM / dt) * 3.6;
+            final newTier = tierFromKmh(speedKmh);
+            final peakTier = _runnerTiers[r.uid] ?? SpeedTier.normal;
+            if (newTier.index > peakTier.index) _runnerTiers[r.uid] = newTier;
+          }
+        }
+        _prevRunnerPos[r.uid] = LatLng(r.lat, r.lng);
+        _prevRunnerTime[r.uid] = now;
+      }
       setState(() => _runners = runners);
       _preloadIcons(runners);
       // Auto-center on runners only when we have no KML to anchor the view.
@@ -604,8 +641,9 @@ class _OrganizerLiveMapScreenState extends State<OrganizerLiveMapScreen>
                                 padding:
                                     const EdgeInsets.fromLTRB(10, 10, 10, 16),
                                 itemCount: results.length,
-                                itemBuilder: (_, i) =>
-                                    _FinalStandingsTile(stat: results[i]),
+                                itemBuilder: (_, i) => _FinalStandingsTile(
+                                  stat: results[i],
+                                ),
                               ),
                       ),
                     ],
@@ -785,6 +823,7 @@ class _OrganizerLiveMapScreenState extends State<OrganizerLiveMapScreen>
                                         rank: rankOffset + i + 1,
                                         selected: pageRunners[i].uid ==
                                             _selectedUid,
+                                        tier: _runnerTiers[pageRunners[i].uid],
                                         onTap: () =>
                                             _focusRunner(pageRunners[i]),
                                       ),
@@ -866,7 +905,7 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = online ? const Color(0xFF2E7D32) : Colors.redAccent;
+    final color = online ? AppTheme.onlineGreen : Colors.redAccent;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
@@ -899,11 +938,13 @@ class _MapRunnerTile extends StatelessWidget {
   final int rank;
   final bool selected;
   final VoidCallback onTap;
+  final SpeedTier? tier;
   const _MapRunnerTile({
     required this.runner,
     required this.rank,
     required this.selected,
     required this.onTap,
+    this.tier,
   });
 
 
@@ -924,6 +965,9 @@ class _MapRunnerTile extends StatelessWidget {
         ? runner.displayName
         : runner.email.split('@').first;
     final online = _isOnline(runner);
+    final dotColor = !online
+        ? Colors.redAccent
+        : colorForTier(tier ?? SpeedTier.normal);
 
     return GestureDetector(
       onTap: onTap,
@@ -970,7 +1014,7 @@ class _MapRunnerTile extends StatelessWidget {
               width: 6,
               height: 6,
               decoration: BoxDecoration(
-                color: online ? const Color(0xFF2E7D32) : Colors.redAccent,
+                color: dotColor,
                 shape: BoxShape.circle,
               ),
             ),
@@ -995,6 +1039,16 @@ class _MapRunnerTile extends StatelessWidget {
                     style: const TextStyle(
                         fontSize: 10, color: Colors.white60),
                   ),
+                  if (online && (tier == SpeedTier.medium || tier == SpeedTier.fast))
+                    Text(
+                      tier == SpeedTier.fast ? 'FAST' : 'MED',
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                        color: colorForTier(tier!),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -1088,6 +1142,7 @@ class _FinalStandingsTile extends StatelessWidget {
             : rank == 3
                 ? const Color(0xFFCD7F32)
                 : null;
+    final tier = tierFromKmh(stat.avgPaceKmH);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
@@ -1127,14 +1182,40 @@ class _FinalStandingsTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.textPrimary,
-                  ),
-                  overflow: TextOverflow.ellipsis,
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        label,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textPrimary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (tier == SpeedTier.medium || tier == SpeedTier.fast) ...[
+                      const SizedBox(width: 5),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: colorForTier(tier).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: colorForTier(tier).withValues(alpha: 0.4)),
+                        ),
+                        child: Text(
+                          tier == SpeedTier.fast ? 'Fast' : 'Medium',
+                          style: TextStyle(
+                            fontSize: 8,
+                            fontWeight: FontWeight.w800,
+                            color: colorForTier(tier),
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 Text(
                   stat.timeStr,

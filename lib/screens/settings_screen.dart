@@ -47,10 +47,10 @@ class SettingsScreen extends GetView<MyPageController> {
                   final missing = gender == null;
                   return _tile(
                     icon: gender == 1 ? Icons.female : Icons.male,
-                    iconColor: missing ? Colors.orange : null,
+                    iconColor: missing ? AppTheme.warningOrange : null,
                     title: 'gender'.tr,
                     subtitle: label,
-                    subtitleColor: missing ? Colors.orange : null,
+                    subtitleColor: missing ? AppTheme.warningOrange : null,
                     warning: missing,
                     onTap: () => _changeGender(context, gender),
                   );
@@ -77,7 +77,7 @@ class SettingsScreen extends GetView<MyPageController> {
                 _tile(
                   icon: Icons.delete_outline,
                   title: 'delete_account'.tr,
-                  titleColor: Colors.red,
+                  titleColor: AppTheme.dangerRed,
                   onTap: () => _deleteAccount(context),
                 ),
                 const Divider(height: 1),
@@ -106,11 +106,11 @@ class SettingsScreen extends GetView<MyPageController> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: OutlinedButton.icon(
               onPressed: () => _confirmSignOut(context),
-              icon: const Icon(Icons.logout, color: Colors.red),
+              icon: const Icon(Icons.logout, color: AppTheme.dangerRed),
               label: Text('sign_out'.tr,
-                  style: const TextStyle(color: Colors.red)),
+                  style: const TextStyle(color: AppTheme.dangerRed)),
               style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Colors.red),
+                side: const BorderSide(color: AppTheme.dangerRed),
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
             ),
@@ -160,7 +160,7 @@ class SettingsScreen extends GetView<MyPageController> {
             : null,
         trailing: onTap != null
             ? warning
-                ? const Icon(Icons.warning_amber_rounded, color: Colors.orange)
+                ? const Icon(Icons.warning_amber_rounded, color: AppTheme.warningOrange)
                 : const Icon(Icons.chevron_right, color: AppTheme.textSecondary)
             : null,
         onTap: onTap,
@@ -172,7 +172,7 @@ class SettingsScreen extends GetView<MyPageController> {
       children: [0, 1].map((value) {
         final label = value == 0 ? 'Male' : 'Female';
         final icon = value == 0 ? Icons.male : Icons.female;
-        final color = value == 0 ? Colors.blue.shade400 : Colors.pink.shade300;
+        final color = value == 0 ? AppTheme.genderMale : AppTheme.genderFemale;
         final isCurrent = currentGender == value;
         return SimpleDialogOption(
           onPressed: () async {
@@ -206,7 +206,7 @@ class SettingsScreen extends GetView<MyPageController> {
         'gender'.tr,
         e.toString(),
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
+        backgroundColor: AppTheme.dangerRed,
         colorText: Colors.white,
       );
     }
@@ -245,7 +245,7 @@ class SettingsScreen extends GetView<MyPageController> {
               Get.back();
               Get.snackbar('phone_number'.tr, e.toString(),
                   snackPosition: SnackPosition.BOTTOM,
-                  backgroundColor: Colors.red,
+                  backgroundColor: AppTheme.dangerRed,
                   colorText: Colors.white);
             }
           },
@@ -366,13 +366,13 @@ class SettingsScreen extends GetView<MyPageController> {
                       : e.message ?? e.code;
               Get.snackbar('change_email'.tr, msg,
                   snackPosition: SnackPosition.BOTTOM,
-                  backgroundColor: Colors.red,
+                  backgroundColor: AppTheme.dangerRed,
                   colorText: Colors.white);
             } catch (e) {
               Get.back();
               Get.snackbar('change_email'.tr, e.toString(),
                   snackPosition: SnackPosition.BOTTOM,
-                  backgroundColor: Colors.red,
+                  backgroundColor: AppTheme.dangerRed,
                   colorText: Colors.white);
             }
           },
@@ -434,14 +434,14 @@ class SettingsScreen extends GetView<MyPageController> {
             if (newPass != confirm) {
               Get.snackbar('change_password'.tr, 'password_mismatch'.tr,
                   snackPosition: SnackPosition.BOTTOM,
-                  backgroundColor: Colors.red,
+                  backgroundColor: AppTheme.dangerRed,
                   colorText: Colors.white);
               return;
             }
             if (newPass.length < 6) {
               Get.snackbar('change_password'.tr, 'password_too_short'.tr,
                   snackPosition: SnackPosition.BOTTOM,
-                  backgroundColor: Colors.red,
+                  backgroundColor: AppTheme.dangerRed,
                   colorText: Colors.white);
               return;
             }
@@ -457,13 +457,13 @@ class SettingsScreen extends GetView<MyPageController> {
                       : e.message ?? e.code;
               Get.snackbar('change_password'.tr, msg,
                   snackPosition: SnackPosition.BOTTOM,
-                  backgroundColor: Colors.red,
+                  backgroundColor: AppTheme.dangerRed,
                   colorText: Colors.white);
             } catch (e) {
               Get.back();
               Get.snackbar('change_password'.tr, e.toString(),
                   snackPosition: SnackPosition.BOTTOM,
-                  backgroundColor: Colors.red,
+                  backgroundColor: AppTheme.dangerRed,
                   colorText: Colors.white);
             }
           },
@@ -486,11 +486,11 @@ class SettingsScreen extends GetView<MyPageController> {
     AppDialogs.confirm(
       context: context,
       icon: Icons.delete_forever_rounded,
-      iconColor: Colors.red,
+      iconColor: AppTheme.dangerRed,
       title: 'delete_account'.tr,
       body: 'delete_account_google_confirm'.tr,
       confirmLabel: 'delete_account'.tr,
-      confirmColor: Colors.red,
+      confirmColor: AppTheme.dangerRed,
     ).then((confirmed) async {
       if (!confirmed) return;
       try {
@@ -499,7 +499,7 @@ class SettingsScreen extends GetView<MyPageController> {
       } catch (e) {
         Get.snackbar('delete_account'.tr, e.toString(),
             snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Colors.red,
+            backgroundColor: AppTheme.dangerRed,
             colorText: Colors.white);
       }
     });
@@ -509,11 +509,11 @@ class SettingsScreen extends GetView<MyPageController> {
     AppDialogs.confirm(
       context: context,
       icon: Icons.delete_forever_rounded,
-      iconColor: Colors.red,
+      iconColor: AppTheme.dangerRed,
       title: 'delete_account'.tr,
       body: 'delete_account_apple_confirm'.tr,
       confirmLabel: 'delete_account'.tr,
-      confirmColor: Colors.red,
+      confirmColor: AppTheme.dangerRed,
     ).then((confirmed) async {
       if (!confirmed) return;
       try {
@@ -522,7 +522,7 @@ class SettingsScreen extends GetView<MyPageController> {
       } catch (e) {
         Get.snackbar('delete_account'.tr, e.toString(),
             snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Colors.red,
+            backgroundColor: AppTheme.dangerRed,
             colorText: Colors.white);
       }
     });
@@ -535,7 +535,7 @@ class SettingsScreen extends GetView<MyPageController> {
       title: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.delete_forever_rounded, color: Colors.red, size: 36),
+          const Icon(Icons.delete_forever_rounded, color: AppTheme.dangerRed, size: 36),
           const SizedBox(height: 8),
           Text('delete_account'.tr,
               textAlign: TextAlign.center,
@@ -582,18 +582,18 @@ class SettingsScreen extends GetView<MyPageController> {
                       : e.message ?? e.code;
               Get.snackbar('delete_account'.tr, msg,
                   snackPosition: SnackPosition.BOTTOM,
-                  backgroundColor: Colors.red,
+                  backgroundColor: AppTheme.dangerRed,
                   colorText: Colors.white);
             } catch (e) {
               Get.back();
               Get.snackbar('delete_account'.tr, e.toString(),
                   snackPosition: SnackPosition.BOTTOM,
-                  backgroundColor: Colors.red,
+                  backgroundColor: AppTheme.dangerRed,
                   colorText: Colors.white);
             }
           },
           style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red, foregroundColor: Colors.white),
+              backgroundColor: AppTheme.dangerRed, foregroundColor: Colors.white),
           child: Text('delete_account'.tr),
         ),
       ],
@@ -604,11 +604,11 @@ class SettingsScreen extends GetView<MyPageController> {
     AppDialogs.confirm(
       context: context,
       icon: Icons.logout,
-      iconColor: Colors.red,
+      iconColor: AppTheme.dangerRed,
       title: 'sign_out'.tr,
       body: 'sign_out_confirm'.tr,
       confirmLabel: 'sign_out'.tr,
-      confirmColor: Colors.red,
+      confirmColor: AppTheme.dangerRed,
     ).then((confirmed) async {
       if (!confirmed) return;
       await controller.signOut();
