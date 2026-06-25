@@ -54,3 +54,6 @@ deploy.sh
 
 # Build artifact — distributed via hosting, not git
 hosting/marathon-map.apk
+
+# Firebase deploy cache (artifact)
+.firebase/
